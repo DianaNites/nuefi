@@ -8,4 +8,5 @@ edition = "2021"
 
 [dependencies]
 crc = "3.0.0"
+log = "0.4.17"
 macros = { path = "../macros" }

@@ -257,6 +257,15 @@ impl SystemTable<Boot> {
         self.table().firmware_revision
     }
 
+    /// Returns the (Major, Minor) UEFI Revision that this implementation claims
+    /// conformance to.
+    pub fn uefi_revision(&self) -> (u32, u32) {
+        (
+            self.table().header.revision.major(),
+            self.table().header.revision.minor(),
+        )
+    }
+
     /// Output on stdout
     pub fn stdout(&self) -> SimpleTextOutput<'_> {
         unsafe { SimpleTextOutput::new(self.table().con_out) }

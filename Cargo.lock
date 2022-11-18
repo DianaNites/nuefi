@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
 name = "crc"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -16,6 +22,15 @@ name = "crc-catalog"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d0165d2900ae6778e36e80bbc4da3b5eefccee9ba939761f9c2882a5d9af3ff"
+
+[[package]]
+name = "log"
+version = "0.4.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
+dependencies = [
+ "cfg-if",
+]
 
 [[package]]
 name = "macros"
@@ -59,6 +74,7 @@ name = "uefi"
 version = "0.1.0"
 dependencies = [
  "crc",
+ "log",
  "macros",
 ]
 
