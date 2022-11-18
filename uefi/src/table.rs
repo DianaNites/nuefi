@@ -223,7 +223,9 @@ pub struct Runtime;
 /// The UEFI System table
 ///
 /// This is your entry-point to using UEFI and all its services
-#[derive(Debug, Clone)]
+// NOTE: This CANNOT be Copy or Clone, as this would violate the planned
+// safety guarantees of passing it to ExitBootServices
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct SystemTable<State> {
     /// Pointer to the table.
@@ -236,7 +238,7 @@ pub struct SystemTable<State> {
     /// is called.
     table: *mut RawSystemTable,
 
-    phantom: PhantomData<State>,
+    phantom: PhantomData<*const State>,
 }
 
 impl SystemTable<Boot> {
@@ -256,8 +258,24 @@ impl SystemTable<Boot> {
         unsafe { &*self.table }
     }
 
+    /// String identifying the vendor
+    pub fn firmware_vendor(&self) -> &str {
+        ""
+    }
+
+    /// Firmware-specific value indicating its revision
+    pub fn firmware_revision(&self) -> u32 {
+        self.table().firmware_revision
+    }
+
+    /// Output on stdout
     pub fn stdout(&self) -> SimpleTextOutput<'_> {
         unsafe { SimpleTextOutput::new(self.table().con_out) }
+    }
+
+    /// Output on stderr
+    pub fn stderr(&self) -> SimpleTextOutput<'_> {
+        unsafe { SimpleTextOutput::new(self.table().std_err) }
     }
 
     pub fn boot(&self) -> Option<BootServices<'_>> {
