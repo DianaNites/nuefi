@@ -9,6 +9,7 @@ use syn::{parse_macro_input, ItemFn};
 /// dependency tree.
 #[proc_macro_attribute]
 pub fn entry(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    // https://github.com/dtolnay/proc-macro-workshop
     let input = parse_macro_input!(input as ItemFn);
     todo!()
 }
