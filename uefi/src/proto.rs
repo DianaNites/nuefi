@@ -6,15 +6,20 @@ use core::{
     mem::MaybeUninit,
 };
 
-use crate::error::{EfiStatus, Result};
+use crate::{
+    error::{EfiStatus, Result},
+    util::interface,
+};
 
 type Void = *mut [u8; 0];
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct SimpleTextInput {
+pub struct RawSimpleTextInput {
     //
 }
+
+interface!(SimpleTextInput(RawSimpleTextInput));
 
 // #[derive(Debug)]
 #[repr(C)]
@@ -39,29 +44,11 @@ impl RawSimpleTextOutput {
     ];
 }
 
-/// The UEFI Boot services
-#[repr(transparent)]
-pub struct SimpleTextOutput<'table> {
-    /// Lifetime conceptually tied to [`crate::SystemTable`]
-    interface: *mut RawSimpleTextOutput,
-    phantom: PhantomData<&'table mut RawSimpleTextOutput>,
-}
+interface!(SimpleTextOutput(RawSimpleTextOutput));
 
 impl<'table> SimpleTextOutput<'table> {
-    /// Create new BootServices
-    ///
-    /// # Safety
-    ///
-    /// - Must be valid pointer
-    pub(crate) unsafe fn new(this: *mut RawSimpleTextOutput) -> Self {
-        Self {
-            interface: this,
-            phantom: PhantomData,
-        }
-    }
-
     pub fn output_string(&self, string: &str) -> Result<()> {
-        let out = unsafe { (*self.interface).output_string };
+        let out = self.interface().output_string;
         let mut fin = EfiStatus::SUCCESS;
         // FIXME: Horribly inefficient
         for (i, char) in string.encode_utf16().enumerate() {

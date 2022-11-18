@@ -4,7 +4,8 @@ use core::{marker::PhantomData, mem::size_of};
 
 use crate::{
     error::{EfiStatus, Result},
-    proto::{self, RawSimpleTextOutput, SimpleTextInput, SimpleTextOutput},
+    proto::{self, RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
+    util::interface,
     EfiHandle,
 };
 
@@ -112,7 +113,7 @@ pub struct RawSystemTable {
     console_in_handle: EfiHandle,
 
     ///
-    con_in: *mut SimpleTextInput,
+    con_in: *mut RawSimpleTextInput,
 
     ///
     console_out_handle: EfiHandle,
@@ -189,27 +190,15 @@ impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
 }
 
-/// The UEFI Boot services
-#[repr(transparent)]
-pub struct BootServices<'table> {
-    /// Lifetime conceptually tied to [`SystemTable`],
-    /// ends when ExitBootServices is called.
-    table: *mut RawBootServices,
-    phantom: PhantomData<&'table mut RawBootServices>,
-}
+interface!(
+    /// The UEFI Boot services
+    BootServices(RawBootServices),
+    ///
+    RuntimeServices(RawRuntimeServices),
+);
 
 impl<'table> BootServices<'table> {
-    /// Create new BootServices
-    ///
-    /// # Safety
-    ///
-    /// - Must be valid pointer
-    unsafe fn new(this: *mut RawBootServices) -> Self {
-        Self {
-            table: this,
-            phantom: PhantomData,
-        }
-    }
+    //
 }
 
 /// Type marker for [`SystemTable`] representing before ExitBootServices is
