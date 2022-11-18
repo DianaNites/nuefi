@@ -23,11 +23,41 @@ const NEXT_BIT: usize = 1 << (STATUS_BITS - 2);
 pub struct EfiStatus(usize);
 
 impl EfiStatus {
+    ///
+    #[inline]
+    pub fn is_warning(self) -> bool {
+        self.0 != 0 && self.0 & ERROR_BIT == 0
+    }
+
+    ///
+    #[inline]
+    pub fn is_error(self) -> bool {
+        self.0 & ERROR_BIT != 0
+    }
+
+    ///
+    #[inline]
+    pub fn is_efi(self) -> bool {
+        self.0 & ERROR_BIT != 0 && self.0 & NEXT_BIT == 0
+    }
+
+    ///
+    #[inline]
+    pub fn is_oem(self) -> bool {
+        self.0 & NEXT_BIT != 0
+    }
+}
+
+impl EfiStatus {
     pub const SUCCESS: Self = Self(0);
+
+    pub const WARN_UNKNOWN_GLYPH: Self = Self(1);
 
     pub const INVALID_PARAMETER: Self = Self(ERROR_BIT | 2);
 
     pub const UNSUPPORTED: Self = Self(ERROR_BIT | 2);
+
+    pub const DEVICE_ERROR: Self = Self(ERROR_BIT | 7);
 
     pub const CRC_ERROR: Self = Self(ERROR_BIT | 27);
 }
@@ -48,30 +78,6 @@ impl UefiError {
     pub fn status(self) -> EfiStatus {
         self.inner
     }
-
-    ///
-    #[inline]
-    pub fn is_warning(self) -> bool {
-        self.inner.0 != 0 && self.inner.0 & ERROR_BIT == 0
-    }
-
-    ///
-    #[inline]
-    pub fn is_error(self) -> bool {
-        self.inner.0 & ERROR_BIT != 0
-    }
-
-    ///
-    #[inline]
-    pub fn is_efi(self) -> bool {
-        self.inner.0 & ERROR_BIT != 0 && self.inner.0 & NEXT_BIT == 0
-    }
-
-    ///
-    #[inline]
-    pub fn is_oem(self) -> bool {
-        self.inner.0 & NEXT_BIT != 0
-    }
 }
 
 impl From<EfiStatus> for Result<()> {
@@ -81,5 +87,19 @@ impl From<EfiStatus> for Result<()> {
         } else {
             Err(UefiError::new(value))
         }
+    }
+}
+
+#[cfg(no)]
+impl From<EfiStatus> for UefiError {
+    fn from(value: EfiStatus) -> Self {
+        UefiError::new(value)
+    }
+}
+
+/// All [`core::fmt::Write`] failures are treated as [`EfiStatus::DEVICE_ERROR`]
+impl From<core::fmt::Error> for UefiError {
+    fn from(_: core::fmt::Error) -> Self {
+        UefiError::new(EfiStatus::DEVICE_ERROR)
     }
 }

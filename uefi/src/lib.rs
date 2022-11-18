@@ -9,33 +9,24 @@ use core::{
 };
 
 use error::EfiStatus;
+pub use table::SystemTable;
 
 pub mod error;
 pub mod proto;
 pub mod table;
+mod util;
 
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
 
-#[repr(transparent)]
-pub struct SystemTable(*mut table::SystemTable);
-
-#[repr(transparent)]
-pub struct BootServices(*mut table::BootServices);
-
-impl SystemTable {
-    pub fn boot(&mut self) {
-        // let x = &(*self.0);
-        // unsafe { BootServices() }
-        todo!()
-    }
-}
-
 pub type MainCheck = fn(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
 
 #[no_mangle]
-extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut table::SystemTable) -> EfiStatus {
+extern "efiapi" fn efi_main(
+    image: EfiHandle,
+    system_table: *mut table::RawSystemTable,
+) -> EfiStatus {
     extern "Rust" {
         fn main(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
     }
@@ -43,7 +34,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut table::SystemTa
         return EfiStatus::INVALID_PARAMETER;
     }
     // SAFETY: Pointer is valid from firmware
-    let valid = unsafe { table::SystemTable::validate(system_table) };
+    let valid = unsafe { table::RawSystemTable::validate(system_table) };
     if let Err(e) = valid {
         return e.status();
     }
@@ -52,7 +43,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut table::SystemTa
     // Safety: Must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.
-    let ret = unsafe { main(image, SystemTable(system_table)) };
+    let ret = unsafe { main(image, SystemTable::new(system_table)) };
     match ret {
         Ok(_) => EfiStatus::SUCCESS,
         Err(e) => e.status(),

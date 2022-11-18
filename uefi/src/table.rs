@@ -1,10 +1,10 @@
 //! UEFI Tables
 
-use core::mem::size_of;
+use core::{marker::PhantomData, mem::size_of};
 
 use crate::{
     error::{EfiStatus, Result},
-    proto::{SimpleTextInput, SimpleTextOutput},
+    proto::{self, RawSimpleTextOutput, SimpleTextInput, SimpleTextOutput},
     EfiHandle,
 };
 
@@ -94,7 +94,7 @@ impl Header {
 /// After a call to ExitBootServices, some parts of this may become invalid.
 #[derive(Debug)]
 #[repr(C)]
-pub struct SystemTable {
+pub struct RawSystemTable {
     /// Table header, always valid
     header: Header,
 
@@ -118,19 +118,19 @@ pub struct SystemTable {
     console_out_handle: EfiHandle,
 
     ///
-    con_out: *mut SimpleTextOutput,
+    con_out: *mut RawSimpleTextOutput,
 
     ///
     standard_error_handle: EfiHandle,
 
     ///
-    std_err: *mut SimpleTextOutput,
+    std_err: *mut RawSimpleTextOutput,
 
     /// Runtime services table, always valid
-    runtime_services: *mut RuntimeServices,
+    runtime_services: *mut RawRuntimeServices,
 
     /// Boot services table
-    boot_services: *mut BootServices,
+    boot_services: *mut RawBootServices,
 
     /// Number of entries, always valid
     number_of_table_entries: usize,
@@ -139,7 +139,7 @@ pub struct SystemTable {
     configuration_table: Void, // EFI_CONFIGURATION_TABLE
 }
 
-impl SystemTable {
+impl RawSystemTable {
     const SIGNATURE: u64 = 0x5453595320494249;
 
     /// Validate the table
@@ -155,10 +155,13 @@ impl SystemTable {
         // Safety: Pointer to first C struct member
         Header::validate(this as *mut Header, Self::SIGNATURE)?;
         let header = &(*this);
-        Header::validate(header.boot_services as *mut Header, BootServices::SIGNATURE)?;
+        Header::validate(
+            header.boot_services as *mut Header,
+            RawBootServices::SIGNATURE,
+        )?;
         Header::validate(
             header.runtime_services as *mut Header,
-            RuntimeServices::SIGNATURE,
+            RawRuntimeServices::SIGNATURE,
         )?;
         Ok(())
     }
@@ -166,22 +169,88 @@ impl SystemTable {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct BootServices {
+pub struct RawBootServices {
     /// Table header
     header: Header,
 }
 
-impl BootServices {
+impl RawBootServices {
     const SIGNATURE: u64 = 0x56524553544f4f42;
 }
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct RuntimeServices {
+pub struct RawRuntimeServices {
     /// Table header
     header: Header,
 }
 
-impl RuntimeServices {
+impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
+}
+
+/// The UEFI Boot services
+#[repr(transparent)]
+pub struct BootServices<'table> {
+    /// Lifetime conceptually tied to [`SystemTable`],
+    /// ends when ExitBootServices is called.
+    table: *mut RawBootServices,
+    phantom: PhantomData<&'table mut RawBootServices>,
+}
+
+impl<'table> BootServices<'table> {
+    /// Create new BootServices
+    ///
+    /// # Safety
+    ///
+    /// - Must be valid pointer
+    unsafe fn new(this: *mut RawBootServices) -> Self {
+        Self {
+            table: this,
+            phantom: PhantomData,
+        }
+    }
+}
+
+/// The UEFI System table
+///
+/// This is your entry-point to using UEFI and all its services
+#[repr(transparent)]
+pub struct SystemTable {
+    /// Pointer to the table.
+    ///
+    /// Conceptually, this is static, it will be alive for the life of the
+    /// program.
+    ///
+    /// That said, it would be problematic if this was a static reference,
+    /// because it can change out from under us, such as when ExitBootServices
+    /// is called.
+    table: *mut RawSystemTable,
+}
+
+impl SystemTable {
+    /// Create new SystemTable
+    ///
+    /// # Safety
+    ///
+    /// - Must be valid pointer
+    pub(crate) unsafe fn new(this: *mut RawSystemTable) -> Self {
+        Self {
+            table: unsafe { &mut (*this) },
+        }
+    }
+
+    pub fn stdout(&self) -> SimpleTextOutput<'_> {
+        // let con = (*self.table).con_out;
+        // unsafe { &*con }
+        unsafe { SimpleTextOutput::new((*self.table).con_out) }
+    }
+
+    pub fn boot(&self) -> BootServices<'_> {
+        // let boot = &(*self.0.boot_services);
+        // let x = &(*self.0);
+        // unsafe { BootServices() }
+        unsafe { BootServices::new((*self.table).boot_services) }
+        // todo!()
+    }
 }
