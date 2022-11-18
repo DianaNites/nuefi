@@ -29,7 +29,7 @@ pub type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::R
 /// entry-point
 ///
 /// This does some basic initial setup, preparing the user entry point from the
-/// UEFI one, validating tables, handling mains return value.
+/// UEFI one, validating tables, handling `main`s return value.
 #[no_mangle]
 extern "efiapi" fn efi_main(
     image: EfiHandle,
