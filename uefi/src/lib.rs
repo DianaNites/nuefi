@@ -11,6 +11,7 @@ use core::{
 use error::EfiStatus;
 
 pub mod error;
+pub mod proto;
 pub mod table;
 
 #[derive(Debug)]
@@ -18,14 +19,25 @@ pub mod table;
 pub struct EfiHandle(*mut c_void);
 
 #[repr(transparent)]
-struct SystemTable(*mut c_void);
+pub struct SystemTable(*mut table::SystemTable);
 
-pub type MainCheck = fn() -> EfiStatus;
+#[repr(transparent)]
+pub struct BootServices(*mut table::BootServices);
+
+impl SystemTable {
+    pub fn boot(&mut self) {
+        // let x = &(*self.0);
+        // unsafe { BootServices() }
+        todo!()
+    }
+}
+
+pub type MainCheck = fn(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
 
 #[no_mangle]
 extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut table::SystemTable) -> EfiStatus {
     extern "Rust" {
-        fn main() -> EfiStatus;
+        fn main(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
     }
     if image.0.is_null() || system_table.is_null() {
         return EfiStatus::INVALID_PARAMETER;
@@ -40,8 +52,11 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut table::SystemTa
     // Safety: Must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.
-    let ret = unsafe { main() };
-    ret
+    let ret = unsafe { main(image, SystemTable(system_table)) };
+    match ret {
+        Ok(_) => EfiStatus::SUCCESS,
+        Err(e) => e.status(),
+    }
 }
 
 #[panic_handler]

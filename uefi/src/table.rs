@@ -4,6 +4,7 @@ use core::mem::size_of;
 
 use crate::{
     error::{EfiStatus, Result},
+    proto::{SimpleTextInput, SimpleTextOutput},
     EfiHandle,
 };
 
@@ -111,19 +112,19 @@ pub struct SystemTable {
     console_in_handle: EfiHandle,
 
     ///
-    con_in: Void, // EFI_SIMPLE_TEXT_INPUT_PROTOCOL
+    con_in: *mut SimpleTextInput,
 
     ///
     console_out_handle: EfiHandle,
 
     ///
-    con_out: Void, // EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
+    con_out: *mut SimpleTextOutput,
 
     ///
     standard_error_handle: EfiHandle,
 
     ///
-    std_err: Void, // EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
+    std_err: *mut SimpleTextOutput,
 
     /// Runtime services table, always valid
     runtime_services: *mut RuntimeServices,
