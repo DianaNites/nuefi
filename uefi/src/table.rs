@@ -212,11 +212,20 @@ impl<'table> BootServices<'table> {
     }
 }
 
+/// Type marker for [`SystemTable`] representing before ExitBootServices is
+/// called
+pub struct Boot;
+
+/// Type marker for [`SystemTable`] representing after ExitBootServices is
+/// called
+pub struct Runtime;
+
 /// The UEFI System table
 ///
 /// This is your entry-point to using UEFI and all its services
+#[derive(Debug, Clone)]
 #[repr(transparent)]
-pub struct SystemTable {
+pub struct SystemTable<State> {
     /// Pointer to the table.
     ///
     /// Conceptually, this is static, it will be alive for the life of the
@@ -226,9 +235,11 @@ pub struct SystemTable {
     /// because it can change out from under us, such as when ExitBootServices
     /// is called.
     table: *mut RawSystemTable,
+
+    phantom: PhantomData<State>,
 }
 
-impl SystemTable {
+impl SystemTable<Boot> {
     /// Create new SystemTable
     ///
     /// # Safety
@@ -236,21 +247,24 @@ impl SystemTable {
     /// - Must be valid pointer
     pub(crate) unsafe fn new(this: *mut RawSystemTable) -> Self {
         Self {
-            table: unsafe { &mut (*this) },
+            table: this,
+            phantom: PhantomData,
         }
     }
 
-    pub fn stdout(&self) -> SimpleTextOutput<'_> {
-        // let con = (*self.table).con_out;
-        // unsafe { &*con }
-        unsafe { SimpleTextOutput::new((*self.table).con_out) }
+    fn table(&self) -> &RawSystemTable {
+        unsafe { &*self.table }
     }
 
-    pub fn boot(&self) -> BootServices<'_> {
-        // let boot = &(*self.0.boot_services);
-        // let x = &(*self.0);
-        // unsafe { BootServices() }
-        unsafe { BootServices::new((*self.table).boot_services) }
-        // todo!()
+    pub fn stdout(&self) -> SimpleTextOutput<'_> {
+        unsafe { SimpleTextOutput::new(self.table().con_out) }
+    }
+
+    pub fn boot(&self) -> Option<BootServices<'_>> {
+        if !self.table().boot_services.is_null() {
+            Some(unsafe { BootServices::new(self.table().boot_services) })
+        } else {
+            None
+        }
     }
 }

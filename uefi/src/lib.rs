@@ -9,6 +9,7 @@ use core::{
 };
 
 use error::EfiStatus;
+use table::Boot;
 pub use table::SystemTable;
 
 pub mod error;
@@ -20,15 +21,22 @@ mod util;
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
 
-pub type MainCheck = fn(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
+pub type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
 
+/// UEFI Entry point
+///
+/// Uses a user-provided main function of type [`MainCheck`] as the library
+/// entry-point
+///
+/// This does some basic initial setup, preparing the user entry point from the
+/// UEFI one, validating tables, handling mains return value.
 #[no_mangle]
 extern "efiapi" fn efi_main(
     image: EfiHandle,
     system_table: *mut table::RawSystemTable,
 ) -> EfiStatus {
     extern "Rust" {
-        fn main(handle: EfiHandle, table: SystemTable) -> error::Result<()>;
+        fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
     }
     if image.0.is_null() || system_table.is_null() {
         return EfiStatus::INVALID_PARAMETER;
@@ -38,11 +46,11 @@ extern "efiapi" fn efi_main(
     if let Err(e) = valid {
         return e.status();
     }
-    // Safety: non-null, valid from firmware.
-    // let table = unsafe { &*system_table };
-    // Safety: Must exist or won't link.
+    // Safety: Main must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.
+    //
+    // system_table is non-null, valid from firmware.
     let ret = unsafe { main(image, SystemTable::new(system_table)) };
     match ret {
         Ok(_) => EfiStatus::SUCCESS,

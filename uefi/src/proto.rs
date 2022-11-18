@@ -3,6 +3,7 @@
 use core::{
     fmt::{self, Write},
     marker::PhantomData,
+    mem::MaybeUninit,
 };
 
 use crate::error::{EfiStatus, Result};
@@ -60,12 +61,10 @@ impl<'table> SimpleTextOutput<'table> {
     }
 
     pub fn output_string(&self, string: &str) -> Result<()> {
-        // string.encode_utf16()
-        // string.len()
         let out = unsafe { (*self.interface).output_string };
         let mut fin = EfiStatus::SUCCESS;
         // FIXME: Horribly inefficient
-        for char in string.encode_utf16() {
+        for (i, char) in string.encode_utf16().enumerate() {
             let buf = [char, 0];
             let ret = unsafe { out(self.interface, buf.as_ptr()) };
             if ret.is_error() {
@@ -79,8 +78,21 @@ impl<'table> SimpleTextOutput<'table> {
     }
 }
 
+/// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
+///
+/// Warnings are ignored. Ending Newlines are turned into \n\r.
+/// Interior newlines are not, yet.
 impl<'t> Write for SimpleTextOutput<'t> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.output_string(s).map_err(|_| fmt::Error)
+        let ret = match self.output_string(s) {
+            Ok(()) => Ok(()),
+            Err(e) if e.status().is_warning() => Ok(()),
+            Err(_) => Err(fmt::Error),
+        };
+        if s.ends_with('\n') {
+            ret.and_then(|_| self.output_string("\r").map_err(|_| fmt::Error))
+        } else {
+            ret
+        }
     }
 }
