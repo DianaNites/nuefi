@@ -13,6 +13,8 @@ use crate::{
 
 type Void = *mut [u8; 0];
 
+type Str16 = *const u16;
+
 #[derive(Debug)]
 #[repr(C)]
 pub struct RawSimpleTextInput {
@@ -21,20 +23,37 @@ pub struct RawSimpleTextInput {
 
 interface!(SimpleTextInput(RawSimpleTextInput));
 
+#[derive(Debug)]
+#[repr(C)]
+struct RawMode {
+    max_mode: i32,
+    mode: i32,
+    attribute: i32,
+    cursor_column: i32,
+    cursor_row: i32,
+    cursor_visible: bool,
+}
+
+// TODO: Report bug to upstream Rust that derive(Debug) doesn't work for efiapi
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawSimpleTextOutput {
-    reset: *mut Void, // EFI_TEXT_RESET,
-    // output_string: *mut Void,       // EFI_TEXT_STRING,
-    output_string: unsafe extern "efiapi" fn(this: *mut Self, string: *const u16) -> EfiStatus, /* EFI_TEXT_STRING, */
-    test_string: *mut Void,         // EFI_TEXT_TEST_STRING,
-    query_mode: *mut Void,          // EFI_TEXT_QUERY_MODE,
-    set_mode: *mut Void,            // EFI_TEXT_SET_MODE,
-    set_attribute: *mut Void,       // EFI_TEXT_SET_ATTRIBUTE,
-    clear_screen: *mut Void,        // EFI_TEXT_CLEAR_SCREEN,
-    set_cursor_position: *mut Void, // EFI_TEXT_SET_CURSOR_POSITION,
-    enable_cursor: *mut Void,       // EFI_TEXT_ENABLE_CURSOR,
-    mode: *mut Void,                // SIMPLE_TEXT_OUTPUT_MODE,
+    reset: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
+    output_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
+    test_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
+    query_mode: unsafe extern "efiapi" fn(
+        this: *mut Self,
+        mode: usize,
+        cols: *mut usize,
+        rows: *mut usize,
+    ) -> EfiStatus,
+    set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus,
+    set_attribute: unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> EfiStatus,
+    clear_screen: unsafe extern "efiapi" fn(this: *mut Self) -> EfiStatus,
+    set_cursor_position:
+        unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus,
+    enable_cursor: unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus,
+    mode: *mut RawMode,
 }
 
 impl RawSimpleTextOutput {
@@ -62,6 +81,28 @@ impl<'table> SimpleTextOutput<'table> {
             }
         }
         fin.into()
+    }
+
+    /// Reset the device associated with this protocol
+    ///
+    /// Clears the screen, resets cursor position.
+    pub fn reset(&self) -> Result<()> {
+        unsafe { (self.interface().reset)(self.interface, false) }.into()
+    }
+
+    /// Clears the screen, resets cursor position.
+    pub fn clear(&self) -> Result<()> {
+        unsafe { (self.interface().clear_screen)(self.interface) }.into()
+    }
+
+    /// Enables the cursor
+    pub fn enable_cursor(&self) -> Result<()> {
+        unsafe { (self.interface().enable_cursor)(self.interface, true) }.into()
+    }
+
+    /// Disables the cursor
+    pub fn disable_cursor(&self) -> Result<()> {
+        unsafe { (self.interface().enable_cursor)(self.interface, false) }.into()
     }
 }
 
