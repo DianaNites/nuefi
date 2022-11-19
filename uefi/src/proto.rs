@@ -13,7 +13,7 @@ use crate::{
 
 type Void = *mut [u8; 0];
 
-type Str16 = *const u16;
+pub type Str16 = *const u16;
 
 #[derive(Debug)]
 #[repr(C)]

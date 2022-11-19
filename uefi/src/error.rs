@@ -59,6 +59,8 @@ impl EfiStatus {
 
     pub const DEVICE_ERROR: Self = Self(ERROR_BIT | 7);
 
+    pub const ABORTED: Self = Self(ERROR_BIT | 21);
+
     pub const CRC_ERROR: Self = Self(ERROR_BIT | 27);
 }
 

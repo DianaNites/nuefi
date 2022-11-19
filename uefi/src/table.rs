@@ -168,7 +168,7 @@ impl RawSystemTable {
     }
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 #[repr(C)]
 pub struct RawBootServices {
     /// Table header
@@ -207,7 +207,12 @@ pub struct RawBootServices {
     // Images
     load_image: Void,
     start_image: Void,
-    exit: Void,
+    exit: unsafe extern "efiapi" fn(
+        handle: EfiHandle,
+        status: EfiStatus,
+        data_size: usize,
+        data: proto::Str16,
+    ) -> EfiStatus,
     unload_image: Void,
     exit_boot_services: Void,
 
@@ -264,7 +269,10 @@ interface!(
 );
 
 impl<'table> BootServices<'table> {
-    //
+    /// Exit the image represented by `handle` with `status`
+    pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
+        unsafe { (self.interface().exit)(handle, status, 0, core::ptr::null_mut()) }.into()
+    }
 }
 
 /// Type marker for [`SystemTable`] representing before ExitBootServices is
@@ -274,6 +282,9 @@ pub struct Boot;
 /// Type marker for [`SystemTable`] representing after ExitBootServices is
 /// called
 pub struct Runtime;
+
+/// Internal state for global handling code
+pub(crate) struct Internal;
 
 /// The UEFI System table
 ///
@@ -296,7 +307,7 @@ pub struct SystemTable<State> {
     phantom: PhantomData<*const State>,
 }
 
-impl SystemTable<Boot> {
+impl<T> SystemTable<T> {
     /// Create new SystemTable
     ///
     /// # Safety
@@ -312,7 +323,25 @@ impl SystemTable<Boot> {
     fn table(&self) -> &RawSystemTable {
         unsafe { &*self.table }
     }
+}
 
+impl SystemTable<Internal> {
+    /// Get the SystemTable if still in boot mode.
+    ///
+    /// This is used by the logging, panic, and alloc error handlers
+    ///
+    /// If ExitBootServices has NOT been called,
+    /// return [`SystemTable<Boot>`], otherwise [`None`]
+    pub(crate) fn as_boot(&self) -> Option<SystemTable<Boot>> {
+        if !self.table().boot_services.is_null() {
+            Some(unsafe { SystemTable::new(self.table) })
+        } else {
+            None
+        }
+    }
+}
+
+impl SystemTable<Boot> {
     /// String identifying the vendor
     pub fn firmware_vendor(&self) -> &str {
         ""
@@ -342,11 +371,8 @@ impl SystemTable<Boot> {
         unsafe { SimpleTextOutput::new(self.table().std_err) }
     }
 
-    pub fn boot(&self) -> Option<BootServices<'_>> {
-        if !self.table().boot_services.is_null() {
-            Some(unsafe { BootServices::new(self.table().boot_services) })
-        } else {
-            None
-        }
+    /// Reference to the UEFI Boot services.
+    pub fn boot(&self) -> BootServices<'_> {
+        unsafe { BootServices::new(self.table().boot_services) }
     }
 }
