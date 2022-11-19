@@ -10,8 +10,10 @@ use core::{
 };
 
 use error::EfiStatus;
+use log::{info, Level, LevelFilter, Metadata, Record};
 use table::Boot;
-pub use table::SystemTable;
+
+pub use crate::table::SystemTable;
 
 pub mod error;
 pub mod proto;
@@ -24,8 +26,41 @@ static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
+static LOGGER: UefiLogger = UefiLogger::new();
+
 struct UefiLogger {
     //
+}
+
+impl UefiLogger {
+    const fn new() -> Self {
+        Self {}
+    }
+
+    fn init() {
+        // This cannot error, because we set it before user code is called.
+        let _ = log::set_logger(&LOGGER);
+        log::set_max_level(LevelFilter::Trace);
+    }
+}
+
+impl log::Log for UefiLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        let target = metadata.target();
+        //&& metadata.level() <= Level::Info
+        (target == "uefi_stub" || target == "uefi") || false
+    }
+
+    fn log(&self, record: &Record) {
+        if let Some(table) = get_boot_table() {
+            if self.enabled(record.metadata()) {
+                let mut stdout = table.stdout();
+                let _ = writeln!(stdout, "{} - {}", record.level(), record.args());
+            }
+        }
+    }
+
+    fn flush(&self) {}
 }
 
 #[derive(Debug)]
@@ -33,6 +68,19 @@ struct UefiLogger {
 pub struct EfiHandle(*mut c_void);
 
 pub type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
+
+/// Get the global [`SystemTable<Boot>`], if available
+fn get_boot_table() -> Option<SystemTable<Boot>> {
+    let table = TABLE.load(Ordering::Acquire);
+    if table.is_null() {
+        return None;
+    }
+    // Safety:
+    // - Table is not null
+    // - Table must be valid or else this code could not be running
+    let table: SystemTable<table::Internal> = unsafe { SystemTable::new(table) };
+    table.as_boot()
+}
 
 /// UEFI Entry point
 ///
@@ -59,12 +107,15 @@ extern "efiapi" fn efi_main(
     }
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
+    UefiLogger::init();
+    info!("UEFI crate initialized");
     // Safety: Main must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.
     //
     // system_table is non-null, valid from firmware.
     let ret = unsafe { main(image, SystemTable::new(system_table)) };
+    info!("Returned from user main with status {ret:?}");
     match ret {
         Ok(_) => EfiStatus::SUCCESS,
         Err(e) => e.status(),
@@ -73,32 +124,26 @@ extern "efiapi" fn efi_main(
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    let table = TABLE.load(Ordering::Acquire);
-    if !table.is_null() {
+    if let Some(table) = get_boot_table() {
         let handle_p = HANDLE.load(Ordering::Relaxed);
         let handle = EfiHandle(handle_p);
-        // Safety:
-        // Handle is not null
-        // handle must be valid or else this code could not be running
-        let table: SystemTable<table::Internal> = unsafe { SystemTable::new(table) };
-        if let Some(table) = table.as_boot() {
-            let mut stdout = table.stdout();
-            let _ = writeln!(stdout, "{info}");
-            let boot = table.boot();
 
-            #[cfg(no)]
-            #[cfg(not(debug_assertions))]
-            {
-                // Just in case?
-                if !handle.0.is_null() {
-                    let _ = boot.exit(handle, EfiStatus::ABORTED);
-                }
-                let _ = writeln!(
+        let mut stdout = table.stdout();
+        let _ = writeln!(stdout, "{info}");
+        let boot = table.boot();
+
+        #[cfg(no)]
+        #[cfg(not(debug_assertions))]
+        {
+            // Just in case?
+            if !handle.0.is_null() {
+                let _ = boot.exit(handle, EfiStatus::ABORTED);
+            }
+            let _ = writeln!(
                 stdout,
                 "Failed to abort on panic. Call to `BootServices::Exit` failed. Handle was {:p}",
                 handle_p
             );
-            }
         }
     }
     // Uselessly loop if we cant do anything else.
