@@ -321,6 +321,12 @@ impl<T> SystemTable<T> {
     }
 
     fn table(&self) -> &RawSystemTable {
+        // Safety:
+        // - Never null
+        // - Pointer will always be valid in the `Boot` state
+        // In the `Runtime` state it becomes the users responsibility?
+        // Or out of scope since it depends on CPU execution environment?
+        // Specifics figured out later
         unsafe { &*self.table }
     }
 }
@@ -334,6 +340,8 @@ impl SystemTable<Internal> {
     /// return [`SystemTable<Boot>`], otherwise [`None`]
     pub(crate) fn as_boot(&self) -> Option<SystemTable<Boot>> {
         if !self.table().boot_services.is_null() {
+            // Safety
+            // - Above check verifies ExitBootServices has not been called.
             Some(unsafe { SystemTable::new(self.table) })
         } else {
             None
