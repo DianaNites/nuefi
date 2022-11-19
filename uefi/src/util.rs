@@ -26,7 +26,7 @@ macro_rules! interface {
                 ///
                 /// # Safety
                 ///
-                /// - `interface` must be a valid pointer
+                /// - `interface` must be a valid non-null pointer
                 pub(crate) unsafe fn new(interface: *mut $in) -> Self {
                     Self {
                         interface,

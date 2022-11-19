@@ -173,6 +173,72 @@ impl RawSystemTable {
 pub struct RawBootServices {
     /// Table header
     header: Header,
+
+    // Task priority
+    raise_tpl: Void,
+    restore_tpl: Void,
+
+    // Memory
+    allocate_pages: Void,
+    free_pages: Void,
+    get_memory_map: Void,
+    allocate_pool: Void,
+    free_pool: Void,
+
+    // Timers/Events
+    create_event: Void,
+    set_timer: Void,
+    wait_for_event: Void,
+    signal_event: Void,
+    close_event: Void,
+    check_event: Void,
+
+    // Protocols
+    install_protocol_interface: Void,
+    reinstall_protocol_interface: Void,
+    uninstall_protocol_interface: Void,
+    handle_protocol: Void,
+    reserved: Void,
+    register_protocol_notify: Void,
+    locate_handle: Void,
+    locate_device_path: Void,
+    install_configuration_table: Void,
+
+    // Images
+    load_image: Void,
+    start_image: Void,
+    exit: Void,
+    unload_image: Void,
+    exit_boot_services: Void,
+
+    // Misc
+    get_next_monotonic_count: Void,
+    stall: Void,
+    set_watchdog_timer: Void,
+
+    // Drivers
+    connect_controller: Void,
+    disconnect_controller: Void,
+
+    // Protocols again
+    open_protocol: Void,
+    close_protocol: Void,
+    open_protocol_information: Void,
+
+    // Library?
+    protocols_per_handle: Void,
+    locate_handle_buffer: Void,
+    locate_protocol: Void,
+    install_multiple_protocol_interfaces: Void,
+    uninstall_multiple_protocol_interfaces: Void,
+
+    // Useless CRC
+    calculate_crc32: Void,
+
+    // Misc again
+    copy_mem: Void,
+    set_mem: Void,
+    create_event_ex: Void,
 }
 
 impl RawBootServices {
@@ -235,7 +301,7 @@ impl SystemTable<Boot> {
     ///
     /// # Safety
     ///
-    /// - Must be valid pointer
+    /// - Must be valid non-null pointer
     pub(crate) unsafe fn new(this: *mut RawSystemTable) -> Self {
         Self {
             table: this,

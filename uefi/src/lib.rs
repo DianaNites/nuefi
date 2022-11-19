@@ -2,10 +2,11 @@
 #![no_std]
 #![feature(abi_efiapi, alloc_error_handler)]
 use core::{
+    arch::asm,
     ffi::c_void,
     fmt::{self, Write},
     panic::PanicInfo,
-    sync::atomic::Ordering,
+    sync::atomic::{AtomicPtr, Ordering},
 };
 
 use error::EfiStatus;
@@ -16,6 +17,8 @@ pub mod error;
 pub mod proto;
 pub mod table;
 mod util;
+
+static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
 
 #[derive(Debug)]
 #[repr(transparent)]
@@ -46,6 +49,10 @@ extern "efiapi" fn efi_main(
     if let Err(e) = valid {
         return e.status();
     }
+    TABLE.store(system_table, Ordering::Release);
+    if true {
+        panic!();
+    }
     // Safety: Main must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.
@@ -60,6 +67,15 @@ extern "efiapi" fn efi_main(
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    let table = TABLE.load(Ordering::Acquire);
+    if !table.is_null() {
+        let table = unsafe { SystemTable::new(table) };
+        let mut stdout = table.stdout();
+        let _ = writeln!(stdout, "{info}");
+        if let Some(boot) = table.boot() {
+            //
+        }
+    }
     loop {}
 }
 
