@@ -15,7 +15,7 @@ use table::Boot;
 pub use crate::table::SystemTable;
 
 pub mod error;
-mod logger;
+pub mod logger;
 pub mod proto;
 pub mod table;
 mod util;
@@ -70,11 +70,6 @@ extern "efiapi" fn efi_main(
     }
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
-    logger::UefiLogger::init();
-    info!("UEFI crate initialized");
-    info!("Starting main function");
-    info!("efi_main loaded at: {:p}", efi_main as *const u8);
-    info!("user main loaded at: {:p}", main as *const u8);
     // Safety: Main must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.

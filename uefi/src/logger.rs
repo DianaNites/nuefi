@@ -1,37 +1,62 @@
 //! Logging helpers for UEFI
 use core::fmt::Write;
 
-use log::{Metadata, Record};
+use log::{Log, Metadata, Record};
 
 use crate::get_boot_table;
-
-static LOGGER: UefiLogger = UefiLogger::new();
 
 /// UEFI Logger
 ///
 /// This logs to the UEFI `stdout`,
 /// if ExitBootServices has not been called, otherwise it does nothing.
+///
+/// This filters out logs from crates other than this one
+/// or the provided `target` in [`UefiLogger::new`]
 pub struct UefiLogger {
-    //
+    targets: Option<&'static [&'static str]>,
 }
 
 impl UefiLogger {
-    const fn new() -> Self {
-        Self {}
+    /// Create a new [UefiLogger]
+    ///
+    /// Filters out logs from crates that are not in `targets`.
+    ///
+    /// Note that if this is empty then all logs will be filtered.
+    ///
+    /// You will need to include your own crates name.
+    pub const fn new(targets: &'static [&'static str]) -> Self {
+        Self {
+            targets: Some(targets),
+        }
     }
 
-    pub(crate) fn init() {
-        // This cannot error, because we set it before user code is called.
-        let _ = log::set_logger(&LOGGER);
-        log::set_max_level(log::STATIC_MAX_LEVEL);
+    /// Like [`UefiLogger::new`], but filters nothing, allowing all logs
+    /// through.
+    pub const fn all() -> Self {
+        Self { targets: None }
+    }
+
+    /// Initialize the logger with [log]
+    ///
+    /// This will set the max log level to [`log::STATIC_MAX_LEVEL`]
+    ///
+    /// Calling this more than once has no effect, including on the max level.
+    pub fn init(logger: &'static dyn Log) {
+        if log::set_logger(logger).is_ok() {
+            log::set_max_level(log::STATIC_MAX_LEVEL);
+        }
     }
 }
 
-impl log::Log for UefiLogger {
+impl Log for UefiLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         let target = metadata.target();
         //&& metadata.level() <= Level::Info
-        target == "uefi_stub" || target == "uefi"
+        if let Some(targets) = self.targets {
+            targets.contains(&target)
+        } else {
+            true
+        }
     }
 
     fn log(&self, record: &Record) {
