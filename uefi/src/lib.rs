@@ -2,20 +2,20 @@
 #![no_std]
 #![feature(abi_efiapi, alloc_error_handler)]
 use core::{
-    arch::asm,
     ffi::c_void,
-    fmt::{self, Write},
+    fmt::Write,
     panic::PanicInfo,
     sync::atomic::{AtomicPtr, Ordering},
 };
 
 use error::EfiStatus;
-use log::{info, Level, LevelFilter, Metadata, Record};
+use log::info;
 use table::Boot;
 
 pub use crate::table::SystemTable;
 
 pub mod error;
+mod logger;
 pub mod proto;
 pub mod table;
 mod util;
@@ -25,49 +25,6 @@ static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_
 
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
-
-static LOGGER: UefiLogger = UefiLogger::new();
-
-struct UefiLogger {
-    //
-}
-
-impl UefiLogger {
-    const fn new() -> Self {
-        Self {}
-    }
-
-    fn init() {
-        // This cannot error, because we set it before user code is called.
-        let _ = log::set_logger(&LOGGER);
-        log::set_max_level(log::STATIC_MAX_LEVEL);
-    }
-}
-
-impl log::Log for UefiLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        let target = metadata.target();
-        //&& metadata.level() <= Level::Info
-        target == "uefi_stub" || target == "uefi"
-    }
-
-    fn log(&self, record: &Record) {
-        if let Some(table) = get_boot_table() {
-            if self.enabled(record.metadata()) {
-                let mut stdout = table.stdout();
-                let _ = writeln!(
-                    stdout,
-                    "[{}] {} - {}",
-                    record.target(),
-                    record.level(),
-                    record.args()
-                );
-            }
-        }
-    }
-
-    fn flush(&self) {}
-}
 
 #[derive(Debug)]
 #[repr(transparent)]
@@ -113,7 +70,7 @@ extern "efiapi" fn efi_main(
     }
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
-    UefiLogger::init();
+    logger::UefiLogger::init();
     info!("UEFI crate initialized");
     info!("Starting main function");
     info!("efi_main loaded at: {:p}", efi_main as *const u8);
@@ -134,16 +91,15 @@ extern "efiapi" fn efi_main(
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     if let Some(table) = get_boot_table() {
-        let handle_p = HANDLE.load(Ordering::Relaxed);
-        let handle = EfiHandle(handle_p);
-
         let mut stdout = table.stdout();
         let _ = writeln!(stdout, "{info}");
-        let boot = table.boot();
 
         #[cfg(no)]
         #[cfg(not(debug_assertions))]
         {
+            let handle_p = HANDLE.load(Ordering::Relaxed);
+            let handle = EfiHandle(handle_p);
+            let boot = table.boot();
             // Just in case?
             if !handle.0.is_null() {
                 let _ = boot.exit(handle, EfiStatus::ABORTED);

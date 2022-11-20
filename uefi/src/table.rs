@@ -255,22 +255,9 @@ impl RawBootServices {
     const SIGNATURE: u64 = 0x56524553544f4f42;
 }
 
-#[derive(Debug)]
-#[repr(C)]
-pub struct RawRuntimeServices {
-    /// Table header
-    header: Header,
-}
-
-impl RawRuntimeServices {
-    const SIGNATURE: u64 = 0x56524553544e5552;
-}
-
 interface!(
-    /// The UEFI Boot services
+    /// The UEFI Boot Services
     BootServices(RawBootServices),
-    ///
-    RuntimeServices(RawRuntimeServices),
 );
 
 impl<'table> BootServices<'table> {
@@ -319,6 +306,22 @@ impl<'table> BootServices<'table> {
         unsafe { (self.interface().set_watchdog_timer)(secs, 0x10000, 0, null_mut()) }.into()
     }
 }
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct RawRuntimeServices {
+    /// Table header
+    header: Header,
+}
+
+impl RawRuntimeServices {
+    const SIGNATURE: u64 = 0x56524553544e5552;
+}
+
+interface!(
+    // /// The UEFI Runtime Services
+    // RuntimeServices(RawRuntimeServices),
+);
 
 /// Type marker for [`SystemTable`] representing before ExitBootServices is
 /// called

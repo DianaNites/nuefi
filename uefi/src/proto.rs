@@ -1,16 +1,13 @@
 //! Supported/known UEFI Protocols
 
-use core::{
-    fmt::{self, Write},
-    marker::PhantomData,
-    mem::MaybeUninit,
-};
+use core::fmt::{self, Write};
 
 use crate::{
     error::{EfiStatus, Result},
     util::interface,
 };
 
+#[allow(dead_code)]
 type Void = *mut [u8; 0];
 
 pub type Str16 = *const u16;
@@ -21,7 +18,7 @@ pub struct RawSimpleTextInput {
     //
 }
 
-interface!(SimpleTextInput(RawSimpleTextInput));
+// interface!(SimpleTextInput(RawSimpleTextInput));
 
 #[derive(Debug)]
 #[repr(C)]
@@ -70,7 +67,7 @@ impl<'table> SimpleTextOutput<'table> {
         let out = self.interface().output_string;
         let mut fin = EfiStatus::SUCCESS;
         // FIXME: Horribly inefficient
-        for (i, char) in string.encode_utf16().enumerate() {
+        for (_i, char) in string.encode_utf16().enumerate() {
             // for (i, char) in string.chars().enumerate() {
             // let char = if char.len_utf16();
             let buf = [char, 0];
