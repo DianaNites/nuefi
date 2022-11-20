@@ -1,9 +1,9 @@
 //! UEFI Tables
 
-use core::{marker::PhantomData, mem::size_of};
+use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
 
 use crate::{
-    error::{EfiStatus, Result},
+    error::{EfiStatus, Result, UefiError},
     proto::{self, RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
     util::interface,
     EfiHandle,
@@ -217,9 +217,14 @@ pub struct RawBootServices {
     exit_boot_services: Void,
 
     // Misc
-    get_next_monotonic_count: Void,
-    stall: Void,
-    set_watchdog_timer: Void,
+    get_next_monotonic_count: unsafe extern "efiapi" fn(count: *mut u64) -> EfiStatus,
+    stall: unsafe extern "efiapi" fn(microseconds: usize) -> EfiStatus,
+    set_watchdog_timer: unsafe extern "efiapi" fn(
+        timeout: usize,
+        code: u64,
+        data_size: usize,
+        data: proto::Str16,
+    ) -> EfiStatus,
 
     // Drivers
     connect_controller: Void,
@@ -271,7 +276,47 @@ interface!(
 impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`
     pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
-        unsafe { (self.interface().exit)(handle, status, 0, core::ptr::null_mut()) }.into()
+        unsafe { (self.interface().exit)(handle, status, 0, null_mut()) }.into()
+    }
+
+    /// Stall for [`Duration`]
+    ///
+    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
+    /// [usize]
+    pub fn stall(&self, dur: Duration) -> Result<()> {
+        let time = match dur
+            .as_micros()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        unsafe { (self.interface().stall)(time) }.into()
+    }
+
+    /// The next monotonic count
+    pub fn next_monotonic_count(&self) -> Result<u64> {
+        let mut out = 0;
+        let ret = unsafe { (self.interface().get_next_monotonic_count)(&mut out) };
+        if ret.is_success() {
+            return Ok(out);
+        }
+        Err(UefiError::new(ret))
+    }
+
+    /// Set the watchdog timer. [`None`] disables the timer.
+    pub fn set_watchdog(&self, timeout: Option<Duration>) -> Result<()> {
+        let timeout = timeout.unwrap_or_default();
+        let secs = match timeout
+            .as_secs()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        unsafe { (self.interface().set_watchdog_timer)(secs, 0x10000, 0, null_mut()) }.into()
     }
 }
 

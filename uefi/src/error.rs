@@ -25,6 +25,12 @@ pub struct EfiStatus(usize);
 impl EfiStatus {
     ///
     #[inline]
+    pub fn is_success(self) -> bool {
+        self == EfiStatus::SUCCESS
+    }
+
+    ///
+    #[inline]
     pub fn is_warning(self) -> bool {
         self.0 != 0 && self.0 & ERROR_BIT == 0
     }
@@ -72,7 +78,7 @@ pub struct UefiError {
 }
 
 impl UefiError {
-    fn new(inner: EfiStatus) -> Self {
+    pub(crate) fn new(inner: EfiStatus) -> Self {
         Self { inner }
     }
 
