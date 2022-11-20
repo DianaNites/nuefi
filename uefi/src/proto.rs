@@ -16,6 +16,8 @@ pub type Str16 = *const u16;
 
 /// Defines a UEFI Protocol
 ///
+/// # Safety
+///
 /// This trait is unsafe because an incorrect GUID will
 /// lead to type confusion and unsafety for both Rust and UEFI.
 pub unsafe trait Protocol {
