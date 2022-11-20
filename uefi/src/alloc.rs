@@ -149,7 +149,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
                 info!(
                     "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
                     ptr.add(offset),
-                    ptr as usize & ((offset) - 1) == 0
+                    ptr as usize & (offset.saturating_sub(1)) == 0
                 );
                 ptr.add(offset)
             } else {
