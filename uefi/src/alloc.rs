@@ -1,5 +1,5 @@
 use core::{
-    alloc::GlobalAlloc,
+    alloc::{GlobalAlloc, Layout},
     mem::{align_of, size_of},
     ptr::null_mut,
 };
@@ -7,6 +7,9 @@ use core::{
 use log::{error, info};
 
 use crate::get_boot_table;
+
+/// UEFI always aligns to 8.
+const POOL_ALIGN: usize = 8;
 
 /// UEFI Physical Address
 #[repr(transparent)]
@@ -102,6 +105,12 @@ struct Block {
     //
 }
 
+impl Block {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
 /// A UEFI memory allocator
 pub struct UefiAlloc {
     //
@@ -117,32 +126,60 @@ impl UefiAlloc {
 ///
 /// yes
 unsafe impl GlobalAlloc for UefiAlloc {
-    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         info!("UEFI allocating {layout:?}");
-        let size = layout.size();
+
         let align = layout.align();
-        if align > 8 {
-            return null_mut();
-        }
-        let align_mask_to_round_down = !(align - 1);
+        let size = layout.size();
+        let offset = if align > POOL_ALIGN {
+            let o = align - POOL_ALIGN;
+            info!(
+                "Allocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
+                o
+            );
+            o
+        } else {
+            0
+        };
+        let size = size + offset;
+
         if let Some(table) = get_boot_table() {
-            table
-                .boot()
-                .allocate_pool(MemoryType::LOADER_DATA, size)
-                .unwrap_or(null_mut())
+            let ret = table.boot().allocate_pool(MemoryType::LOADER_DATA, size);
+            if let Ok(ptr) = ret {
+                info!(
+                    "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
+                    ptr.add(offset),
+                    ptr as usize & ((offset) - 1) == 0
+                );
+                ptr.add(offset)
+            } else {
+                null_mut()
+            }
         } else {
             null_mut()
         }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         if ptr.is_null() {
             return;
         }
-        let size = layout.size();
         let align = layout.align();
-        let align_mask_to_round_down = !(align - 1);
+        let size = layout.size();
+        let offset = if align > POOL_ALIGN {
+            let o = align - POOL_ALIGN;
+            info!(
+                "Deallocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
+                o
+            );
+            o
+        } else {
+            0
+        };
+        let size = size + offset;
+
         if let Some(table) = get_boot_table() {
+            let ptr = ptr.sub(offset);
             let ret = table.boot().free_pool(ptr);
             if let Err(e) = ret {
                 error!("Error {e} while deallocating memory {ptr:p} with layout {layout:?}");
