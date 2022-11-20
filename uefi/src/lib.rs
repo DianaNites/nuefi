@@ -14,6 +14,7 @@ use table::Boot;
 
 pub use crate::table::SystemTable;
 
+pub mod alloc;
 pub mod error;
 pub mod logger;
 pub mod proto;

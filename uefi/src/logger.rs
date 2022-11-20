@@ -53,6 +53,9 @@ impl Log for UefiLogger {
         let target = metadata.target();
         //&& metadata.level() <= Level::Info
         if let Some(targets) = self.targets {
+            // FIXME: target is ACTUALLY in the form of crate or crate::module
+            // Target is a *path*.
+            // We want to filter on crate name
             targets.contains(&target)
         } else {
             true

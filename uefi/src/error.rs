@@ -61,7 +61,7 @@ impl EfiStatus {
 
     pub const INVALID_PARAMETER: Self = Self(ERROR_BIT | 2);
 
-    pub const UNSUPPORTED: Self = Self(ERROR_BIT | 2);
+    pub const UNSUPPORTED: Self = Self(ERROR_BIT | 3);
 
     pub const DEVICE_ERROR: Self = Self(ERROR_BIT | 7);
 
@@ -109,5 +109,20 @@ impl From<EfiStatus> for UefiError {
 impl From<core::fmt::Error> for UefiError {
     fn from(_: core::fmt::Error) -> Self {
         UefiError::new(EfiStatus::DEVICE_ERROR)
+    }
+}
+
+impl core::fmt::Display for UefiError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self.status() {
+            EfiStatus::SUCCESS => write!(f, "success"),
+            EfiStatus::WARN_UNKNOWN_GLYPH => write!(f, "unknown glyph"),
+            EfiStatus::INVALID_PARAMETER => write!(f, "invalid parameter"),
+            EfiStatus::UNSUPPORTED => write!(f, "unsupported"),
+            EfiStatus::DEVICE_ERROR => write!(f, "device error"),
+            EfiStatus::ABORTED => write!(f, "aborted"),
+            EfiStatus::CRC_ERROR => write!(f, "crc error"),
+            status => write!(f, "{status:?}"),
+        }
     }
 }

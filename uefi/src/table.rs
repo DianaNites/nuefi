@@ -182,11 +182,30 @@ pub struct RawBootServices {
     restore_tpl: Void,
 
     // Memory
-    allocate_pages: Void,
-    free_pages: Void,
-    get_memory_map: Void,
-    allocate_pool: Void,
-    free_pool: Void,
+    allocate_pages: unsafe extern "efiapi" fn(
+        ty: crate::alloc::AllocateType,
+        mem_ty: crate::alloc::MemoryType,
+        pages: usize,
+        memory: *mut crate::alloc::PhysicalAddress,
+    ) -> EfiStatus,
+    free_pages: unsafe extern "efiapi" fn(
+        //
+        memory: crate::alloc::PhysicalAddress,
+        pages: usize,
+    ) -> EfiStatus,
+    get_memory_map: unsafe extern "efiapi" fn(
+        map_size: *mut usize,
+        map: *mut crate::alloc::MemoryDescriptor,
+        key: *mut usize,
+        entry_size: *mut usize,
+        entry_version: *mut u32,
+    ) -> EfiStatus,
+    allocate_pool: unsafe extern "efiapi" fn(
+        mem_ty: crate::alloc::MemoryType,
+        size: usize,
+        out: *mut *mut u8,
+    ) -> EfiStatus,
+    free_pool: unsafe extern "efiapi" fn(mem: *mut u8) -> EfiStatus,
 
     // Timers/Events
     create_event: Void,
@@ -308,6 +327,26 @@ impl<'table> BootServices<'table> {
         };
         unsafe { (self.interface().set_watchdog_timer)(secs, 0x10000, 0, null_mut()) }.into()
     }
+
+    /// Allocate `size` bytes of memory from pool of type `ty`
+    pub fn allocate_pool(&self, ty: crate::alloc::MemoryType, size: usize) -> Result<*mut u8> {
+        let mut out: *mut u8 = null_mut();
+        let ret = unsafe { (self.interface().allocate_pool)(ty, size, &mut out) };
+        if ret.is_success() {
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Free memory allocated by [BootServices::allocate_pool]
+    ///
+    /// # Safety
+    ///
+    /// Must have been allocated by [BootServices::allocate_pool]
+    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
+        (self.interface().free_pool)(memory).into()
+    }
 }
 
 #[derive(Debug)]
@@ -333,6 +372,10 @@ pub struct Boot;
 /// Type marker for [`SystemTable`] representing after ExitBootServices is
 /// called
 pub struct Runtime;
+
+/// Type marker for [`SystemTable`] representing we dont know if
+/// ExitBootServices has been called
+struct Unknown;
 
 /// Internal state for global handling code
 pub(crate) struct Internal;
@@ -385,11 +428,27 @@ impl<T> SystemTable<T> {
 impl SystemTable<Internal> {
     /// Get the SystemTable if still in boot mode.
     ///
-    /// This is used by the logging, panic, and alloc error handlers
+    /// This is useful for the logging, panic, and alloc error handlers
     ///
     /// If ExitBootServices has NOT been called,
     /// return [`SystemTable<Boot>`], otherwise [`None`]
     pub(crate) fn as_boot(&self) -> Option<SystemTable<Boot>> {
+        if !self.table().boot_services.is_null() {
+            // Safety
+            // - Above check verifies ExitBootServices has not been called.
+            Some(unsafe { SystemTable::new(self.table) })
+        } else {
+            None
+        }
+    }
+
+    /// Get the SystemTable if not in boot mode.
+    ///
+    /// This is useful for the logging, panic, and alloc error handlers
+    ///
+    /// If ExitBootServices has NOT been called,
+    /// return [`SystemTable<Runtime>`], otherwise [`None`]
+    pub(crate) fn as_runtime(&self) -> Option<SystemTable<Boot>> {
         if !self.table().boot_services.is_null() {
             // Safety
             // - Above check verifies ExitBootServices has not been called.
