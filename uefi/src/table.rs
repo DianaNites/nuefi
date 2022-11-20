@@ -4,7 +4,10 @@ use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
-    proto::{self, RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
+    proto::{
+        self,
+        console::{RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
+    },
     util::interface,
     EfiHandle,
 };
