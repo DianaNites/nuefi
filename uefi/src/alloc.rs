@@ -112,6 +112,8 @@ impl Block {
 }
 
 /// A UEFI memory allocator
+///
+/// After ExitBootServices is called, all allocations will fail.
 pub struct UefiAlloc {
     //
 }
