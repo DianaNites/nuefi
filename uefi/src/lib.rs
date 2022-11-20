@@ -40,7 +40,7 @@ impl UefiLogger {
     fn init() {
         // This cannot error, because we set it before user code is called.
         let _ = log::set_logger(&LOGGER);
-        log::set_max_level(LevelFilter::Trace);
+        log::set_max_level(log::STATIC_MAX_LEVEL);
     }
 }
 
@@ -48,14 +48,20 @@ impl log::Log for UefiLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         let target = metadata.target();
         //&& metadata.level() <= Level::Info
-        (target == "uefi_stub" || target == "uefi") || false
+        target == "uefi_stub" || target == "uefi"
     }
 
     fn log(&self, record: &Record) {
         if let Some(table) = get_boot_table() {
             if self.enabled(record.metadata()) {
                 let mut stdout = table.stdout();
-                let _ = writeln!(stdout, "{} - {}", record.level(), record.args());
+                let _ = writeln!(
+                    stdout,
+                    "[{}] {} - {}",
+                    record.target(),
+                    record.level(),
+                    record.args()
+                );
             }
         }
     }
@@ -109,6 +115,9 @@ extern "efiapi" fn efi_main(
     TABLE.store(system_table, Ordering::Release);
     UefiLogger::init();
     info!("UEFI crate initialized");
+    info!("Starting main function");
+    info!("efi_main loaded at: {:p}", efi_main as *const u8);
+    info!("user main loaded at: {:p}", main as *const u8);
     // Safety: Main must exist or won't link.
     // FIXME: Could be wrong signature until derive macro is written.
     // After that, its out of scope.

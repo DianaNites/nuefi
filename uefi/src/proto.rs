@@ -71,6 +71,8 @@ impl<'table> SimpleTextOutput<'table> {
         let mut fin = EfiStatus::SUCCESS;
         // FIXME: Horribly inefficient
         for (i, char) in string.encode_utf16().enumerate() {
+            // for (i, char) in string.chars().enumerate() {
+            // let char = if char.len_utf16();
             let buf = [char, 0];
             let ret = unsafe { out(self.interface, buf.as_ptr()) };
             if ret.is_error() {
