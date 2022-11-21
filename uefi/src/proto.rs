@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub mod console;
+pub mod device_path;
 
 #[allow(dead_code)]
 type Void = *mut [u8; 0];
