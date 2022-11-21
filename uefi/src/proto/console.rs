@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct RawSimpleTextInput {
+pub(crate) struct RawSimpleTextInput {
     //
 }
 
@@ -29,7 +29,7 @@ struct RawMode {
 // TODO: Report bug to upstream Rust that derive(Debug) doesn't work for efiapi
 // #[derive(Debug)]
 #[repr(C)]
-pub struct RawSimpleTextOutput {
+pub(crate) struct RawSimpleTextOutput {
     reset: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
     output_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
     test_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
