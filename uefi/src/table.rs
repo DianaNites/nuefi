@@ -183,25 +183,25 @@ pub struct RawBootServices {
 
     // Memory
     allocate_pages: unsafe extern "efiapi" fn(
-        ty: crate::alloc::AllocateType,
-        mem_ty: crate::alloc::MemoryType,
+        ty: crate::mem::AllocateType,
+        mem_ty: crate::mem::MemoryType,
         pages: usize,
-        memory: *mut crate::alloc::PhysicalAddress,
+        memory: *mut crate::mem::PhysicalAddress,
     ) -> EfiStatus,
     free_pages: unsafe extern "efiapi" fn(
         //
-        memory: crate::alloc::PhysicalAddress,
+        memory: crate::mem::PhysicalAddress,
         pages: usize,
     ) -> EfiStatus,
     get_memory_map: unsafe extern "efiapi" fn(
         map_size: *mut usize,
-        map: *mut crate::alloc::MemoryDescriptor,
+        map: *mut crate::mem::MemoryDescriptor,
         key: *mut usize,
         entry_size: *mut usize,
         entry_version: *mut u32,
     ) -> EfiStatus,
     allocate_pool: unsafe extern "efiapi" fn(
-        mem_ty: crate::alloc::MemoryType,
+        mem_ty: crate::mem::MemoryType,
         size: usize,
         out: *mut *mut u8,
     ) -> EfiStatus,
@@ -341,7 +341,7 @@ impl<'table> BootServices<'table> {
     }
 
     /// Allocate `size` bytes of memory from pool of type `ty`
-    pub fn allocate_pool(&self, ty: crate::alloc::MemoryType, size: usize) -> Result<*mut u8> {
+    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
         let mut out: *mut u8 = null_mut();
         let ret = unsafe { (self.interface().allocate_pool)(ty, size, &mut out) };
         if ret.is_success() {
