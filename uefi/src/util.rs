@@ -27,6 +27,10 @@ macro_rules! interface {
                 /// # Safety
                 ///
                 /// - `interface` must be a valid non-null pointer
+                /// - Only called from [crate::SystemTable] or [crate::proto::Protocol::from_raw]
+                ///
+                /// Be VERY CAREFUL about the lifetime this synthesizes,
+                /// or else it will be possible to live longer than it should and cause UB.
                 pub(crate) unsafe fn new(interface: *mut $in) -> Self {
                     Self {
                         interface,
