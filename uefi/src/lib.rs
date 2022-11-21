@@ -21,6 +21,7 @@ pub mod error;
 pub mod logger;
 pub mod mem;
 pub mod proto;
+pub mod string;
 pub mod table;
 mod util;
 

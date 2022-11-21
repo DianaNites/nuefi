@@ -1,12 +1,13 @@
 //! UEFI Device Path Protocol
 use alloc::{string::String, vec::Vec};
 
-use log::{error, trace};
+use log::{error, info, trace};
 
 use super::{Guid, Protocol, Str16};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
+    string::{string_len, UefiString},
     util::interface,
 };
 
@@ -35,7 +36,7 @@ interface!(
 );
 
 impl<'table> DevicePath<'table> {
-    /// Convert this node to a UEFI String
+    /// Convert this path to a UEFI String
     pub fn to_text(&self) -> Result<()> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -49,22 +50,20 @@ impl<'table> DevicePath<'table> {
         }
     }
 
-    /// Convert this node to a Rust String
+    /// Convert this path to a Rust String
     pub fn to_string(&self) -> Result<String> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             let text = boot
                 .locate_protocol::<DevicePathToText>()?
                 .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
-            let util = boot
-                .locate_protocol::<DevicePathUtil>()?
-                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
 
-            let mut v: Vec<u16> = Vec::new();
-            v.try_reserve_exact(util.get_device_path_size(self) / 2)
-                .map_err(|e| UefiError::new(EfiStatus::OUT_OF_RESOURCES))?;
-
-            todo!("Test {}", util.get_device_path_size(self))
+            let s = text.convert_device_path_to_text(self)?;
+            let s = s.as_slice();
+            let s = char::decode_utf16(s.iter().cloned())
+                .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                .collect::<String>();
+            Ok(s)
         } else {
             error!("Tried to use DevicePath::to_text while not in Boot mode");
             Err(UefiError::new(EfiStatus::UNSUPPORTED))
@@ -119,9 +118,13 @@ pub(crate) struct RawDevicePathUtil {
 interface!(DevicePathUtil(RawDevicePathUtil));
 
 impl<'table> DevicePathUtil<'table> {
-    /// [DevicePath] size, in bytes
+    /// [DevicePath] size, in bytes. NOT including the End Of Path node.
     pub fn get_device_path_size(&self, node: &DevicePath) -> usize {
-        unsafe { (self.interface().get_device_path_size)(node.interface) }
+        unsafe {
+            (self.interface().get_device_path_size)(node.interface)
+                // End of path node
+                - core::mem::size_of::<RawDevicePath>()
+        }
     }
 }
 
@@ -146,27 +149,45 @@ pub(crate) struct RawDevicePathToText {
         node: *mut RawDevicePath,
         display: bool,
         shortcuts: bool,
-    ) -> Str16,
+    ) -> *mut u16,
     convert_device_path_to_text: unsafe extern "efiapi" fn(
         path: *mut RawDevicePath,
         display: bool,
         shortcuts: bool,
-    ) -> Str16,
+    ) -> *mut u16,
 }
 
 interface!(DevicePathToText(RawDevicePathToText));
 
 impl<'table> DevicePathToText<'table> {
+    /// Returns an owned [UefiString] of `node`, a component of a [DevicePath]
     ///
-    pub fn convert_device_node_to_text(&self, node: &DevicePath) {
+    /// # Errors
+    ///
+    /// - If memory allocation fails
+    pub fn convert_device_node_to_text(&self, node: &DevicePath) -> Result<UefiString> {
         let ret =
             unsafe { (self.interface().convert_device_node_to_text)(node.interface, false, false) };
+        if !ret.is_null() {
+            Ok(unsafe { UefiString::from_raw(ret, string_len(ret)) })
+        } else {
+            Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
+        }
     }
 
+    /// Returns an owned [UefiString] of `path`
     ///
-    pub fn convert_device_path_to_text(&self, path: &DevicePath) {
+    /// # Errors
+    ///
+    /// - If memory allocation fails
+    pub fn convert_device_path_to_text(&self, path: &DevicePath) -> Result<UefiString> {
         let ret =
             unsafe { (self.interface().convert_device_path_to_text)(path.interface, false, false) };
+        if !ret.is_null() {
+            Ok(unsafe { UefiString::from_raw(ret, string_len(ret)) })
+        } else {
+            Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
+        }
     }
 }
 
