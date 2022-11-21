@@ -80,7 +80,11 @@ pub struct UefiError {
 }
 
 impl UefiError {
+    /// Create a new [UefiError]
+    ///
+    /// Only do this with [EfiStatus] that is NOT [`EfiStatus::SUCCESS`]
     pub(crate) fn new(inner: EfiStatus) -> Self {
+        debug_assert!(!inner.is_success(), "Tried to use UefiError with a success");
         Self { inner }
     }
 

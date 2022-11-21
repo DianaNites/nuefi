@@ -3,7 +3,7 @@ use log::error;
 
 use super::{Guid, Protocol, Str16};
 use crate::{
-    error::{EfiStatus, Result},
+    error::{EfiStatus, Result, UefiError},
     get_boot_table,
     util::interface,
 };
@@ -29,11 +29,17 @@ interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {
     /// Convert this node to a UEFI String
-    pub fn to_text(&self) {
+    pub fn to_text(&self) -> Result<()> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
+            if let Some(to) = boot.locate_protocol::<DevicePathToText>()? {
+                //
+            }
             todo!();
-        };
+        } else {
+            error!("Tried to use DevicePath::to_text while not in Boot mode");
+            Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        }
     }
 }
 
