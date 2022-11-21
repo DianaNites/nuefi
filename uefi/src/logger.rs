@@ -5,6 +5,15 @@ use log::{Log, Metadata, Record};
 
 use crate::get_boot_table;
 
+/// Log from within the logger
+#[allow(dead_code)]
+fn debug_log(args: core::fmt::Arguments) {
+    if let Some(table) = get_boot_table() {
+        let mut stdout = table.stdout();
+        let _ = writeln!(stdout, "{args}",);
+    }
+}
+
 /// UEFI Logger
 ///
 /// This logs to the UEFI `stdout`,
@@ -51,12 +60,11 @@ impl UefiLogger {
 impl Log for UefiLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         let target = metadata.target();
-        //&& metadata.level() <= Level::Info
         if let Some(targets) = self.targets {
-            // FIXME: target is ACTUALLY in the form of crate or crate::module
-            // Target is a *path*.
-            // We want to filter on crate name
-            targets.contains(&target)
+            targets.iter().any(|s| {
+                target.starts_with(s)
+                    && target.as_bytes().get(s.len()).copied().unwrap_or_default() == b':'
+            })
         } else {
             true
         }
