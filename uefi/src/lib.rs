@@ -1,6 +1,8 @@
 #![allow(unused_imports, unused_variables, clippy::let_and_return, dead_code)]
 #![no_std]
 #![feature(abi_efiapi, alloc_error_handler)]
+extern crate alloc;
+
 use core::{
     ffi::c_void,
     fmt::Write,
@@ -15,9 +17,9 @@ use table::Boot;
 
 pub use crate::table::SystemTable;
 
-pub mod alloc;
 pub mod error;
 pub mod logger;
+pub mod mem;
 pub mod proto;
 pub mod table;
 mod util;
