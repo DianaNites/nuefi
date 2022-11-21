@@ -1,7 +1,7 @@
 //! UEFI Console related protocols
 use core::fmt::{self, Write};
 
-use super::Str16;
+use super::{Guid, Str16};
 use crate::{
     error::{EfiStatus, Result},
     util::interface,
@@ -49,10 +49,12 @@ pub struct RawSimpleTextOutput {
 }
 
 impl RawSimpleTextOutput {
-    pub const GUID: [u8; 16] = [
-        0x38, 0x74, 0x77, 0xc2, 0x69, 0xc7, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72,
-        0x3b,
-    ];
+    pub const GUID: Guid = unsafe {
+        Guid::from_bytes([
+            0x38, 0x74, 0x77, 0xc2, 0x69, 0xc7, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
+            0x72, 0x3b,
+        ])
+    };
 }
 
 interface!(SimpleTextOutput(RawSimpleTextOutput));

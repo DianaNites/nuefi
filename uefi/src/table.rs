@@ -154,7 +154,7 @@ impl RawSystemTable {
     /// # Safety
     ///
     /// - Must be a valid pointer
-    /// - Must only e called before running user code.
+    /// - Must only be called before running user code.
     pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
         // Safety: Pointer to first C struct member
         Header::validate(this as *mut Header, Self::SIGNATURE)?;
@@ -236,7 +236,7 @@ pub struct RawBootServices {
         data: proto::Str16,
     ) -> EfiStatus,
     unload_image: Void,
-    exit_boot_services: Void,
+    exit_boot_services: unsafe extern "efiapi" fn(handle: EfiHandle, key: usize) -> EfiStatus,
 
     // Misc
     get_next_monotonic_count: unsafe extern "efiapi" fn(count: *mut u64) -> EfiStatus,
@@ -260,7 +260,12 @@ pub struct RawBootServices {
     // Library?
     protocols_per_handle: Void,
     locate_handle_buffer: Void,
-    locate_protocol: Void,
+    locate_protocol: unsafe extern "efiapi" fn(
+        //
+        guid: *mut proto::Guid,
+        key: Void,
+        out: *mut *mut u8,
+    ) -> EfiStatus,
     install_multiple_protocol_interfaces: Void,
     uninstall_multiple_protocol_interfaces: Void,
 

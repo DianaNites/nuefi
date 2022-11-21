@@ -100,17 +100,6 @@ impl MemoryDescriptor {
     pub(crate) const VERSION: u32 = 1;
 }
 
-/// An allocated block
-struct Block {
-    //
-}
-
-impl Block {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
 /// A UEFI memory allocator
 ///
 /// After ExitBootServices is called, all allocations will fail.
