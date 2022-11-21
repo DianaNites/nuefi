@@ -34,7 +34,11 @@ pub unsafe trait Protocol<'table> {
 
 /// UEFI GUID
 #[derive(Clone, Copy)]
-#[repr(transparent)]
+#[repr(C, align(64))]
+// #[repr(transparent)]
+// FIXME: should be 64-bit aligned?
+// This should never be passed by value to UEFI, which means transparent does
+// nothing?
 pub struct Guid([u8; 16]);
 
 impl Guid {

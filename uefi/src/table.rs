@@ -408,8 +408,7 @@ impl<'table> BootServices<'table> {
         };
         if ret.is_success() {
             unsafe { Ok(Some(T::from_raw(out))) }
-        } else if ret == EfiStatus::NOT_FOUND {
-            //|| out.is_null() {
+        } else if ret == EfiStatus::UNSUPPORTED {
             Ok(None)
         } else {
             Err(UefiError::new(ret))

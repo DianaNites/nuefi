@@ -28,6 +28,7 @@ macro_rules! interface {
                 ///
                 /// - `interface` must be a valid non-null pointer
                 /// - Only called from [crate::SystemTable] or [crate::proto::Protocol::from_raw]
+                /// - Or "simple" getters from a protocol
                 ///
                 /// Be VERY CAREFUL about the lifetime this synthesizes,
                 /// or else it will be possible to live longer than it should and cause UB.

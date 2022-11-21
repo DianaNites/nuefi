@@ -39,6 +39,7 @@ impl AllocateType {
 }
 
 /// UEFI Memory type
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct MemoryType(u32);
 
