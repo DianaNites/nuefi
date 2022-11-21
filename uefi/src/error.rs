@@ -18,7 +18,7 @@ const NEXT_BIT: usize = 1 << (STATUS_BITS - 2);
 /// A ABI transparent wrapper around EFI_STATUS
 ///
 /// You should not need to use this directly.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct EfiStatus(usize);
 
@@ -173,13 +173,23 @@ impl core::fmt::Display for EfiStatus {
             EfiStatus::COMPROMISED_DATA => write!(f, "compromised data"),
             EfiStatus::IP_ADDRESS_CONFLICT => write!(f, "ip address conflict"),
             EfiStatus::HTTP_ERROR => write!(f, "http error"),
-            status => write!(f, "{status:?}"),
+            // status => write!(f, "{status:?}"),
+            _ => todo!(),
         }
     }
 }
 
+impl core::fmt::Debug for EfiStatus {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple("EfiStatus")
+            .field(&self.0)
+            .field(&format_args!("[Display] {}", self))
+            .finish()
+    }
+}
+
 /// Represents a UEFI `EFI_STATUS`
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct UefiError {
     inner: EfiStatus,
@@ -227,5 +237,14 @@ impl From<core::fmt::Error> for UefiError {
 impl core::fmt::Display for UefiError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.status())
+    }
+}
+
+impl core::fmt::Debug for UefiError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("UefiError")
+            .field("inner", &self.inner)
+            .field("[Display]", &format_args!("{}", self.inner))
+            .finish()
     }
 }
