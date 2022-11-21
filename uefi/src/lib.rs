@@ -6,10 +6,11 @@ use core::{
     fmt::Write,
     panic::PanicInfo,
     sync::atomic::{AtomicPtr, Ordering},
+    time::Duration,
 };
 
 use error::EfiStatus;
-use log::info;
+use log::{error, info};
 use table::Boot;
 
 pub use crate::table::SystemTable;
@@ -81,7 +82,15 @@ extern "efiapi" fn efi_main(
     info!("Returned from user main with status {ret:?}");
     match ret {
         Ok(_) => EfiStatus::SUCCESS,
-        Err(e) => e.status(),
+        Err(e) => {
+            if let Some(table) = get_boot_table() {
+                error!("UEFI User main exited with error: {}", e);
+                // TODO: Make configurable in the macro entry point.
+                let _ = table.boot().stall(Duration::from_secs(5));
+            }
+
+            e.status()
+        }
     }
 }
 
