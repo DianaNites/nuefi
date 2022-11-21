@@ -1,5 +1,7 @@
 //! UEFI Device Path Protocol
-use log::error;
+use alloc::{string::String, vec::Vec};
+
+use log::{error, trace};
 
 use super::{Guid, Protocol, Str16};
 use crate::{
@@ -25,7 +27,12 @@ pub(crate) struct RawDevicePath {
     len: [u8; 2],
 }
 
-interface!(DevicePath(RawDevicePath));
+interface!(
+    /// Owned DevicePath
+    ///
+    /// Memory will be deallocated on Drop
+    DevicePath(RawDevicePath)
+);
 
 impl<'table> DevicePath<'table> {
     /// Convert this node to a UEFI String
@@ -33,9 +40,31 @@ impl<'table> DevicePath<'table> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             if let Some(to) = boot.locate_protocol::<DevicePathToText>()? {
-                //
+                todo!("Test")
             }
             todo!();
+        } else {
+            error!("Tried to use DevicePath::to_text while not in Boot mode");
+            Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        }
+    }
+
+    /// Convert this node to a Rust String
+    pub fn to_string(&self) -> Result<String> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            let text = boot
+                .locate_protocol::<DevicePathToText>()?
+                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+            let util = boot
+                .locate_protocol::<DevicePathUtil>()?
+                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+
+            let mut v: Vec<u16> = Vec::new();
+            v.try_reserve_exact(util.get_device_path_size(self) / 2)
+                .map_err(|e| UefiError::new(EfiStatus::OUT_OF_RESOURCES))?;
+
+            todo!("Test {}", util.get_device_path_size(self))
         } else {
             error!("Tried to use DevicePath::to_text while not in Boot mode");
             Err(UefiError::new(EfiStatus::UNSUPPORTED))
@@ -45,6 +74,7 @@ impl<'table> DevicePath<'table> {
 
 impl<'table> Drop for DevicePath<'table> {
     fn drop(&mut self) {
+        trace!("Deallocating DevicePath");
         if let Some(table) = get_boot_table() {
             let ret = unsafe { table.boot().free_pool(self.interface as *mut u8) };
             if ret.is_err() {
@@ -73,10 +103,10 @@ unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
 }
 
 /// Device Path Utilities protocol
-#[derive(Debug)]
+// #[derive(Debug)]
 #[repr(C)]
 pub(crate) struct RawDevicePathUtil {
-    get_device_path_size: *mut u8,
+    get_device_path_size: unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize,
     duplicate_device_path: *mut u8,
     append_device_path: *mut u8,
     append_device_node: *mut u8,
@@ -87,6 +117,13 @@ pub(crate) struct RawDevicePathUtil {
 }
 
 interface!(DevicePathUtil(RawDevicePathUtil));
+
+impl<'table> DevicePathUtil<'table> {
+    /// [DevicePath] size, in bytes
+    pub fn get_device_path_size(&self, node: &DevicePath) -> usize {
+        unsafe { (self.interface().get_device_path_size)(node.interface) }
+    }
+}
 
 unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
     const GUID: Guid = unsafe {
@@ -122,12 +159,14 @@ interface!(DevicePathToText(RawDevicePathToText));
 impl<'table> DevicePathToText<'table> {
     ///
     pub fn convert_device_node_to_text(&self, node: &DevicePath) {
-        unsafe { (self.interface().convert_device_node_to_text)(node.interface, false, false) };
+        let ret =
+            unsafe { (self.interface().convert_device_node_to_text)(node.interface, false, false) };
     }
 
     ///
     pub fn convert_device_path_to_text(&self, path: &DevicePath) {
-        unsafe { (self.interface().convert_device_path_to_text)(path.interface, false, false) };
+        let ret =
+            unsafe { (self.interface().convert_device_path_to_text)(path.interface, false, false) };
     }
 }
 
