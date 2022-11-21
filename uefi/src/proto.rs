@@ -20,8 +20,15 @@ pub type Str16 = *const u16;
 ///
 /// This trait is unsafe because an incorrect GUID will
 /// lead to type confusion and unsafety for both Rust and UEFI.
-pub unsafe trait Protocol {
+pub unsafe trait Protocol<'table> {
+    /// Protocol GUID
     const GUID: Guid;
+
+    /// # Safety
+    ///
+    /// - MUST be library author.
+    #[doc(hidden)]
+    unsafe fn from_raw(this: *mut u8) -> Self;
 }
 
 /// UEFI GUID
@@ -34,6 +41,6 @@ impl Guid {
     ///
     /// - MUST be a valid protocol GUID
     pub const unsafe fn from_bytes(bytes: [u8; 16]) -> Self {
-        Self(bytes)
+        Self(nuuid::Uuid::from_bytes_me(bytes).to_bytes())
     }
 }

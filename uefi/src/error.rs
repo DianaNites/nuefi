@@ -65,6 +65,8 @@ impl EfiStatus {
 
     pub const DEVICE_ERROR: Self = Self(ERROR_BIT | 7);
 
+    pub const NOT_FOUND: Self = Self(ERROR_BIT | 14);
+
     pub const ABORTED: Self = Self(ERROR_BIT | 21);
 
     pub const CRC_ERROR: Self = Self(ERROR_BIT | 27);
@@ -120,6 +122,7 @@ impl core::fmt::Display for UefiError {
             EfiStatus::INVALID_PARAMETER => write!(f, "invalid parameter"),
             EfiStatus::UNSUPPORTED => write!(f, "unsupported"),
             EfiStatus::DEVICE_ERROR => write!(f, "device error"),
+            EfiStatus::NOT_FOUND => write!(f, "not found"),
             EfiStatus::ABORTED => write!(f, "aborted"),
             EfiStatus::CRC_ERROR => write!(f, "crc error"),
             status => write!(f, "{status:?}"),

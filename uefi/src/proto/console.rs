@@ -48,15 +48,6 @@ pub struct RawSimpleTextOutput {
     mode: *mut RawMode,
 }
 
-impl RawSimpleTextOutput {
-    pub const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x38, 0x74, 0x77, 0xc2, 0x69, 0xc7, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
-            0x72, 0x3b,
-        ])
-    };
-}
-
 interface!(SimpleTextOutput(RawSimpleTextOutput));
 
 impl<'table> SimpleTextOutput<'table> {
@@ -118,5 +109,18 @@ impl<'t> Write for SimpleTextOutput<'t> {
         } else {
             ret
         }
+    }
+}
+
+unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
+    const GUID: Guid = unsafe {
+        Guid::from_bytes([
+            0x38, 0x74, 0x77, 0xc2, 0x69, 0xc7, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
+            0x72, 0x3b,
+        ])
+    };
+
+    unsafe fn from_raw(this: *mut u8) -> Self {
+        unsafe { SimpleTextOutput::new(this as *mut RawSimpleTextOutput) }
     }
 }

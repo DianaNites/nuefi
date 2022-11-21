@@ -352,6 +352,30 @@ impl<'table> BootServices<'table> {
     pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
         (self.interface().free_pool)(memory).into()
     }
+
+    /// Find and return an arbitrary protocol instance from an arbitrary handle
+    /// matching `guid`.
+    ///
+    /// This is useful for protocols that don't care about where they're
+    /// attached, or where only one handle is expected to exist.
+    ///
+    /// This is shorthand for
+    ///
+    /// TODO: Section about finding handles for protocols
+    ///
+    /// If no protocol is found, [None] is returned.
+    pub fn locate_protocol<'boot, T: proto::Protocol<'boot>>(&'boot self) -> Result<Option<T>> {
+        let mut out: *mut u8 = null_mut();
+        let mut guid = T::GUID;
+        let ret = unsafe { (self.interface().locate_protocol)(&mut guid, null_mut(), &mut out) };
+        if ret.is_success() {
+            unsafe { Ok(Some(T::from_raw(out))) }
+        } else if ret == EfiStatus::NOT_FOUND {
+            Ok(None)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
 }
 
 #[derive(Debug)]
