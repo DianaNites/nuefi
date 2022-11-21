@@ -18,7 +18,7 @@ use crate::{
 /// exists.
 #[derive(Debug)]
 #[repr(C, packed)]
-pub struct RawDevicePath {
+pub(crate) struct RawDevicePath {
     ty: u8,
     sub_ty: u8,
     /// Length, including this header
@@ -75,7 +75,7 @@ unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
 /// Device Path Utilities protocol
 #[derive(Debug)]
 #[repr(C)]
-pub struct RawDevicePathUtil {
+pub(crate) struct RawDevicePathUtil {
     get_device_path_size: *mut u8,
     duplicate_device_path: *mut u8,
     append_device_path: *mut u8,
@@ -104,7 +104,7 @@ unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
 /// Device Path Display protocol
 // #[derive(Debug)]
 #[repr(C)]
-pub struct RawDevicePathToText {
+pub(crate) struct RawDevicePathToText {
     convert_device_node_to_text: unsafe extern "efiapi" fn(
         node: *mut RawDevicePath,
         display: bool,

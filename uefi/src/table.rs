@@ -253,7 +253,14 @@ pub struct RawBootServices {
     disconnect_controller: Void,
 
     // Protocols again
-    open_protocol: Void,
+    open_protocol: unsafe extern "efiapi" fn(
+        handle: EfiHandle,
+        guid: *mut proto::Guid,
+        out: *mut *mut u8,
+        agent_handle: EfiHandle,
+        controller_handle: EfiHandle,
+        attributes: u32,
+    ) -> EfiStatus,
     close_protocol: Void,
     open_protocol_information: Void,
 
@@ -371,6 +378,38 @@ impl<'table> BootServices<'table> {
         if ret.is_success() {
             unsafe { Ok(Some(T::from_raw(out))) }
         } else if ret == EfiStatus::NOT_FOUND {
+            Ok(None)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Open the protocol on `handle`, if it exists.
+    ///
+    /// The protocol is opened in Exclusive mode
+    // TODO: RAII guard to scope this and call close_protocol
+    pub fn open_protocol<'boot, T: proto::Protocol<'boot>>(
+        &'boot self,
+        handle: EfiHandle,
+        agent: EfiHandle,
+        controller: Option<EfiHandle>,
+    ) -> Result<Option<T>> {
+        let mut out: *mut u8 = null_mut();
+        let mut guid = T::GUID;
+        let ret = unsafe {
+            (self.interface().open_protocol)(
+                handle,
+                &mut guid,
+                &mut out,
+                agent,
+                controller.unwrap_or(EfiHandle(null_mut())),
+                0x20,
+            )
+        };
+        if ret.is_success() {
+            unsafe { Ok(Some(T::from_raw(out))) }
+        } else if ret == EfiStatus::NOT_FOUND {
+            //|| out.is_null() {
             Ok(None)
         } else {
             Err(UefiError::new(ret))

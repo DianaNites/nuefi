@@ -27,7 +27,8 @@ static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
-#[derive(Debug)]
+/// Handle to something in UEFI firmware
+#[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
 
