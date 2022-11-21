@@ -115,12 +115,12 @@ impl Block {
 ///
 /// After ExitBootServices is called, all allocations will fail.
 pub struct UefiAlloc {
-    //
+    _priv: (),
 }
 
 impl UefiAlloc {
     pub const fn new() -> Self {
-        Self {}
+        Self { _priv: () }
     }
 }
 
