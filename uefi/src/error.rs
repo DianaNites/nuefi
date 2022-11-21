@@ -59,17 +59,123 @@ impl EfiStatus {
 
     pub const WARN_UNKNOWN_GLYPH: Self = Self(1);
 
+    pub const WARN_DELETE_FAILURE: Self = Self(2);
+
+    pub const WARN_WRITE_FAILURE: Self = Self(3);
+
+    pub const WARN_BUFFER_TOO_SMALL: Self = Self(4);
+
+    pub const WARN_STALE_DATA: Self = Self(5);
+
+    pub const WARN_FILE_SYSTEM: Self = Self(6);
+
+    pub const WARN_RESET_REQUIRED: Self = Self(7);
+
+    pub const LOAD_ERROR: Self = Self(ERROR_BIT | 1);
+
     pub const INVALID_PARAMETER: Self = Self(ERROR_BIT | 2);
 
     pub const UNSUPPORTED: Self = Self(ERROR_BIT | 3);
 
+    pub const BAD_BUFFER_SIZE: Self = Self(ERROR_BIT | 4);
+
+    pub const BUFFER_TOO_SMALL: Self = Self(ERROR_BIT | 5);
+
+    pub const NOT_READY: Self = Self(ERROR_BIT | 6);
+
     pub const DEVICE_ERROR: Self = Self(ERROR_BIT | 7);
+
+    pub const WRITE_PROTECTED: Self = Self(ERROR_BIT | 8);
+
+    pub const OUT_OF_RESOURCES: Self = Self(ERROR_BIT | 9);
+
+    pub const VOLUME_CORRUPTED: Self = Self(ERROR_BIT | 10);
+
+    pub const VOLUME_FULL: Self = Self(ERROR_BIT | 11);
+
+    pub const NO_MEDIA: Self = Self(ERROR_BIT | 12);
+
+    pub const MEDIA_CHANGED: Self = Self(ERROR_BIT | 13);
 
     pub const NOT_FOUND: Self = Self(ERROR_BIT | 14);
 
+    pub const ACCESS_DENIED: Self = Self(ERROR_BIT | 15);
+    pub const NO_RESPONSE: Self = Self(ERROR_BIT | 16);
+    pub const NO_MAPPING: Self = Self(ERROR_BIT | 17);
+    pub const TIMEOUT: Self = Self(ERROR_BIT | 18);
+    pub const NOT_STARTED: Self = Self(ERROR_BIT | 19);
+    pub const ALREADY_STARTED: Self = Self(ERROR_BIT | 20);
+
     pub const ABORTED: Self = Self(ERROR_BIT | 21);
 
+    pub const ICMP_ERROR: Self = Self(ERROR_BIT | 22);
+    pub const TCP_ERROR: Self = Self(ERROR_BIT | 23);
+    pub const PROTOCOL_ERROR: Self = Self(ERROR_BIT | 24);
+    pub const INCOMPATIBLE_VERSION: Self = Self(ERROR_BIT | 25);
+    pub const SECURITY_VIOLATION: Self = Self(ERROR_BIT | 26);
+
     pub const CRC_ERROR: Self = Self(ERROR_BIT | 27);
+
+    pub const END_OF_MEDIA: Self = Self(ERROR_BIT | 28);
+    pub const END_OF_FILE: Self = Self(ERROR_BIT | 31);
+    pub const INVALID_LANGUAGE: Self = Self(ERROR_BIT | 32);
+    pub const COMPROMISED_DATA: Self = Self(ERROR_BIT | 33);
+    pub const IP_ADDRESS_CONFLICT: Self = Self(ERROR_BIT | 34);
+    pub const HTTP_ERROR: Self = Self(ERROR_BIT | 35);
+}
+
+impl core::fmt::Display for EfiStatus {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match *self {
+            //
+            EfiStatus::SUCCESS => write!(f, "success"),
+
+            // Warnings
+            EfiStatus::WARN_UNKNOWN_GLYPH => write!(f, "unknown glyph"),
+            EfiStatus::WARN_DELETE_FAILURE => write!(f, "delete failure"),
+            EfiStatus::WARN_WRITE_FAILURE => write!(f, "write failure"),
+            EfiStatus::WARN_BUFFER_TOO_SMALL => write!(f, "buffer too small warning"),
+            EfiStatus::WARN_STALE_DATA => write!(f, "stale data"),
+            EfiStatus::WARN_FILE_SYSTEM => write!(f, "filesystem"),
+            EfiStatus::WARN_RESET_REQUIRED => write!(f, "reset required"),
+
+            // Error
+            EfiStatus::LOAD_ERROR => write!(f, "load error"),
+            EfiStatus::INVALID_PARAMETER => write!(f, "invalid parameter"),
+            EfiStatus::UNSUPPORTED => write!(f, "unsupported"),
+            EfiStatus::BAD_BUFFER_SIZE => write!(f, "bad buffer"),
+            EfiStatus::BUFFER_TOO_SMALL => write!(f, "buffer too small error"),
+            EfiStatus::NOT_READY => write!(f, "not ready"),
+            EfiStatus::DEVICE_ERROR => write!(f, "device error"),
+            EfiStatus::WRITE_PROTECTED => write!(f, "write protected"),
+            EfiStatus::OUT_OF_RESOURCES => write!(f, "out of resources"),
+            EfiStatus::VOLUME_CORRUPTED => write!(f, "volume corrupted"),
+            EfiStatus::VOLUME_FULL => write!(f, "volume full"),
+            EfiStatus::NO_MEDIA => write!(f, "no media"),
+            EfiStatus::MEDIA_CHANGED => write!(f, "media changed"),
+            EfiStatus::NOT_FOUND => write!(f, "not found"),
+            EfiStatus::ACCESS_DENIED => write!(f, "access denied"),
+            EfiStatus::NO_RESPONSE => write!(f, "no response"),
+            EfiStatus::NO_MAPPING => write!(f, "no mapping"),
+            EfiStatus::TIMEOUT => write!(f, "time out"),
+            EfiStatus::NOT_STARTED => write!(f, "not started"),
+            EfiStatus::ALREADY_STARTED => write!(f, "already started"),
+            EfiStatus::ABORTED => write!(f, "aborted"),
+            EfiStatus::ICMP_ERROR => write!(f, "icmp error"),
+            EfiStatus::TCP_ERROR => write!(f, "tcp error"),
+            EfiStatus::PROTOCOL_ERROR => write!(f, "network protocol error"),
+            EfiStatus::INCOMPATIBLE_VERSION => write!(f, "incompatible version"),
+            EfiStatus::SECURITY_VIOLATION => write!(f, "security violation"),
+            EfiStatus::CRC_ERROR => write!(f, "crc error"),
+            EfiStatus::END_OF_MEDIA => write!(f, "end of media"),
+            EfiStatus::END_OF_FILE => write!(f, "end of file"),
+            EfiStatus::INVALID_LANGUAGE => write!(f, "invalid language"),
+            EfiStatus::COMPROMISED_DATA => write!(f, "compromised data"),
+            EfiStatus::IP_ADDRESS_CONFLICT => write!(f, "ip address conflict"),
+            EfiStatus::HTTP_ERROR => write!(f, "http error"),
+            status => write!(f, "{status:?}"),
+        }
+    }
 }
 
 /// Represents a UEFI `EFI_STATUS`
@@ -120,16 +226,6 @@ impl From<core::fmt::Error> for UefiError {
 
 impl core::fmt::Display for UefiError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self.status() {
-            EfiStatus::SUCCESS => write!(f, "success"),
-            EfiStatus::WARN_UNKNOWN_GLYPH => write!(f, "unknown glyph"),
-            EfiStatus::INVALID_PARAMETER => write!(f, "invalid parameter"),
-            EfiStatus::UNSUPPORTED => write!(f, "unsupported"),
-            EfiStatus::DEVICE_ERROR => write!(f, "device error"),
-            EfiStatus::NOT_FOUND => write!(f, "not found"),
-            EfiStatus::ABORTED => write!(f, "aborted"),
-            EfiStatus::CRC_ERROR => write!(f, "crc error"),
-            status => write!(f, "{status:?}"),
-        }
+        write!(f, "{}", self.status())
     }
 }
