@@ -25,31 +25,31 @@ pub struct EfiStatus(usize);
 impl EfiStatus {
     ///
     #[inline]
-    pub fn is_success(self) -> bool {
-        self == EfiStatus::SUCCESS
+    pub const fn is_success(self) -> bool {
+        self.0 == EfiStatus::SUCCESS.0
     }
 
     ///
     #[inline]
-    pub fn is_warning(self) -> bool {
+    pub const fn is_warning(self) -> bool {
         self.0 != 0 && self.0 & ERROR_BIT == 0
     }
 
     ///
     #[inline]
-    pub fn is_error(self) -> bool {
+    pub const fn is_error(self) -> bool {
         self.0 & ERROR_BIT != 0
     }
 
     ///
     #[inline]
-    pub fn is_efi(self) -> bool {
+    pub const fn is_efi(self) -> bool {
         self.0 & ERROR_BIT != 0 && self.0 & NEXT_BIT == 0
     }
 
     ///
     #[inline]
-    pub fn is_oem(self) -> bool {
+    pub const fn is_oem(self) -> bool {
         self.0 & NEXT_BIT != 0
     }
 }
@@ -199,13 +199,13 @@ impl UefiError {
     /// Create a new [UefiError]
     ///
     /// Only do this with [EfiStatus] that is NOT [`EfiStatus::SUCCESS`]
-    pub(crate) fn new(inner: EfiStatus) -> Self {
+    pub(crate) const fn new(inner: EfiStatus) -> Self {
         debug_assert!(!inner.is_success(), "Tried to use UefiError with a success");
         Self { inner }
     }
 
     /// The [`EfiStatus`] for this error
-    pub fn status(self) -> EfiStatus {
+    pub const fn status(self) -> EfiStatus {
         self.inner
     }
 }
