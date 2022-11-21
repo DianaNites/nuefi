@@ -4,7 +4,7 @@ use core::{
     ptr::null_mut,
 };
 
-use log::{error, info};
+use log::{error, info, trace};
 
 use crate::get_boot_table;
 
@@ -124,18 +124,15 @@ impl UefiAlloc {
     }
 }
 
-/// # Safety
-///
-/// yes
 unsafe impl GlobalAlloc for UefiAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        info!("UEFI allocating {layout:?}");
+        trace!("UEFI allocating {layout:?}");
 
         let align = layout.align();
         let size = layout.size();
         let offset = if align > POOL_ALIGN {
             let o = align - POOL_ALIGN;
-            info!(
+            trace!(
                 "Allocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
                 o
             );
@@ -148,7 +145,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         if let Some(table) = get_boot_table() {
             let ret = table.boot().allocate_pool(MemoryType::LOADER_DATA, size);
             if let Ok(ptr) = ret {
-                info!(
+                trace!(
                     "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
                     ptr.add(offset),
                     ptr as usize & (offset.saturating_sub(1)) == 0
@@ -170,7 +167,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         let size = layout.size();
         let offset = if align > POOL_ALIGN {
             let o = align - POOL_ALIGN;
-            info!(
+            trace!(
                 "Deallocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
                 o
             );
