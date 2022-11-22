@@ -88,8 +88,9 @@ extern "efiapi" fn efi_main(
         Err(e) => {
             if let Some(table) = get_boot_table() {
                 error!("UEFI User main exited with error: {}", e);
+                error!("Waiting 30 seconds");
                 // TODO: Make configurable in the macro entry point.
-                let _ = table.boot().stall(Duration::from_secs(5));
+                let _ = table.boot().stall(Duration::from_secs(30));
             }
 
             e.status()
