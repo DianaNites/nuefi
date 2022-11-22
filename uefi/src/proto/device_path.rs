@@ -8,6 +8,7 @@ use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     string::{string_len, UefiString},
+    table::BootServices,
     util::interface,
 };
 
@@ -55,7 +56,10 @@ impl RawDevicePath {
 interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {
-    //
+    /// Free the DevicePath
+    pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
+        unsafe { boot.free_pool(self.interface as *mut u8) }
+    }
 }
 
 unsafe impl<'table> Protocol<'table> for DevicePath<'table> {

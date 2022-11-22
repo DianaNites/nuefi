@@ -150,6 +150,7 @@ impl<'table> UefiStr<'table> {
 }
 
 /// An unowned UEFI [DevicePath]
+#[derive(Debug)]
 pub struct Path<'table> {
     data: DevicePath<'table>,
 }
@@ -206,23 +207,23 @@ impl<'table> Path<'table> {
 }
 
 /// An owned UEFI [DevicePath]
-pub struct PathBuf {
-    //
+#[derive(Debug)]
+pub struct PathBuf<'table> {
+    data: DevicePath<'table>,
 }
 
-#[cfg(no)]
 impl<'table> Drop for PathBuf<'table> {
     fn drop(&mut self) {
         trace!("Deallocating DevicePath");
         if let Some(table) = get_boot_table() {
-            let ret = unsafe { table.boot().free_pool(self.interface as *mut u8) };
+            let ret = self.data.free(&table.boot());
             if ret.is_err() {
-                error!("Failed to deallocate DevicePath {:p}", self.interface)
+                error!("Failed to deallocate DevicePath {:?}", self.data)
             }
         } else {
             error!(
-                "Tried to deallocate DevicePath {:p} while not in Boot mode",
-                self.interface
+                "Tried to deallocate DevicePath {:?} while not in Boot mode",
+                self
             )
         }
     }
