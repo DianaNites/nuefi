@@ -29,7 +29,7 @@ struct RawMode {
 // TODO: Report bug to upstream Rust that derive(Debug) doesn't work for efiapi
 // #[derive(Debug)]
 #[repr(C)]
-pub(crate) struct RawSimpleTextOutput {
+pub struct RawSimpleTextOutput {
     reset: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
     output_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
     test_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
@@ -120,7 +120,9 @@ unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { SimpleTextOutput::new(this as *mut RawSimpleTextOutput) }
+    type Raw = RawSimpleTextOutput;
+
+    unsafe fn from_raw(this: *mut RawSimpleTextOutput) -> Self {
+        unsafe { SimpleTextOutput::new(this) }
     }
 }

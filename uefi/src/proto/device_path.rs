@@ -66,15 +66,17 @@ unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { DevicePath::new(this as *mut RawDevicePath) }
+    type Raw = RawDevicePath;
+
+    unsafe fn from_raw(this: *mut RawDevicePath) -> Self {
+        unsafe { DevicePath::new(this) }
     }
 }
 
 /// Device Path Utilities protocol
 // #[derive(Debug)]
 #[repr(C)]
-pub(crate) struct RawDevicePathUtil {
+pub struct RawDevicePathUtil {
     get_device_path_size: unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize,
     duplicate_device_path: *mut u8,
     append_device_path: *mut u8,
@@ -106,15 +108,17 @@ unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { DevicePathUtil::new(this as *mut RawDevicePathUtil) }
+    type Raw = RawDevicePathUtil;
+
+    unsafe fn from_raw(this: *mut RawDevicePathUtil) -> Self {
+        unsafe { DevicePathUtil::new(this) }
     }
 }
 
 /// Device Path Display protocol
 // #[derive(Debug)]
 #[repr(C)]
-pub(crate) struct RawDevicePathToText {
+pub struct RawDevicePathToText {
     convert_device_node_to_text: unsafe extern "efiapi" fn(
         node: *mut RawDevicePath,
         display: bool,
@@ -169,7 +173,9 @@ unsafe impl<'table> Protocol<'table> for DevicePathToText<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { DevicePathToText::new(this as *mut RawDevicePathToText) }
+    type Raw = RawDevicePathToText;
+
+    unsafe fn from_raw(this: *mut RawDevicePathToText) -> Self {
+        unsafe { DevicePathToText::new(this) }
     }
 }

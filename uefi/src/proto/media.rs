@@ -51,7 +51,9 @@ unsafe impl<'table> Protocol<'table> for LoadFile2<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { LoadFile2::new(this as *mut RawLoadFile2) }
+    type Raw = RawLoadFile2;
+
+    unsafe fn from_raw(this: *mut RawLoadFile2) -> Self {
+        unsafe { LoadFile2::new(this) }
     }
 }

@@ -400,7 +400,7 @@ impl<'table> BootServices<'table> {
         let mut guid = T::GUID;
         let ret = unsafe { (self.interface().locate_protocol)(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
-            unsafe { Ok(Some(T::from_raw(out))) }
+            unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
         } else if ret == EfiStatus::NOT_FOUND {
             Ok(None)
         } else {
@@ -432,7 +432,7 @@ impl<'table> BootServices<'table> {
         if ret.is_success() {
             unsafe {
                 Ok(Some(Scope::new(
-                    T::from_raw(out),
+                    T::from_raw(out as *mut T::Raw),
                     handle,
                     agent,
                     controller,
@@ -501,23 +501,33 @@ impl<'table> BootServices<'table> {
         unsafe { (self.interface().unload_image)(handle).into() }
     }
 
-    /// Install a `Protocol` on `handle`
+    /// Install an instance of [proto::Protocol] on `handle`
     pub fn install_protocol<'a, T: proto::Protocol<'a>>(
         &self,
         handle: EfiHandle,
-        interface: &mut T,
+        interface: &'static mut T::Raw,
+    ) -> Result<()> {
+        // Safety:
+        // `interface` being a static mut reference guarantees validity and lifetime.
+        unsafe { self.install_protocol_ptr::<T>(handle, interface) }
+    }
+
+    /// Install a `Protocol` on `handle`
+    ///
+    /// # Safety
+    ///
+    /// - Pointer must be a valid instance of [proto::Protocol]
+    /// - Pointer must live long enough
+    pub unsafe fn install_protocol_ptr<'a, T: proto::Protocol<'a>>(
+        &self,
+        handle: EfiHandle,
+        interface: *mut T::Raw,
     ) -> Result<()> {
         let mut guid = T::GUID;
         let mut h = handle;
-        unsafe {
-            (self.interface().install_protocol_interface)(
-                &mut h,
-                &mut guid,
-                0,
-                interface as *mut _ as *mut u8,
-            )
+
+        (self.interface().install_protocol_interface)(&mut h, &mut guid, 0, interface as *mut u8)
             .into()
-        }
     }
 }
 

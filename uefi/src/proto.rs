@@ -36,11 +36,14 @@ pub unsafe trait Protocol<'table> {
     /// Protocol GUID
     const GUID: Guid;
 
+    /// Raw type of this Protocol
+    type Raw;
+
     /// # Safety
     ///
     /// - MUST be library author.
     #[doc(hidden)]
-    unsafe fn from_raw(this: *mut u8) -> Self;
+    unsafe fn from_raw(this: *mut Self::Raw) -> Self;
 }
 
 /// UEFI GUID

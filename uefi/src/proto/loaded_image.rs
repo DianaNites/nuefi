@@ -15,9 +15,10 @@ use crate::{
     EfiHandle,
 };
 
+/// Raw UEFI LoadedImage protocol structure
 #[derive(Debug)]
 #[repr(C)]
-pub(crate) struct RawLoadedImage {
+pub struct RawLoadedImage {
     revision: u32,
     parent: EfiHandle,
     system_table: *mut RawSystemTable,
@@ -88,7 +89,9 @@ unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
         ])
     };
 
-    unsafe fn from_raw(this: *mut u8) -> Self {
-        unsafe { LoadedImage::new(this as *mut RawLoadedImage) }
+    type Raw = RawLoadedImage;
+
+    unsafe fn from_raw(this: *mut RawLoadedImage) -> Self {
+        unsafe { LoadedImage::new(this) }
     }
 }
