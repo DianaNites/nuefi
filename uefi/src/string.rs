@@ -2,7 +2,7 @@
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
 use alloc::{string::String, vec::Vec};
-use core::{marker::PhantomData, ops::Deref, slice::from_raw_parts};
+use core::{fmt::Display, marker::PhantomData, ops::Deref, slice::from_raw_parts};
 
 use log::{error, trace};
 
@@ -202,6 +202,21 @@ impl<'table> Path<'table> {
         } else {
             error!("Tried to use DevicePath::to_string while not in Boot mode");
             Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        }
+    }
+
+    /// Get this as a [DevicePath]
+    pub fn as_device(&self) -> &DevicePath<'table> {
+        &self.data
+    }
+}
+
+impl<'table> Display for Path<'table> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        if let Ok(s) = self.to_string() {
+            write!(f, "{}", s)
+        } else {
+            write!(f, "Path (couldn't display, out of memory)")
         }
     }
 }

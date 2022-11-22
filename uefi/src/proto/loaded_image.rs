@@ -64,6 +64,15 @@ impl<'table> LoadedImage<'table> {
         self.interface().image_size
     }
 
+    /// The device handle that the EFI Image was loaded from, or [None]
+    pub fn device(&self) -> Option<EfiHandle> {
+        if !self.interface().device.0.is_null() {
+            Some(self.interface().device)
+        } else {
+            None
+        }
+    }
+
     /// Set the LoadOptions for this loaded image
     ///
     /// # Panics
@@ -82,6 +91,24 @@ impl<'table> LoadedImage<'table> {
         let len: u32 = data.len().try_into().unwrap();
         let size: u32 = size_of::<T>().try_into().unwrap();
         self.interface_mut().options_size = len * size;
+    }
+
+    /// Set the Device handle for this image
+    ///
+    /// # Safety
+    ///
+    /// Only use this if you know what you're doing
+    pub unsafe fn set_device(&self, device: EfiHandle) {
+        self.interface_mut().device = device;
+    }
+
+    /// Set the [DevicePath] for this image
+    ///
+    /// # Safety
+    ///
+    /// Only use this if you know what you're doing
+    pub unsafe fn set_path(&self, path: &Path) {
+        self.interface_mut().path = path.as_device().as_ptr();
     }
 }
 

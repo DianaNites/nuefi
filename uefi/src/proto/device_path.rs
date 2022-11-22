@@ -56,6 +56,10 @@ impl RawDevicePath {
 interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {
+    pub(crate) fn as_ptr(&self) -> *mut RawDevicePath {
+        self.interface
+    }
+
     /// Free the DevicePath
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
         unsafe { boot.free_pool(self.interface as *mut u8) }

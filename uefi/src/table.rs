@@ -472,9 +472,6 @@ impl<'table> BootServices<'table> {
     /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
     ///
     /// You will need to handle that case in [`BootServices::start_image`]
-    ///
-    /// Note that some firmware will return `EfiStatus::SECURITY_VIOLATION`
-    /// instead of what the spec documents. Looking at you, QEMU.
     pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
         let mut out = EfiHandle(null_mut());
         let ret = unsafe {
