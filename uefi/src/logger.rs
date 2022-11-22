@@ -61,6 +61,11 @@ impl UefiLogger {
         }
     }
 
+    /// Add colorful output
+    pub const fn color(self) -> UefiColorLogger {
+        UefiColorLogger(self)
+    }
+
     /// Initialize the logger with [log]
     ///
     /// This will set the max log level to [`log::STATIC_MAX_LEVEL`]
@@ -100,8 +105,35 @@ impl Log for UefiLogger {
     fn log(&self, record: &Record) {
         if let Some(table) = get_boot_table() {
             if self.enabled(record.metadata()) {
+                let mut stdout = table.stdout();
+                let _ = writeln!(
+                    stdout,
+                    "[{}] {} - {}",
+                    record.target(),
+                    record.level(),
+                    record.args()
+                );
+            }
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+/// Like [UefiLogger], but colors its output based on the level
+///
+/// See [`UefiLogger::color`]
+pub struct UefiColorLogger(UefiLogger);
+
+impl Log for UefiColorLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        self.0.enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        if let Some(table) = get_boot_table() {
+            if self.enabled(record.metadata()) {
                 let stdout = table.stdout();
-                // TODO: This should be in a wrapper type, not default.
                 let attr = match record.level() {
                     log::Level::Error => TextForeground::RED,
                     log::Level::Warn => TextForeground::YELLOW,
@@ -110,19 +142,12 @@ impl Log for UefiLogger {
                     log::Level::Debug => TextForeground::BLUE,
                     log::Level::Trace => TextForeground::MAGENTA,
                 };
-                let _ = stdout.with_attributes(attr, TextBackground::BLACK, || {
-                    let mut stdout = table.stdout();
-                    let _ = writeln!(
-                        stdout,
-                        "[{}] {} - {}",
-                        record.target(),
-                        record.level(),
-                        record.args()
-                    );
-                });
+                let _ = stdout.with_attributes(attr, TextBackground::BLACK, || self.0.log(record));
             }
         }
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        self.0.flush()
+    }
 }
