@@ -261,7 +261,12 @@ pub struct RawBootServices {
         controller_handle: EfiHandle,
         attributes: u32,
     ) -> EfiStatus,
-    close_protocol: Void,
+    close_protocol: unsafe extern "efiapi" fn(
+        handle: EfiHandle,
+        guid: *mut proto::Guid,
+        agent_handle: EfiHandle,
+        controller_handle: EfiHandle,
+    ) -> EfiStatus,
     open_protocol_information: Void,
 
     // Library?
@@ -410,6 +415,32 @@ impl<'table> BootServices<'table> {
             unsafe { Ok(Some(T::from_raw(out))) }
         } else if ret == EfiStatus::UNSUPPORTED {
             Ok(None)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Close the [Protocol] on `handle`
+    ///
+    /// `handle`, `agent`, and `controller` must be the same [EfiHandle]'s
+    /// passed to [`BootServices::open_protocol`]
+    pub fn close_protocol<'boot, T: proto::Protocol<'boot>>(
+        &'boot self,
+        handle: EfiHandle,
+        agent: EfiHandle,
+        controller: Option<EfiHandle>,
+    ) -> Result<()> {
+        let mut guid = T::GUID;
+        let ret = unsafe {
+            (self.interface().close_protocol)(
+                handle,
+                &mut guid,
+                agent,
+                controller.unwrap_or(EfiHandle(null_mut())),
+            )
+        };
+        if ret.is_success() {
+            Ok(())
         } else {
             Err(UefiError::new(ret))
         }
