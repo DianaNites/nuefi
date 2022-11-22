@@ -39,19 +39,28 @@ pub struct UefiString<'table> {
 impl<'table> UefiString<'table> {
     /// Create an owned [UefiString] from `data` and `len` *characters*.
     ///
+    /// This takes responsibility for freeing the memory using `free_pool`
+    ///
     /// # Safety
     ///
-    /// - Data must be a valid non-null pointer for `len` *characters*, not
-    ///   including nul
-    pub(crate) unsafe fn from_raw(data: *mut u16, len: usize) -> Self {
+    /// - Data must be a valid non-null pointer to a UEFI string ending in nul
+    pub unsafe fn from_ptr(data: *mut u16) -> Self {
         Self {
             data,
-            len,
+            len: string_len(data) + 1,
             _ghost: PhantomData,
         }
     }
 
-    pub(crate) fn as_slice(&self) -> &[u16] {
+    /// Get the string as a slice of u16 characters.
+    ///
+    /// Does not include trailing nul
+    pub const fn as_slice(&self) -> &[u16] {
+        unsafe { from_raw_parts(self.data, self.len - 1) }
+    }
+
+    /// Get the string as a slice of u16 characters
+    pub const fn as_slice_with_nul(&self) -> &[u16] {
         unsafe { from_raw_parts(self.data, self.len) }
     }
 }
@@ -169,7 +178,7 @@ impl<'table> Drop for PathBuf<'table> {
 ///
 /// - data must be a valid non-null pointer to a string
 #[inline]
-pub(crate) unsafe fn string_len(data: *mut u16) -> usize {
+pub(crate) const unsafe fn string_len(data: *const u16) -> usize {
     let mut len = 0;
     while *data.add(len) != 0 {
         len += 1;

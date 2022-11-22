@@ -143,7 +143,7 @@ impl<'table> DevicePathToText<'table> {
         let ret =
             unsafe { (self.interface().convert_device_node_to_text)(node.interface, false, false) };
         if !ret.is_null() {
-            Ok(unsafe { UefiString::from_raw(ret, string_len(ret)) })
+            Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
             Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
         }
@@ -158,7 +158,7 @@ impl<'table> DevicePathToText<'table> {
         let ret =
             unsafe { (self.interface().convert_device_path_to_text)(path.interface, false, false) };
         if !ret.is_null() {
-            Ok(unsafe { UefiString::from_raw(ret, string_len(ret)) })
+            Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
             Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
         }
