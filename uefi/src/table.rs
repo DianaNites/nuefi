@@ -5,11 +5,14 @@ use core::{marker::PhantomData, ptr::null_mut, time::Duration};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     proto::{self, console::SimpleTextOutput, Scope},
+    string::UefiStr,
     util::interface,
     EfiHandle,
 };
 
 pub mod raw;
+use alloc::string::String;
+
 use raw::*;
 
 interface!(
@@ -347,8 +350,13 @@ impl SystemTable<Internal> {
 
 impl SystemTable<Boot> {
     /// String identifying the vendor
-    pub fn firmware_vendor(&self) -> &str {
-        ""
+    pub fn firmware_vendor(&self) -> String {
+        let p = self.table().firmware_vendor as *mut u16;
+        if p.is_null() {
+            return String::new();
+        }
+        // Safety: always valid
+        unsafe { UefiStr::from_ptr(p) }.to_string()
     }
 
     /// Firmware-specific value indicating its revision

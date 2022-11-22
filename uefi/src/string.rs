@@ -104,7 +104,7 @@ pub struct UefiStr<'table> {
 }
 
 impl<'table> UefiStr<'table> {
-    /// Create an unowned [UefiStr] from `data` and `len` *characters*.
+    /// Create an unowned [UefiStr] from `data`
     ///
     /// # Safety
     ///
@@ -143,6 +143,14 @@ impl<'table> UefiStr<'table> {
     pub const fn as_slice_with_nul(&self) -> &[u16] {
         // Safety: Ensured valid in from_ptr
         unsafe { from_raw_parts(self.data, self.len) }
+    }
+
+    /// Convert this to a string
+    #[allow(clippy::inherent_to_string)]
+    pub fn to_string(&self) -> String {
+        char::decode_utf16(self.as_slice().iter().cloned())
+            .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+            .collect::<String>()
     }
 }
 
