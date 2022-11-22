@@ -9,6 +9,7 @@ use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     mem::MemoryType,
+    string::Path,
     table::RawSystemTable,
     util::interface,
     EfiHandle,
@@ -40,13 +41,11 @@ interface!(LoadedImage(RawLoadedImage));
 impl<'table> LoadedImage<'table> {
     const REVISION: u32 = 0x1000;
 
-    /// The [DevicePath] to the file of the loaded image, if it exists.
-    pub fn file_path(&self) -> Option<DevicePath> {
+    /// The [Path] to the file of the loaded image, if it exists.
+    pub fn file_path(&self) -> Option<Path> {
         let path = self.interface().path;
         if !path.is_null() {
-            // FIXME: DevicePath is owned and will incorrectly deallocate this memory on
-            // Drop
-            Some(unsafe { DevicePath::new(path) })
+            Some(Path::new(unsafe { DevicePath::new(path) }))
         } else {
             None
         }

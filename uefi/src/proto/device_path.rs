@@ -28,64 +28,10 @@ pub(crate) struct RawDevicePath {
     len: [u8; 2],
 }
 
-interface!(
-    /// Owned DevicePath
-    ///
-    /// Memory will be deallocated on Drop
-    DevicePath(RawDevicePath)
-);
+interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {
-    /// Convert this path to a UEFI String
-    pub fn to_text(&self) -> Result<()> {
-        if let Some(table) = get_boot_table() {
-            let boot = table.boot();
-            if let Some(to) = boot.locate_protocol::<DevicePathToText>()? {
-                todo!("Test")
-            }
-            todo!();
-        } else {
-            error!("Tried to use DevicePath::to_text while not in Boot mode");
-            Err(UefiError::new(EfiStatus::UNSUPPORTED))
-        }
-    }
-
-    /// Convert this path to a Rust String
-    pub fn to_string(&self) -> Result<String> {
-        if let Some(table) = get_boot_table() {
-            let boot = table.boot();
-            let text = boot
-                .locate_protocol::<DevicePathToText>()?
-                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
-
-            let s = text.convert_device_path_to_text(self)?;
-            let s = s.as_slice();
-            let s = char::decode_utf16(s.iter().cloned())
-                .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
-                .collect::<String>();
-            Ok(s)
-        } else {
-            error!("Tried to use DevicePath::to_text while not in Boot mode");
-            Err(UefiError::new(EfiStatus::UNSUPPORTED))
-        }
-    }
-}
-
-impl<'table> Drop for DevicePath<'table> {
-    fn drop(&mut self) {
-        trace!("Deallocating DevicePath");
-        if let Some(table) = get_boot_table() {
-            let ret = unsafe { table.boot().free_pool(self.interface as *mut u8) };
-            if ret.is_err() {
-                error!("Failed to deallocate DevicePath {:p}", self.interface)
-            }
-        } else {
-            error!(
-                "Tried to deallocate DevicePath {:p} while not in Boot mode",
-                self.interface
-            )
-        }
-    }
+    //
 }
 
 unsafe impl<'table> Protocol<'table> for DevicePath<'table> {

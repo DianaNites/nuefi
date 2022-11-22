@@ -9,7 +9,12 @@ use log::{error, trace};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
-    proto::{Guid, Protocol, Str16},
+    proto::{
+        device_path::{DevicePath, DevicePathToText},
+        Guid,
+        Protocol,
+        Str16,
+    },
     util::interface,
 };
 
@@ -32,12 +37,11 @@ pub struct UefiString<'table> {
 }
 
 impl<'table> UefiString<'table> {
-    /// Create an owned [UefiString] from `data` and `len` *characters*, NOT
-    /// including nul.
+    /// Create an owned [UefiString] from `data` and `len` *characters*.
     ///
     /// # Safety
     ///
-    /// - Data must be a valid non-null pointer for `len` *characters*,
+    /// - Data must be a valid non-null pointer for `len` *characters*, not
     ///   including nul
     pub(crate) unsafe fn from_raw(data: *mut u16, len: usize) -> Self {
         Self {
@@ -77,6 +81,85 @@ pub struct UefiStr {
 impl UefiStr {
     pub(crate) fn from_raw(data: *mut u16) -> Self {
         Self { data }
+    }
+}
+
+/// An unowned UEFI [DevicePath]
+pub struct Path<'table> {
+    data: DevicePath<'table>,
+}
+
+impl<'table> Path<'table> {
+    /// Create an unowned [Path] from a [DevicePath]
+    pub(crate) fn new(data: DevicePath<'table>) -> Self {
+        Self { data }
+    }
+
+    /// Convert this path to a UEFI String
+    pub fn to_text(&'table self) -> Result<UefiString<'table>> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            let text = boot
+                .locate_protocol::<DevicePathToText>()?
+                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+
+            let s = text.convert_device_path_to_text(&self.data)?;
+            Ok(
+                // Safety: Evil lifetime hack, turn our local borrow
+                // into a `'table` borrow
+                // This should be safe because the only way to call to_text is
+                // by having a valid lifetime
+                unsafe { core::mem::transmute(s) },
+            )
+        } else {
+            error!("Tried to use DevicePath::to_text while not in Boot mode");
+            Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        }
+    }
+
+    /// Convert this path to a Rust String
+    ///
+    /// Invalid characters are mapped to [`char::REPLACEMENT_CHARACTER`]
+    pub fn to_string(&self) -> Result<String> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            let text = boot
+                .locate_protocol::<DevicePathToText>()?
+                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+
+            let s = text.convert_device_path_to_text(&self.data)?;
+            let s = s.as_slice();
+            let s = char::decode_utf16(s.iter().cloned())
+                .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                .collect::<String>();
+            Ok(s)
+        } else {
+            error!("Tried to use DevicePath::to_string while not in Boot mode");
+            Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        }
+    }
+}
+
+/// An owned UEFI [DevicePath]
+pub struct PathBuf {
+    //
+}
+
+#[cfg(no)]
+impl<'table> Drop for PathBuf<'table> {
+    fn drop(&mut self) {
+        trace!("Deallocating DevicePath");
+        if let Some(table) = get_boot_table() {
+            let ret = unsafe { table.boot().free_pool(self.interface as *mut u8) };
+            if ret.is_err() {
+                error!("Failed to deallocate DevicePath {:p}", self.interface)
+            }
+        } else {
+            error!(
+                "Tried to deallocate DevicePath {:p} while not in Boot mode",
+                self.interface
+            )
+        }
     }
 }
 
