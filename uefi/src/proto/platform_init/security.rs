@@ -25,7 +25,7 @@ pub type AuthStateFn = unsafe extern "efiapi" fn(
 pub type AuthFn = unsafe extern "efiapi" fn(
     //
     this: *mut RawSecurityArch2,
-    file: *mut RawDevicePath,
+    path: *mut RawDevicePath,
     file: *mut u8,
     file_size: usize,
     boot: bool,
@@ -49,7 +49,7 @@ impl RawSecurityArch {
 interface!(SecurityArch(RawSecurityArch));
 
 impl<'table> SecurityArch<'table> {
-    pub(crate) fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
+    pub fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
         self.interface
     }
 }
@@ -85,7 +85,7 @@ impl RawSecurityArch2 {
 interface!(SecurityArch2(RawSecurityArch2));
 
 impl<'table> SecurityArch2<'table> {
-    pub(crate) fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
+    pub fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
         self.interface
     }
 }
