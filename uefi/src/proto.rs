@@ -89,6 +89,16 @@ impl<'table, Proto: Protocol<'table>> Scope<'table, Proto> {
             controller,
         }
     }
+
+    /// Close this protocol
+    pub fn close(self) {}
+
+    /// "Leak" this Protocol
+    ///
+    /// It can be closed by calling [`crate::BootServices::close_protocol`]
+    pub fn leak(self) {
+        core::mem::forget(self);
+    }
 }
 
 impl<'table, Proto: Protocol<'table>> Deref for Scope<'table, Proto> {

@@ -1,4 +1,6 @@
 //! UEFI Loaded image Protocol
+use core::mem::size_of;
+
 use super::{
     device_path::{DevicePath, RawDevicePath},
     Guid,
@@ -74,10 +76,12 @@ impl<'table> LoadedImage<'table> {
     ///
     /// It is your responsibility to ensure the data lives long enough until
     /// start_image is called.
-    pub unsafe fn set_options(&self, data: &[u8]) {
+    pub unsafe fn set_options<T>(&self, data: &[T]) {
         // EFI pls dont write to our options
         self.interface_mut().options = data.as_ptr() as *mut _;
-        self.interface_mut().options_size = data.len().try_into().unwrap();
+        let len: u32 = data.len().try_into().unwrap();
+        let size: u32 = size_of::<T>().try_into().unwrap();
+        self.interface_mut().options_size = len * size;
     }
 }
 
