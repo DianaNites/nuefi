@@ -10,6 +10,53 @@ use crate::{
 pub mod raw;
 use raw::RawSimpleTextOutput;
 
+/// Text foreground attributes for [SimpleTextOutput]
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+// Uefi wants them as usize but SetAttributes wants u32 but actually its all one
+// byte
+pub struct TextForeground(usize);
+
+impl TextForeground {
+    pub const BLACK: Self = Self(0x00);
+    pub const BLUE: Self = Self(0x01);
+    pub const GREEN: Self = Self(0x02);
+    pub const CYAN: Self = Self(0x03);
+    pub const RED: Self = Self(0x04);
+    pub const MAGENTA: Self = Self(0x05);
+    pub const BROWN: Self = Self(0x06);
+    pub const LIGHT_GRAY: Self = Self(0x07);
+
+    pub const BRIGHT: Self = Self(0x08);
+    pub const DARK_GRAY: Self = Self(0x08);
+
+    pub const LIGHT_BLUE: Self = Self(0x09);
+    pub const LIGHT_GREEN: Self = Self(0x0A);
+    pub const LIGHT_CYAN: Self = Self(0x0B);
+    pub const LIGHT_RED: Self = Self(0x0C);
+    pub const LIGHT_MAGENTA: Self = Self(0x0D);
+    pub const YELLOW: Self = Self(0x0E);
+    pub const WHITE: Self = Self(0x0F);
+}
+
+/// Text background attributes for [SimpleTextOutput]
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+// Uefi wants them as usize but SetAttributes wants u32 but actually its all one
+// byte??
+pub struct TextBackground(usize);
+
+impl TextBackground {
+    pub const BLACK: Self = Self(0x00);
+    pub const BLUE: Self = Self(0x01);
+    pub const GREEN: Self = Self(0x02);
+    pub const CYAN: Self = Self(0x03);
+    pub const RED: Self = Self(0x04);
+    pub const MAGENTA: Self = Self(0x05);
+    pub const BROWN: Self = Self(0x06);
+    pub const LIGHT_GRAY: Self = Self(0x07);
+}
+
 // interface!(SimpleTextInput(RawSimpleTextInput));
 
 interface!(SimpleTextOutput(RawSimpleTextOutput));
@@ -33,6 +80,55 @@ impl<'table> SimpleTextOutput<'table> {
             }
         }
         fin.into()
+    }
+
+    /// Use these colors for all output to this Protocol within the
+    /// closure, restoring them afterwards.
+    ///
+    /// Note that this will affect ALL output to this protocol, from anywhere in
+    /// the program.
+    /// In particular, this includes usage of the log macros.
+    pub fn with_attributes<F: FnMut()>(
+        &self,
+        fore: TextForeground,
+        back: TextBackground,
+        mut f: F,
+    ) -> Result<()> {
+        let cur = self.attributes();
+        self.set_attributes(fore, back)?;
+        f();
+        self.set_attributes(cur.0, cur.1)
+    }
+
+    /// Use this foreground color for the duration of the `f` call.
+    pub fn with_foreground<F: FnMut()>(&self, fore: TextForeground, f: F) -> Result<()> {
+        self.with_attributes(fore, self.attributes().1, f)
+    }
+
+    /// Use this background color for the duration of the `f` call.
+    pub fn with_background<F: FnMut()>(&self, back: TextBackground, f: F) -> Result<()> {
+        self.with_attributes(self.attributes().0, back, f)
+    }
+
+    /// Set the text background color
+    pub fn set_background(&self, back: TextBackground) -> Result<()> {
+        self.set_attributes(self.attributes().0, back)
+    }
+
+    /// Current text attributes
+    pub fn attributes(&self) -> (TextForeground, TextBackground) {
+        // Safety: Construction ensures these are valid
+        let mode = unsafe { *self.interface().mode };
+        let attr = mode.attribute as u8;
+        let f = attr & 0xF;
+        let b = attr >> 4;
+
+        (TextForeground(f.into()), TextBackground(b.into()))
+    }
+
+    pub fn set_attributes(&self, fore: TextForeground, back: TextBackground) -> Result<()> {
+        // Safety: Construction ensures these are valid
+        unsafe { (self.interface().set_attribute)(self.interface, fore.0 | back.0 << 4) }.into()
     }
 
     /// Reset the device associated with this protocol

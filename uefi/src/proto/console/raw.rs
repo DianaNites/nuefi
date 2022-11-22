@@ -9,7 +9,7 @@ pub struct RawSimpleTextInput {
     //
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RawMode {
     pub max_mode: i32,

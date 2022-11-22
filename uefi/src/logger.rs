@@ -3,7 +3,10 @@ use core::fmt::Write;
 
 use log::{Log, Metadata, Record};
 
-use crate::get_boot_table;
+use crate::{
+    get_boot_table,
+    proto::console::{TextBackground, TextForeground},
+};
 
 /// Log from within the logger
 #[allow(dead_code)]
@@ -97,14 +100,26 @@ impl Log for UefiLogger {
     fn log(&self, record: &Record) {
         if let Some(table) = get_boot_table() {
             if self.enabled(record.metadata()) {
-                let mut stdout = table.stdout();
-                let _ = writeln!(
-                    stdout,
-                    "[{}] {} - {}",
-                    record.target(),
-                    record.level(),
-                    record.args()
-                );
+                let stdout = table.stdout();
+                // TODO: This should be in a wrapper type, not default.
+                let attr = match record.level() {
+                    log::Level::Error => TextForeground::RED,
+                    log::Level::Warn => TextForeground::YELLOW,
+                    log::Level::Info => TextForeground::LIGHT_CYAN,
+                    // log::Level::Info => OutputAttribute::LIGHT_GRAY,
+                    log::Level::Debug => TextForeground::BLUE,
+                    log::Level::Trace => TextForeground::MAGENTA,
+                };
+                let _ = stdout.with_attributes(attr, TextBackground::BLACK, || {
+                    let mut stdout = table.stdout();
+                    let _ = writeln!(
+                        stdout,
+                        "[{}] {} - {}",
+                        record.target(),
+                        record.level(),
+                        record.args()
+                    );
+                });
             }
         }
     }
