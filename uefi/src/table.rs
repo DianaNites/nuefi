@@ -218,7 +218,12 @@ pub struct RawBootServices {
     check_event: Void,
 
     // Protocols
-    install_protocol_interface: Void,
+    install_protocol_interface: unsafe extern "efiapi" fn(
+        handle: *mut EfiHandle,
+        guid: *mut proto::Guid,
+        interface_ty: u32,
+        interface: *mut u8,
+    ) -> EfiStatus,
     reinstall_protocol_interface: Void,
     uninstall_protocol_interface: Void,
     handle_protocol: Void,
@@ -494,6 +499,25 @@ impl<'table> BootServices<'table> {
     /// Unload an earlier loaded image
     pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
         unsafe { (self.interface().unload_image)(handle).into() }
+    }
+
+    /// Install a `Protocol` on `handle`
+    pub fn install_protocol<'a, T: proto::Protocol<'a>>(
+        &self,
+        handle: EfiHandle,
+        interface: &mut T,
+    ) -> Result<()> {
+        let mut guid = T::GUID;
+        let mut h = handle;
+        unsafe {
+            (self.interface().install_protocol_interface)(
+                &mut h,
+                &mut guid,
+                0,
+                interface as *mut _ as *mut u8,
+            )
+            .into()
+        }
     }
 }
 

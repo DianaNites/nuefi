@@ -28,6 +28,26 @@ pub(crate) struct RawDevicePath {
     len: [u8; 2],
 }
 
+impl RawDevicePath {
+    /// Create a new [RawDevicePath]
+    pub unsafe fn create(ty: u8, sub_ty: u8, len: u16) -> Self {
+        Self {
+            ty,
+            sub_ty,
+            len: len.to_le_bytes(),
+        }
+    }
+
+    /// Create the end of path node
+    pub fn end() -> Self {
+        Self {
+            ty: 0x7F,
+            sub_ty: 0xFF,
+            len: 4u16.to_le_bytes(),
+        }
+    }
+}
+
 interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {

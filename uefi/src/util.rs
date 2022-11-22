@@ -47,6 +47,16 @@ macro_rules! interface {
                     // Should be statically impossible to invalidate
                     unsafe { &*self.interface }
                 }
+
+                /// Return a mutable reference to the interface by dereferencing and reborrowing its pointer
+                #[allow(clippy::mut_from_ref)]
+                fn interface_mut(&self) -> &mut $in {
+                    // SAFETY:
+                    // Ensured valid in construction.
+                    // Continued validity ensured by the type system
+                    // Should be statically impossible to invalidate
+                    unsafe { &mut *self.interface }
+                }
             }
         )*
     };

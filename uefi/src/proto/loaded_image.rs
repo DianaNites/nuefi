@@ -60,6 +60,24 @@ impl<'table> LoadedImage<'table> {
     pub fn image_size(&self) -> u64 {
         self.interface().image_size
     }
+
+    /// Set the LoadOptions for this loaded image
+    ///
+    /// # Panics
+    ///
+    /// - If `data` is bigger than [`u32::MAX`]
+    ///
+    /// # Safety
+    ///
+    /// You should only use this if you know what you're doing.
+    ///
+    /// It is your responsibility to ensure the data lives long enough until
+    /// start_image is called.
+    pub unsafe fn set_options(&self, data: &[u8]) {
+        // EFI pls dont write to our options
+        self.interface_mut().options = data.as_ptr() as *mut _;
+        self.interface_mut().options_size = data.len().try_into().unwrap();
+    }
 }
 
 unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
