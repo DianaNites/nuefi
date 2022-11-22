@@ -50,6 +50,16 @@ impl<'table> LoadedImage<'table> {
             None
         }
     }
+
+    /// Returns the base address of our executable in memory
+    pub fn image_base(&self) -> *mut u8 {
+        self.interface().image_base
+    }
+
+    /// Returns the size of our executable in memory
+    pub fn image_size(&self) -> u64 {
+        self.interface().image_size
+    }
 }
 
 unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
