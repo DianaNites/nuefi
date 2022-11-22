@@ -7,6 +7,7 @@ use crate::{
     proto::{
         self,
         console::{RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
+        Scope,
     },
     util::interface,
     EfiHandle,
@@ -398,7 +399,7 @@ impl<'table> BootServices<'table> {
         handle: EfiHandle,
         agent: EfiHandle,
         controller: Option<EfiHandle>,
-    ) -> Result<Option<T>> {
+    ) -> Result<Option<Scope<T>>> {
         let mut out: *mut u8 = null_mut();
         let mut guid = T::GUID;
         let ret = unsafe {
@@ -412,7 +413,14 @@ impl<'table> BootServices<'table> {
             )
         };
         if ret.is_success() {
-            unsafe { Ok(Some(T::from_raw(out))) }
+            unsafe {
+                Ok(Some(Scope::new(
+                    T::from_raw(out),
+                    handle,
+                    agent,
+                    controller,
+                )))
+            }
         } else if ret == EfiStatus::UNSUPPORTED {
             Ok(None)
         } else {

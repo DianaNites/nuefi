@@ -3,6 +3,7 @@
 use core::{
     fmt::{self, Write},
     marker::PhantomData,
+    ops::Deref,
 };
 
 use log::error;
@@ -82,6 +83,15 @@ impl<'table, Proto: Protocol<'table>> Scope<'table, Proto> {
             agent,
             controller,
         }
+    }
+}
+
+impl<'table, Proto: Protocol<'table>> Deref for Scope<'table, Proto> {
+    type Target = Proto;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.proto
     }
 }
 
