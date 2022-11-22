@@ -1,317 +1,16 @@
 //! UEFI Tables
 
-use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
+use core::{marker::PhantomData, ptr::null_mut, time::Duration};
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
-    proto::{
-        self,
-        console::{RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
-        device_path::DevicePath,
-        Scope,
-    },
+    proto::{self, console::SimpleTextOutput, Scope},
     util::interface,
     EfiHandle,
 };
 
-pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
-
-type Void = *mut [u8; 0];
-
-/// UEFI Header Revision
-///
-/// This is a binary coded decimal.
-///
-/// The upper 16 bits are the major version
-///
-/// The lower 16 bits are the minor version
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
-struct Revision(u32);
-
-impl Revision {
-    pub fn major(self) -> u32 {
-        self.0 >> 16
-    }
-
-    pub fn minor(self) -> u32 {
-        self.0 as u16 as u32
-    }
-}
-
-#[derive(Debug)]
-#[repr(C)]
-struct Header {
-    /// Unique signature identifying the table
-    signature: u64,
-
-    /// UEFI Revision
-    revision: Revision,
-
-    /// Size of the entire table, including this header
-    size: u32,
-
-    /// 32-bit CRC for the table.
-    /// This is set to 0 and computed for `size` bytes.
-    crc32: u32,
-
-    /// Reserved field. 0.
-    reserved: u32,
-}
-
-impl Header {
-    /// Validate the header
-    ///
-    /// # Safety
-    ///
-    /// - Must be called with a valid pointed to a UEFI table
-    unsafe fn validate(table: *mut Self, sig: u64) -> Result<()> {
-        let header = &*table;
-        let expected = header.crc32;
-        let len = header.size;
-        // Calculate the CRC
-        let mut digest = CRC.digest();
-        digest.update(&header.signature.to_ne_bytes());
-        digest.update(&header.revision.0.to_ne_bytes());
-        digest.update(&header.size.to_ne_bytes());
-        digest.update(&0u32.to_ne_bytes());
-        digest.update(&header.reserved.to_ne_bytes());
-        // Calculate the remaining table, header digested above.
-        let bytes = core::slice::from_raw_parts(
-            table.cast::<u8>().add(size_of::<Header>()),
-            len as usize - size_of::<Header>(),
-        );
-        digest.update(bytes);
-        if expected != digest.finalize() {
-            return EfiStatus::CRC_ERROR.into();
-        }
-        if !(header.revision.major() == 2 && header.revision.minor() >= 70) {
-            return EfiStatus::UNSUPPORTED.into();
-        }
-        if header.signature != sig {
-            return EfiStatus::INVALID_PARAMETER.into();
-        }
-        Ok(())
-    }
-}
-
-/// The EFI system table.
-///
-/// After a call to ExitBootServices, some parts of this may become invalid.
-#[derive(Debug)]
-#[repr(C)]
-pub struct RawSystemTable {
-    /// Table header, always valid
-    header: Header,
-
-    /// Firmware vendor, always valid
-    ///
-    /// Null terminated UCS-2 string
-    firmware_vendor: *const u16,
-
-    /// Firmware revision, always valid
-    ///
-    /// Firmware vendor specific version value
-    firmware_revision: u32,
-
-    ///
-    console_in_handle: EfiHandle,
-
-    ///
-    con_in: *mut RawSimpleTextInput,
-
-    ///
-    console_out_handle: EfiHandle,
-
-    ///
-    con_out: *mut RawSimpleTextOutput,
-
-    ///
-    standard_error_handle: EfiHandle,
-
-    ///
-    std_err: *mut RawSimpleTextOutput,
-
-    /// Runtime services table, always valid
-    runtime_services: *mut RawRuntimeServices,
-
-    /// Boot services table
-    boot_services: *mut RawBootServices,
-
-    /// Number of entries, always valid
-    number_of_table_entries: usize,
-
-    /// Configuration table, always valid
-    configuration_table: Void, // EFI_CONFIGURATION_TABLE
-}
-
-impl RawSystemTable {
-    const SIGNATURE: u64 = 0x5453595320494249;
-
-    /// Validate the table
-    ///
-    /// Validation fails if CRC validation fails, or the UEFI revision is
-    /// unsupported
-    ///
-    /// # Safety
-    ///
-    /// - Must be a valid pointer
-    /// - Must only be called before running user code.
-    pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
-        // Safety: Pointer to first C struct member
-        Header::validate(this as *mut Header, Self::SIGNATURE)?;
-        let header = &(*this);
-        Header::validate(
-            header.boot_services as *mut Header,
-            RawBootServices::SIGNATURE,
-        )?;
-        Header::validate(
-            header.runtime_services as *mut Header,
-            RawRuntimeServices::SIGNATURE,
-        )?;
-        Ok(())
-    }
-}
-
-// #[derive(Debug)]
-#[repr(C)]
-pub struct RawBootServices {
-    /// Table header
-    header: Header,
-
-    // Task priority
-    raise_tpl: Void,
-    restore_tpl: Void,
-
-    // Memory
-    allocate_pages: unsafe extern "efiapi" fn(
-        ty: crate::mem::AllocateType,
-        mem_ty: crate::mem::MemoryType,
-        pages: usize,
-        memory: *mut crate::mem::PhysicalAddress,
-    ) -> EfiStatus,
-    free_pages: unsafe extern "efiapi" fn(
-        //
-        memory: crate::mem::PhysicalAddress,
-        pages: usize,
-    ) -> EfiStatus,
-    get_memory_map: unsafe extern "efiapi" fn(
-        map_size: *mut usize,
-        map: *mut crate::mem::MemoryDescriptor,
-        key: *mut usize,
-        entry_size: *mut usize,
-        entry_version: *mut u32,
-    ) -> EfiStatus,
-    allocate_pool: unsafe extern "efiapi" fn(
-        mem_ty: crate::mem::MemoryType,
-        size: usize,
-        out: *mut *mut u8,
-    ) -> EfiStatus,
-    free_pool: unsafe extern "efiapi" fn(mem: *mut u8) -> EfiStatus,
-
-    // Timers/Events
-    create_event: Void,
-    set_timer: Void,
-    wait_for_event: Void,
-    signal_event: Void,
-    close_event: Void,
-    check_event: Void,
-
-    // Protocols
-    install_protocol_interface: unsafe extern "efiapi" fn(
-        handle: *mut EfiHandle,
-        guid: *mut proto::Guid,
-        interface_ty: u32,
-        interface: *mut u8,
-    ) -> EfiStatus,
-    reinstall_protocol_interface: Void,
-    uninstall_protocol_interface: Void,
-    handle_protocol: Void,
-    reserved: Void,
-    register_protocol_notify: Void,
-    locate_handle: Void,
-    locate_device_path: Void,
-    install_configuration_table: Void,
-
-    // Images
-    load_image: unsafe extern "efiapi" fn(
-        policy: bool,
-        parent: EfiHandle,
-        path: *mut DevicePath,
-        source: *mut u8,
-        source_size: usize,
-        out: *mut EfiHandle,
-    ) -> EfiStatus,
-    start_image: unsafe extern "efiapi" fn(
-        //
-        handle: EfiHandle,
-        exit_size: *mut usize,
-        exit: *mut *mut u8,
-    ) -> EfiStatus,
-    exit: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        status: EfiStatus,
-        data_size: usize,
-        data: proto::Str16,
-    ) -> EfiStatus,
-    unload_image: unsafe extern "efiapi" fn(handle: EfiHandle) -> EfiStatus,
-    exit_boot_services: unsafe extern "efiapi" fn(handle: EfiHandle, key: usize) -> EfiStatus,
-
-    // Misc
-    get_next_monotonic_count: unsafe extern "efiapi" fn(count: *mut u64) -> EfiStatus,
-    stall: unsafe extern "efiapi" fn(microseconds: usize) -> EfiStatus,
-    set_watchdog_timer: unsafe extern "efiapi" fn(
-        timeout: usize,
-        code: u64,
-        data_size: usize,
-        data: proto::Str16,
-    ) -> EfiStatus,
-
-    // Drivers
-    connect_controller: Void,
-    disconnect_controller: Void,
-
-    // Protocols again
-    open_protocol: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        guid: *mut proto::Guid,
-        out: *mut *mut u8,
-        agent_handle: EfiHandle,
-        controller_handle: EfiHandle,
-        attributes: u32,
-    ) -> EfiStatus,
-    close_protocol: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        guid: *mut proto::Guid,
-        agent_handle: EfiHandle,
-        controller_handle: EfiHandle,
-    ) -> EfiStatus,
-    open_protocol_information: Void,
-
-    // Library?
-    protocols_per_handle: Void,
-    locate_handle_buffer: Void,
-    locate_protocol: unsafe extern "efiapi" fn(
-        //
-        guid: *mut proto::Guid,
-        key: Void,
-        out: *mut *mut u8,
-    ) -> EfiStatus,
-    install_multiple_protocol_interfaces: Void,
-    uninstall_multiple_protocol_interfaces: Void,
-
-    // Useless CRC
-    calculate_crc32: Void,
-
-    // Misc again
-    copy_mem: Void,
-    set_mem: Void,
-    create_event_ex: Void,
-}
-
-impl RawBootServices {
-    const SIGNATURE: u64 = 0x56524553544f4f42;
-}
+pub mod raw;
+use raw::*;
 
 interface!(
     /// The UEFI Boot Services
@@ -538,17 +237,6 @@ impl<'table> BootServices<'table> {
     }
 }
 
-#[derive(Debug)]
-#[repr(C)]
-pub struct RawRuntimeServices {
-    /// Table header
-    header: Header,
-}
-
-impl RawRuntimeServices {
-    const SIGNATURE: u64 = 0x56524553544e5552;
-}
-
 interface!(
     // /// The UEFI Runtime Services
     // RuntimeServices(RawRuntimeServices),
@@ -561,10 +249,6 @@ pub struct Boot;
 /// Type marker for [`SystemTable`] representing after ExitBootServices is
 /// called
 pub struct Runtime;
-
-/// Type marker for [`SystemTable`] representing we dont know if
-/// ExitBootServices has been called
-struct Unknown;
 
 /// Internal state for global handling code
 pub(crate) struct Internal;
@@ -637,7 +321,7 @@ impl SystemTable<Internal> {
     ///
     /// If ExitBootServices has NOT been called,
     /// return [`SystemTable<Runtime>`], otherwise [`None`]
-    pub(crate) fn as_runtime(&self) -> Option<SystemTable<Boot>> {
+    pub(crate) fn _as_runtime(&self) -> Option<SystemTable<Boot>> {
         if !self.table().boot_services.is_null() {
             // Safety
             // - Above check verifies ExitBootServices has not been called.

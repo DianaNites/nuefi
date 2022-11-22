@@ -1,19 +1,10 @@
 //! Supported/known UEFI Protocols
 
-use core::{
-    fmt::{self, Write},
-    marker::PhantomData,
-    ops::Deref,
-};
+use core::{marker::PhantomData, ops::Deref};
 
 use log::error;
 
-use crate::{
-    error::{EfiStatus, Result},
-    get_boot_table,
-    util::interface,
-    EfiHandle,
-};
+use crate::{get_boot_table, EfiHandle};
 
 pub mod console;
 pub mod device_path;

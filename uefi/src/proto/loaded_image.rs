@@ -5,14 +5,11 @@ use super::{
     device_path::{DevicePath, RawDevicePath},
     Guid,
     Protocol,
-    Str16,
 };
 use crate::{
-    error::{EfiStatus, Result, UefiError},
-    get_boot_table,
     mem::MemoryType,
     string::Path,
-    table::RawSystemTable,
+    table::raw::RawSystemTable,
     util::interface,
     EfiHandle,
 };
@@ -42,7 +39,7 @@ pub struct RawLoadedImage {
 interface!(LoadedImage(RawLoadedImage));
 
 impl<'table> LoadedImage<'table> {
-    const REVISION: u32 = 0x1000;
+    const _REVISION: u32 = 0x1000;
 
     /// The [Path] to the file of the loaded image, if it exists.
     pub fn file_path(&self) -> Option<Path> {

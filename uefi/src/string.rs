@@ -1,7 +1,7 @@
 //! UEFI String handling helpers
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
 use core::{fmt::Display, marker::PhantomData, ops::Deref, slice::from_raw_parts};
 
 use log::{error, trace};
@@ -9,13 +9,7 @@ use log::{error, trace};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
-    proto::{
-        device_path::{DevicePath, DevicePathToText},
-        Guid,
-        Protocol,
-        Str16,
-    },
-    util::interface,
+    proto::device_path::{DevicePath, DevicePathToText},
 };
 
 /// An owned UEFI string, encoded as UTF-16/UCS-2/lies*

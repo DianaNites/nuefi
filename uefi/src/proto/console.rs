@@ -9,7 +9,7 @@ use crate::{
 
 #[derive(Debug)]
 #[repr(C)]
-pub(crate) struct RawSimpleTextInput {
+pub struct RawSimpleTextInput {
     //
 }
 

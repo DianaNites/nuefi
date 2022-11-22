@@ -21,6 +21,8 @@ macro_rules! interface {
                 phantom: core::marker::PhantomData<&'table mut $in>,
             }
 
+            // Its okay not to use these macro generated interfaces, shut up
+            #[allow(dead_code)]
             impl<'table> $name<'table> {
                 /// Create a new interface
                 ///
@@ -56,6 +58,13 @@ macro_rules! interface {
                     // Continued validity ensured by the type system
                     // Should be statically impossible to invalidate
                     unsafe { &mut *self.interface }
+                }
+
+                /// Raw pointer to this protocols interface
+                ///
+                /// It is your responsibility to use it correctly.
+                pub fn as_ptr(&self) -> *mut $in {
+                    self.interface
                 }
             }
         )*

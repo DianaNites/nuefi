@@ -1,10 +1,9 @@
 use core::{
     alloc::{GlobalAlloc, Layout},
-    mem::{align_of, size_of},
     ptr::null_mut,
 };
 
-use log::{error, info, trace};
+use log::{error, trace};
 
 use crate::get_boot_table;
 
@@ -35,7 +34,7 @@ impl AllocateType {
     pub const ADDRESS: Self = Self(2);
 
     /// Max value.
-    const MAX: Self = Self(3);
+    const _MAX: Self = Self(3);
 }
 
 /// UEFI Memory type
@@ -62,7 +61,7 @@ impl MemoryType {
     pub const UNACCEPTED: Self = Self(15);
 
     /// Max value.
-    const MAX: Self = Self(16);
+    const _MAX: Self = Self(16);
 }
 
 /// UEFI Memory flags
@@ -98,7 +97,7 @@ pub struct MemoryDescriptor {
 }
 
 impl MemoryDescriptor {
-    pub(crate) const VERSION: u32 = 1;
+    pub(crate) const _VERSION: u32 = 1;
 }
 
 /// A UEFI memory allocator
@@ -154,7 +153,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
             return;
         }
         let align = layout.align();
-        let size = layout.size();
+        let _size = layout.size();
         let offset = if align > POOL_ALIGN {
             let o = align - POOL_ALIGN;
             trace!(
@@ -165,7 +164,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         } else {
             0
         };
-        let size = size + offset;
+        let _size = _size + offset;
 
         if let Some(table) = get_boot_table() {
             let ptr = ptr.sub(offset);

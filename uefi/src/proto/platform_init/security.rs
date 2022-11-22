@@ -1,17 +1,8 @@
 //! UEFI PI Security Protocols
 
-use log::{error, info, trace};
-
 use crate::{
-    error::{EfiStatus, Result, UefiError},
-    get_boot_table,
-    proto::{
-        device_path::{DevicePath, RawDevicePath},
-        Guid,
-        Protocol,
-        Str16,
-    },
-    string::{string_len, UefiString},
+    error::EfiStatus,
+    proto::{device_path::RawDevicePath, Guid, Protocol},
     util::interface,
 };
 
@@ -49,9 +40,7 @@ impl RawSecurityArch {
 interface!(SecurityArch(RawSecurityArch));
 
 impl<'table> SecurityArch<'table> {
-    pub fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
-        self.interface
-    }
+    //
 }
 
 unsafe impl<'table> Protocol<'table> for SecurityArch<'table> {
@@ -85,9 +74,7 @@ impl RawSecurityArch2 {
 interface!(SecurityArch2(RawSecurityArch2));
 
 impl<'table> SecurityArch2<'table> {
-    pub fn as_ptr(&self) -> *mut <Self as Protocol<'table>>::Raw {
-        self.interface
-    }
+    //
 }
 
 unsafe impl<'table> Protocol<'table> for SecurityArch2<'table> {

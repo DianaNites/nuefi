@@ -1,13 +1,9 @@
 //! UEFI Device Path Protocol
-use alloc::{string::String, vec::Vec};
 
-use log::{error, info, trace};
-
-use super::{Guid, Protocol, Str16};
+use super::{Guid, Protocol};
 use crate::{
     error::{EfiStatus, Result, UefiError},
-    get_boot_table,
-    string::{string_len, UefiString},
+    string::UefiString,
     table::BootServices,
     util::interface,
 };
@@ -56,10 +52,6 @@ impl RawDevicePath {
 interface!(DevicePath(RawDevicePath));
 
 impl<'table> DevicePath<'table> {
-    pub(crate) fn as_ptr(&self) -> *mut RawDevicePath {
-        self.interface
-    }
-
     /// Free the DevicePath
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
         unsafe { boot.free_pool(self.interface as *mut u8) }

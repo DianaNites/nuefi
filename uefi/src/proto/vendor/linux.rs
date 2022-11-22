@@ -1,16 +1,11 @@
 //! Linux Specific UEFI Protocols
-use log::{error, info, trace};
 
 use crate::{
-    error::{EfiStatus, Result, UefiError},
-    get_boot_table,
     proto::{
         device_path::{DevicePath, RawDevicePath},
         Guid,
         Protocol,
-        Str16,
     },
-    string::{string_len, UefiString},
     util::interface,
 };
 

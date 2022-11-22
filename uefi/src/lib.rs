@@ -1,4 +1,5 @@
-#![allow(unused_imports, unused_variables, clippy::let_and_return, dead_code)]
+// #![allow(unused_imports, unused_variables, clippy::let_and_return,
+// dead_code)]
 #![no_std]
 #![feature(abi_efiapi, alloc_error_handler)]
 extern crate alloc;
@@ -13,7 +14,7 @@ use core::{
 
 use error::EfiStatus;
 use log::{error, info};
-use table::Boot;
+use table::{raw::RawSystemTable, Boot};
 
 pub use crate::table::SystemTable;
 
@@ -26,7 +27,7 @@ pub mod table;
 mod util;
 
 /// Handle to the SystemTable. Uses Acquire/Release
-static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
+static TABLE: AtomicPtr<RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
 
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
@@ -59,10 +60,7 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 /// This does some basic initial setup, preparing the user entry point from the
 /// UEFI one, validating tables, handling `main`s return value.
 #[no_mangle]
-extern "efiapi" fn efi_main(
-    image: EfiHandle,
-    system_table: *mut table::RawSystemTable,
-) -> EfiStatus {
+extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> EfiStatus {
     extern "Rust" {
         fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
     }
@@ -70,7 +68,7 @@ extern "efiapi" fn efi_main(
         return EfiStatus::INVALID_PARAMETER;
     }
     // SAFETY: Pointer is valid from firmware
-    let valid = unsafe { table::RawSystemTable::validate(system_table) };
+    let valid = unsafe { RawSystemTable::validate(system_table) };
     if let Err(e) = valid {
         return e.status();
     }

@@ -1,17 +1,8 @@
 //! UEFI Media protocols
 use crate::{
-    error::{EfiStatus, Result, UefiError},
-    get_boot_table,
-    proto::{
-        self,
-        device_path::{DevicePath, RawDevicePath},
-        Guid,
-        Protocol,
-        Str16,
-    },
-    string::{string_len, UefiString},
+    error::EfiStatus,
+    proto::{device_path::RawDevicePath, Guid, Protocol},
     util::interface,
-    EfiHandle,
 };
 
 pub type LoadFile2Fn = unsafe extern "efiapi" fn(
