@@ -393,7 +393,6 @@ impl<'table> BootServices<'table> {
     /// Open the protocol on `handle`, if it exists.
     ///
     /// The protocol is opened in Exclusive mode
-    // TODO: RAII guard to scope this and call close_protocol
     pub fn open_protocol<'boot, T: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
