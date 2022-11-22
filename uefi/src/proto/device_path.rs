@@ -8,46 +8,8 @@ use crate::{
     util::interface,
 };
 
-/// Raw device path structure
-///
-/// Device Paths are variable length, unaligned/byte packed structures.
-///
-/// All fields must be assumed unaligned
-///
-/// Also a protocol that can be used on any handle to obtain its path, if it
-/// exists.
-#[derive(Debug)]
-#[repr(C, packed)]
-pub struct RawDevicePath {
-    ty: u8,
-    sub_ty: u8,
-    /// Length, including this header
-    len: [u8; 2],
-}
-
-impl RawDevicePath {
-    /// Create a new [RawDevicePath]
-    ///
-    /// # Safety
-    ///
-    /// It is up to you to make sure this is a valid node.
-    pub unsafe fn create(ty: u8, sub_ty: u8, len: u16) -> Self {
-        Self {
-            ty,
-            sub_ty,
-            len: len.to_le_bytes(),
-        }
-    }
-
-    /// Create the end of path node
-    pub fn end() -> Self {
-        Self {
-            ty: 0x7F,
-            sub_ty: 0xFF,
-            len: 4u16.to_le_bytes(),
-        }
-    }
-}
+pub mod raw;
+use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
 interface!(DevicePath(RawDevicePath));
 
@@ -71,20 +33,6 @@ unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
     unsafe fn from_raw(this: *mut RawDevicePath) -> Self {
         unsafe { DevicePath::new(this) }
     }
-}
-
-/// Device Path Utilities protocol
-// #[derive(Debug)]
-#[repr(C)]
-pub struct RawDevicePathUtil {
-    get_device_path_size: unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize,
-    duplicate_device_path: *mut u8,
-    append_device_path: *mut u8,
-    append_device_node: *mut u8,
-    append_device_path_instance: *mut u8,
-    get_next_device_path_instance: *mut u8,
-    is_device_path_multi_instance: *mut u8,
-    create_device_node: *mut u8,
 }
 
 interface!(DevicePathUtil(RawDevicePathUtil));
@@ -113,22 +61,6 @@ unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
     unsafe fn from_raw(this: *mut RawDevicePathUtil) -> Self {
         unsafe { DevicePathUtil::new(this) }
     }
-}
-
-/// Device Path Display protocol
-// #[derive(Debug)]
-#[repr(C)]
-pub struct RawDevicePathToText {
-    convert_device_node_to_text: unsafe extern "efiapi" fn(
-        node: *mut RawDevicePath,
-        display: bool,
-        shortcuts: bool,
-    ) -> *mut u16,
-    convert_device_path_to_text: unsafe extern "efiapi" fn(
-        path: *mut RawDevicePath,
-        display: bool,
-        shortcuts: bool,
-    ) -> *mut u16,
 }
 
 interface!(DevicePathToText(RawDevicePathToText));

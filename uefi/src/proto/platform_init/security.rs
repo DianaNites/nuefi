@@ -1,41 +1,12 @@
 //! UEFI PI Security Protocols
 
 use crate::{
-    error::EfiStatus,
-    proto::{device_path::RawDevicePath, Guid, Protocol},
+    proto::{Guid, Protocol},
     util::interface,
 };
 
-pub type AuthStateFn = unsafe extern "efiapi" fn(
-    //
-    this: *mut RawSecurityArch,
-    status: u32,
-    file: *mut RawDevicePath,
-) -> EfiStatus;
-
-pub type AuthFn = unsafe extern "efiapi" fn(
-    //
-    this: *mut RawSecurityArch2,
-    path: *mut RawDevicePath,
-    file: *mut u8,
-    file_size: usize,
-    boot: bool,
-) -> EfiStatus;
-
-/// Security Arch Protocol
-#[repr(C)]
-pub struct RawSecurityArch {
-    auth_state: Option<AuthStateFn>,
-}
-
-impl RawSecurityArch {
-    /// Create a new instance of this protocol
-    pub fn create(auth_state: AuthStateFn) -> Self {
-        Self {
-            auth_state: Some(auth_state),
-        }
-    }
-}
+pub mod raw;
+use raw::{RawSecurityArch, RawSecurityArch2};
 
 interface!(SecurityArch(RawSecurityArch));
 
@@ -55,19 +26,6 @@ unsafe impl<'table> Protocol<'table> for SecurityArch<'table> {
 
     unsafe fn from_raw(this: *mut RawSecurityArch) -> Self {
         unsafe { SecurityArch::new(this) }
-    }
-}
-
-/// Security Arch2 Protocol
-#[repr(C)]
-pub struct RawSecurityArch2 {
-    auth: Option<AuthFn>,
-}
-
-impl RawSecurityArch2 {
-    /// Create a new instance of this protocol
-    pub fn create(auth: AuthFn) -> Self {
-        Self { auth: Some(auth) }
     }
 }
 

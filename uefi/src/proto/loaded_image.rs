@@ -1,40 +1,11 @@
 //! UEFI Loaded image Protocol
 use core::mem::size_of;
 
-use super::{
-    device_path::{DevicePath, RawDevicePath},
-    Guid,
-    Protocol,
-};
-use crate::{
-    mem::MemoryType,
-    string::Path,
-    table::raw::RawSystemTable,
-    util::interface,
-    EfiHandle,
-};
+use super::{device_path::DevicePath, Guid, Protocol};
+use crate::{string::Path, util::interface, EfiHandle};
 
-/// Raw UEFI LoadedImage protocol structure
-#[derive(Debug)]
-#[repr(C)]
-pub struct RawLoadedImage {
-    revision: u32,
-    parent: EfiHandle,
-    system_table: *mut RawSystemTable,
-
-    device: EfiHandle,
-    path: *mut RawDevicePath,
-    _reserved: *mut u8,
-
-    options_size: u32,
-    options: *mut u8,
-
-    image_base: *mut u8,
-    image_size: u64,
-    image_code: MemoryType,
-    image_data: MemoryType,
-    unload: *mut u8,
-}
+pub mod raw;
+use raw::RawLoadedImage;
 
 interface!(LoadedImage(RawLoadedImage));
 

@@ -147,7 +147,7 @@ impl<'table> BootServices<'table> {
         }
     }
 
-    /// Close the [Protocol] on `handle`
+    /// Close the [crate::proto::Protocol] on `handle`
     ///
     /// `handle`, `agent`, and `controller` must be the same [EfiHandle]'s
     /// passed to [`BootServices::open_protocol`]

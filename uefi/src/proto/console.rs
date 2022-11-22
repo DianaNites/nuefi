@@ -7,46 +7,10 @@ use crate::{
     util::interface,
 };
 
-#[derive(Debug)]
-#[repr(C)]
-pub struct RawSimpleTextInput {
-    //
-}
+pub mod raw;
+use raw::RawSimpleTextOutput;
 
 // interface!(SimpleTextInput(RawSimpleTextInput));
-
-#[derive(Debug)]
-#[repr(C)]
-struct RawMode {
-    max_mode: i32,
-    mode: i32,
-    attribute: i32,
-    cursor_column: i32,
-    cursor_row: i32,
-    cursor_visible: bool,
-}
-
-// TODO: Report bug to upstream Rust that derive(Debug) doesn't work for efiapi
-// #[derive(Debug)]
-#[repr(C)]
-pub struct RawSimpleTextOutput {
-    reset: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
-    output_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
-    test_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
-    query_mode: unsafe extern "efiapi" fn(
-        this: *mut Self,
-        mode: usize,
-        cols: *mut usize,
-        rows: *mut usize,
-    ) -> EfiStatus,
-    set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus,
-    set_attribute: unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> EfiStatus,
-    clear_screen: unsafe extern "efiapi" fn(this: *mut Self) -> EfiStatus,
-    set_cursor_position:
-        unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus,
-    enable_cursor: unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus,
-    mode: *mut RawMode,
-}
 
 interface!(SimpleTextOutput(RawSimpleTextOutput));
 

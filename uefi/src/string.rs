@@ -16,8 +16,8 @@ use crate::{
 ///
 /// *UEFI firmware supposedly often lies/is not conformant with UCS-2.
 ///
-/// The backing memory will be freed using [`crate::SystemTable::free_pool`] on
-/// [Drop]
+/// The backing memory will be freed using
+/// [`crate::table::BootServices::free_pool`] on [Drop]
 ///
 /// This means this data is only valid before ExitBootServices.
 #[derive(Debug)]

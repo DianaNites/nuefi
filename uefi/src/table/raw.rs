@@ -5,7 +5,7 @@ use crate::{
     error::{EfiStatus, Result},
     proto::{
         self,
-        console::{RawSimpleTextInput, RawSimpleTextOutput},
+        console::raw::{RawSimpleTextInput, RawSimpleTextOutput},
         device_path::DevicePath,
     },
     EfiHandle,

@@ -57,7 +57,7 @@ impl Guid {
 }
 
 /// A scope around a [Protocol] that will call
-/// [`crate::BootServices::close_protocol`] on [Drop]
+/// [`crate::table::BootServices::close_protocol`] on [Drop]
 pub struct Scope<'table, Proto: Protocol<'table>> {
     proto: Proto,
     phantom: PhantomData<&'table mut Proto>,
@@ -87,7 +87,8 @@ impl<'table, Proto: Protocol<'table>> Scope<'table, Proto> {
 
     /// "Leak" this Protocol
     ///
-    /// It can be closed by calling [`crate::BootServices::close_protocol`]
+    /// It can be closed by calling
+    /// [`crate::table::BootServices::close_protocol`]
     pub fn leak(self) {
         core::mem::forget(self);
     }
