@@ -47,7 +47,9 @@ impl RawInitrdMediaGuid {
 interface!(InitrdMediaGuid(RawInitrdMediaGuid));
 
 impl<'table> InitrdMediaGuid<'table> {
-    //
+    pub fn as_device_path(&mut self) -> DevicePath {
+        unsafe { DevicePath::from_raw(self as *mut _ as *mut u8) }
+    }
 }
 
 unsafe impl<'table> Protocol<'table> for InitrdMediaGuid<'table> {

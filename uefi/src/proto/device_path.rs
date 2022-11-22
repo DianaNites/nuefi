@@ -21,7 +21,7 @@ use crate::{
 /// exists.
 #[derive(Debug)]
 #[repr(C, packed)]
-pub(crate) struct RawDevicePath {
+pub struct RawDevicePath {
     ty: u8,
     sub_ty: u8,
     /// Length, including this header
@@ -30,6 +30,10 @@ pub(crate) struct RawDevicePath {
 
 impl RawDevicePath {
     /// Create a new [RawDevicePath]
+    ///
+    /// # Safety
+    ///
+    /// It is up to you to make sure this is a valid node.
     pub unsafe fn create(ty: u8, sub_ty: u8, len: u16) -> Self {
         Self {
             ty,
