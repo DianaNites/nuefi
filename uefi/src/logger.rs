@@ -23,6 +23,7 @@ fn debug_log(args: core::fmt::Arguments) {
 /// or the provided `target` in [`UefiLogger::new`]
 pub struct UefiLogger {
     targets: Option<&'static [&'static str]>,
+    excludes: Option<&'static [&'static str]>,
 }
 
 impl UefiLogger {
@@ -36,13 +37,25 @@ impl UefiLogger {
     pub const fn new(targets: &'static [&'static str]) -> Self {
         Self {
             targets: Some(targets),
+            excludes: None,
         }
     }
 
     /// Like [`UefiLogger::new`], but filters nothing, allowing all logs
     /// through.
     pub const fn all() -> Self {
-        Self { targets: None }
+        Self {
+            targets: None,
+            excludes: None,
+        }
+    }
+
+    /// Add excludes
+    pub const fn exclude(self, excludes: &'static [&'static str]) -> Self {
+        Self {
+            targets: self.targets,
+            excludes: Some(excludes),
+        }
     }
 
     /// Initialize the logger with [log]
@@ -60,7 +73,16 @@ impl UefiLogger {
 impl Log for UefiLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         let target = metadata.target();
-        if let Some(targets) = self.targets {
+        let exclude = if let Some(excludes) = self.excludes {
+            excludes.iter().any(|s| {
+                s == &target
+                    || (target.starts_with(s)
+                        && target.as_bytes().get(s.len()).copied().unwrap_or_default() == b':')
+            })
+        } else {
+            false
+        };
+        let include = if let Some(targets) = self.targets {
             targets.iter().any(|s| {
                 s == &target
                     || (target.starts_with(s)
@@ -68,7 +90,8 @@ impl Log for UefiLogger {
             })
         } else {
             true
-        }
+        };
+        !exclude && include
     }
 
     fn log(&self, record: &Record) {
