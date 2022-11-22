@@ -62,8 +62,9 @@ impl Log for UefiLogger {
         let target = metadata.target();
         if let Some(targets) = self.targets {
             targets.iter().any(|s| {
-                target.starts_with(s)
-                    && target.as_bytes().get(s.len()).copied().unwrap_or_default() == b':'
+                s == &target
+                    || (target.starts_with(s)
+                        && target.as_bytes().get(s.len()).copied().unwrap_or_default() == b':')
             })
         } else {
             true
