@@ -425,25 +425,21 @@ impl<'table> BootServices<'table> {
     /// `handle`, `agent`, and `controller` must be the same [EfiHandle]'s
     /// passed to [`BootServices::open_protocol`]
     pub fn close_protocol<'boot, T: proto::Protocol<'boot>>(
-        &'boot self,
+        &self,
         handle: EfiHandle,
         agent: EfiHandle,
         controller: Option<EfiHandle>,
     ) -> Result<()> {
         let mut guid = T::GUID;
-        let ret = unsafe {
+        unsafe {
             (self.interface().close_protocol)(
                 handle,
                 &mut guid,
                 agent,
                 controller.unwrap_or(EfiHandle(null_mut())),
             )
-        };
-        if ret.is_success() {
-            Ok(())
-        } else {
-            Err(UefiError::new(ret))
         }
+        .into()
     }
 }
 
