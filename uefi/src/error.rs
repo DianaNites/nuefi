@@ -220,9 +220,15 @@ impl From<EfiStatus> for Result<()> {
     }
 }
 
-#[cfg(no)]
+/// Convert [EfiStatus] to [UefiError]
+///
+/// Panics if [EfiStatus] is [EfiStatus::SUCCESS]
 impl From<EfiStatus> for UefiError {
     fn from(value: EfiStatus) -> Self {
+        assert!(
+            !value.is_success(),
+            "Tried to construct a successful UefiError"
+        );
         UefiError::new(value)
     }
 }
