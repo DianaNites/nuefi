@@ -2,7 +2,7 @@
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
 use alloc::{string::String, vec::Vec};
-use core::{marker::PhantomData, slice::from_raw_parts};
+use core::{marker::PhantomData, ops::Deref, slice::from_raw_parts};
 
 use log::{error, trace};
 
@@ -27,6 +27,7 @@ use crate::{
 ///
 /// This means this data is only valid before ExitBootServices.
 #[derive(Debug)]
+#[repr(C)]
 pub struct UefiString<'table> {
     data: *mut u16,
 
@@ -37,7 +38,7 @@ pub struct UefiString<'table> {
 }
 
 impl<'table> UefiString<'table> {
-    /// Create an owned [UefiString] from `data` and `len` *characters*.
+    /// Create an owned [UefiString] from `data`
     ///
     /// This takes responsibility for freeing the memory using `free_pool`
     ///
@@ -52,16 +53,27 @@ impl<'table> UefiString<'table> {
         }
     }
 
-    /// Get the string as a slice of u16 characters.
+    /// Create an owned [UefiString] from `data` and `len` *characters*,
+    /// including nul.
     ///
-    /// Does not include trailing nul
-    pub const fn as_slice(&self) -> &[u16] {
-        unsafe { from_raw_parts(self.data, self.len - 1) }
+    /// # Safety
+    ///
+    /// - Data must be a valid non-null pointer to a UEFI string ending in nul
+    pub unsafe fn from_ptr_len(data: *mut u16, len: usize) -> Self {
+        Self {
+            data,
+            len,
+            _ghost: PhantomData,
+        }
     }
+}
 
-    /// Get the string as a slice of u16 characters
-    pub const fn as_slice_with_nul(&self) -> &[u16] {
-        unsafe { from_raw_parts(self.data, self.len) }
+impl<'table> Deref for UefiString<'table> {
+    type Target = UefiStr<'table>;
+
+    fn deref(&self) -> &Self::Target {
+        // Safety: UefiStr and UefiString have the same layout
+        unsafe { core::mem::transmute(self) }
     }
 }
 
@@ -82,14 +94,58 @@ impl<'table> Drop for UefiString<'table> {
     }
 }
 
+/// An unowned UEFI string.
 ///
-pub struct UefiStr {
+/// See [UefiString] for more details.
+#[derive(Debug)]
+#[repr(C)]
+pub struct UefiStr<'table> {
     data: *mut u16,
+
+    /// Length in *characters*
+    len: usize,
+
+    _ghost: PhantomData<&'table mut u8>,
 }
 
-impl UefiStr {
-    pub(crate) fn from_raw(data: *mut u16) -> Self {
-        Self { data }
+impl<'table> UefiStr<'table> {
+    /// Create an unowned [UefiStr] from `data` and `len` *characters*.
+    ///
+    /// # Safety
+    ///
+    /// - Data must be a valid non-null pointer to a UEFI string ending in nul
+    pub unsafe fn from_ptr(data: *mut u16) -> Self {
+        Self {
+            data,
+            len: string_len(data) + 1,
+            _ghost: PhantomData,
+        }
+    }
+
+    /// Create an unowned [UefiStr] from `data` and `len` *characters*,
+    /// including nul.
+    ///
+    /// # Safety
+    ///
+    /// - Data must be a valid non-null pointer to a UEFI string ending in nul
+    pub unsafe fn from_ptr_len(data: *mut u16, len: usize) -> Self {
+        Self {
+            data,
+            len,
+            _ghost: PhantomData,
+        }
+    }
+
+    /// Get the string as a slice of u16 characters.
+    ///
+    /// Does not include trailing nul
+    pub const fn as_slice(&self) -> &[u16] {
+        unsafe { from_raw_parts(self.data, self.len - 1) }
+    }
+
+    /// Get the string as a slice of u16 characters
+    pub const fn as_slice_with_nul(&self) -> &[u16] {
+        unsafe { from_raw_parts(self.data, self.len) }
     }
 }
 
