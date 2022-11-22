@@ -7,6 +7,7 @@ use crate::{
     proto::{
         self,
         console::{RawSimpleTextInput, RawSimpleTextOutput, SimpleTextOutput},
+        device_path::DevicePath,
         Scope,
     },
     util::interface,
@@ -228,15 +229,27 @@ pub struct RawBootServices {
     install_configuration_table: Void,
 
     // Images
-    load_image: Void,
-    start_image: Void,
+    load_image: unsafe extern "efiapi" fn(
+        policy: bool,
+        parent: EfiHandle,
+        path: *mut DevicePath,
+        source: *mut u8,
+        source_size: usize,
+        out: *mut EfiHandle,
+    ) -> EfiStatus,
+    start_image: unsafe extern "efiapi" fn(
+        //
+        handle: EfiHandle,
+        exit_size: *mut usize,
+        exit: *mut *mut u8,
+    ) -> EfiStatus,
     exit: unsafe extern "efiapi" fn(
         handle: EfiHandle,
         status: EfiStatus,
         data_size: usize,
         data: proto::Str16,
     ) -> EfiStatus,
-    unload_image: Void,
+    unload_image: unsafe extern "efiapi" fn(handle: EfiHandle) -> EfiStatus,
     exit_boot_services: unsafe extern "efiapi" fn(handle: EfiHandle, key: usize) -> EfiStatus,
 
     // Misc
@@ -447,6 +460,40 @@ impl<'table> BootServices<'table> {
             )
         }
         .into()
+    }
+
+    /// Load an image from memory `src`, returning its handle.
+    pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
+        let mut out = EfiHandle(null_mut());
+        let ret = unsafe {
+            (self.interface().load_image)(
+                false,
+                parent,
+                // TODO: Provide fake device path
+                null_mut(),
+                // UEFI pls do not modify us.
+                src.as_ptr() as *mut _,
+                src.len(),
+                &mut out,
+            )
+        };
+
+        if ret.is_success() {
+            assert_ne!(out, EfiHandle(null_mut()));
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Unload an earlier loaded image
+    pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
+        unsafe { (self.interface().start_image)(handle, &mut 0, null_mut()).into() }
+    }
+
+    /// Unload an earlier loaded image
+    pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
+        unsafe { (self.interface().unload_image)(handle).into() }
     }
 }
 

@@ -32,7 +32,7 @@ static TABLE: AtomicPtr<table::RawSystemTable> = AtomicPtr::new(core::ptr::null_
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
 /// Handle to something in UEFI firmware
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
 
