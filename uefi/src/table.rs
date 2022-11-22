@@ -411,6 +411,9 @@ impl<'table> BootServices<'table> {
     /// Open the protocol on `handle`, if it exists.
     ///
     /// The protocol is opened in Exclusive mode
+    // TODO: Is this safe/sound to call with the same protocol twice?
+    // Do we need to test the protocol first?
+    // *Seems* to be fine, in qemu?
     pub fn open_protocol<'boot, T: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
