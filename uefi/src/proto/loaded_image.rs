@@ -16,6 +16,7 @@ impl<'table> LoadedImage<'table> {
     pub fn file_path(&self) -> Option<Path> {
         let path = self.interface().path;
         if !path.is_null() {
+            // Safety: `path` is valid
             Some(Path::new(unsafe { DevicePath::new(path) }))
         } else {
             None
@@ -80,6 +81,7 @@ impl<'table> LoadedImage<'table> {
     }
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -91,6 +93,6 @@ unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
     type Raw = RawLoadedImage;
 
     unsafe fn from_raw(this: *mut RawLoadedImage) -> Self {
-        unsafe { LoadedImage::new(this) }
+        LoadedImage::new(this)
     }
 }

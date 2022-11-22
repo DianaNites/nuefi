@@ -1,5 +1,6 @@
 // #![allow(unused_imports, unused_variables, clippy::let_and_return,
 // dead_code)]
+#![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
 #![no_std]
 #![feature(abi_efiapi, alloc_error_handler)]
 extern crate alloc;

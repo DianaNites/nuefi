@@ -24,6 +24,8 @@ impl RawInitrdMediaGuid {
     /// Create a new instance of this protocol
     pub fn create() -> Self {
         Self {
+            // Safety: Statically valid
+            // TODO: We can create a nicer safe API on this.
             path: unsafe { RawDevicePath::create(4, 3, 20) },
             guid: InitrdMediaGuid::GUID.0,
             end: RawDevicePath::end(),

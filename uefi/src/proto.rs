@@ -45,6 +45,7 @@ pub unsafe trait Protocol<'table> {
 // FIXME: should be 64-bit aligned?
 // This should never be passed by value to UEFI, which means transparent does
 // nothing?
+#[allow(clippy::undocumented_unsafe_blocks)]
 pub struct Guid([u8; 16]);
 
 impl Guid {

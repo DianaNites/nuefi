@@ -20,6 +20,7 @@ interface!(
 impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`
     pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
+        // Safety: Construction ensures safety
         unsafe { (self.interface().exit)(handle, status, 0, null_mut()) }.into()
     }
 
@@ -36,12 +37,14 @@ impl<'table> BootServices<'table> {
             Ok(t) => t,
             Err(e) => return e.into(),
         };
+        // Safety: Construction ensures safety
         unsafe { (self.interface().stall)(time) }.into()
     }
 
     /// The next monotonic count
     pub fn next_monotonic_count(&self) -> Result<u64> {
         let mut out = 0;
+        // Safety: Construction ensures safety
         let ret = unsafe { (self.interface().get_next_monotonic_count)(&mut out) };
         if ret.is_success() {
             return Ok(out);
@@ -60,12 +63,14 @@ impl<'table> BootServices<'table> {
             Ok(t) => t,
             Err(e) => return e.into(),
         };
+        // Safety: Construction ensures safety. Statically verified arguments.
         unsafe { (self.interface().set_watchdog_timer)(secs, 0x10000, 0, null_mut()) }.into()
     }
 
     /// Allocate `size` bytes of memory from pool of type `ty`
     pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
         let mut out: *mut u8 = null_mut();
+        // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (self.interface().allocate_pool)(ty, size, &mut out) };
         if ret.is_success() {
             Ok(out)
@@ -97,8 +102,10 @@ impl<'table> BootServices<'table> {
     pub fn locate_protocol<'boot, T: proto::Protocol<'boot>>(&'boot self) -> Result<Option<T>> {
         let mut out: *mut u8 = null_mut();
         let mut guid = T::GUID;
+        // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (self.interface().locate_protocol)(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
+            // Safety: Success means out is valid
             unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
         } else if ret == EfiStatus::NOT_FOUND {
             Ok(None)
@@ -121,6 +128,7 @@ impl<'table> BootServices<'table> {
     ) -> Result<Option<Scope<T>>> {
         let mut out: *mut u8 = null_mut();
         let mut guid = T::GUID;
+        // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
             (self.interface().open_protocol)(
                 handle,
@@ -132,6 +140,7 @@ impl<'table> BootServices<'table> {
             )
         };
         if ret.is_success() {
+            // Safety: Success means out is valid
             unsafe {
                 Ok(Some(Scope::new(
                     T::from_raw(out as *mut T::Raw),
@@ -158,6 +167,7 @@ impl<'table> BootServices<'table> {
         controller: Option<EfiHandle>,
     ) -> Result<()> {
         let mut guid = T::GUID;
+        // Safety: Construction ensures safety. Statically verified arguments.
         unsafe {
             (self.interface().close_protocol)(
                 handle,
@@ -176,6 +186,7 @@ impl<'table> BootServices<'table> {
     /// You will need to handle that case in [`BootServices::start_image`]
     pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
         let mut out = EfiHandle(null_mut());
+        // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
             (self.interface().load_image)(
                 false,
@@ -199,11 +210,13 @@ impl<'table> BootServices<'table> {
 
     /// Unload an earlier loaded image
     pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
+        // Safety: Construction ensures safety. Statically verified arguments.
         unsafe { (self.interface().start_image)(handle, &mut 0, null_mut()).into() }
     }
 
     /// Unload an earlier loaded image
     pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
+        // Safety: Construction ensures safety. Statically verified arguments.
         unsafe { (self.interface().unload_image)(handle).into() }
     }
 
@@ -307,7 +320,7 @@ impl SystemTable<Internal> {
     /// return [`SystemTable<Boot>`], otherwise [`None`]
     pub(crate) fn as_boot(&self) -> Option<SystemTable<Boot>> {
         if !self.table().boot_services.is_null() {
-            // Safety
+            // Safety:
             // - Above check verifies ExitBootServices has not been called.
             Some(unsafe { SystemTable::new(self.table) })
         } else {
@@ -323,7 +336,7 @@ impl SystemTable<Internal> {
     /// return [`SystemTable<Runtime>`], otherwise [`None`]
     pub(crate) fn _as_runtime(&self) -> Option<SystemTable<Boot>> {
         if !self.table().boot_services.is_null() {
-            // Safety
+            // Safety:
             // - Above check verifies ExitBootServices has not been called.
             Some(unsafe { SystemTable::new(self.table) })
         } else {
@@ -354,16 +367,19 @@ impl SystemTable<Boot> {
 
     /// Output on stdout
     pub fn stdout(&self) -> SimpleTextOutput<'_> {
+        // Safety: Construction ensures safety.
         unsafe { SimpleTextOutput::new(self.table().con_out) }
     }
 
     /// Output on stderr
     pub fn stderr(&self) -> SimpleTextOutput<'_> {
+        // Safety: Construction ensures safety.
         unsafe { SimpleTextOutput::new(self.table().std_err) }
     }
 
     /// Reference to the UEFI Boot services.
     pub fn boot(&self) -> BootServices<'_> {
+        // Safety: Construction ensures safety.
         unsafe { BootServices::new(self.table().boot_services) }
     }
 }

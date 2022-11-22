@@ -75,6 +75,7 @@ impl<'table> Drop for UefiString<'table> {
     fn drop(&mut self) {
         trace!("Deallocating UefiString");
         if let Some(table) = get_boot_table() {
+            // Safety: self.data was allocated by UEFI
             let ret = unsafe { table.boot().free_pool(self.data as *mut u8) };
             if ret.is_err() {
                 error!("Failed to deallocate UefiString {:p}", self.data)
@@ -134,11 +135,13 @@ impl<'table> UefiStr<'table> {
     ///
     /// Does not include trailing nul
     pub const fn as_slice(&self) -> &[u16] {
+        // Safety: Ensured valid in from_ptr
         unsafe { from_raw_parts(self.data, self.len - 1) }
     }
 
     /// Get the string as a slice of u16 characters
     pub const fn as_slice_with_nul(&self) -> &[u16] {
+        // Safety: Ensured valid in from_ptr
         unsafe { from_raw_parts(self.data, self.len) }
     }
 }

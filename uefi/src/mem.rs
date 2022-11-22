@@ -113,6 +113,7 @@ impl UefiAlloc {
     }
 }
 
+// Safety: We adhere to the contract of GlobalAlloc
 unsafe impl GlobalAlloc for UefiAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         trace!("UEFI allocating {layout:?}");
@@ -176,7 +177,5 @@ unsafe impl GlobalAlloc for UefiAlloc {
     }
 }
 
-/// # Safety
-///
-/// Synchronized by UEFI?
+// Safety: Synchronized by UEFI? UEFI has one thread, and we're it.
 unsafe impl Sync for UefiAlloc {}

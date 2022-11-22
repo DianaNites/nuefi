@@ -12,10 +12,15 @@ interface!(InitrdMediaGuid(RawInitrdMediaGuid));
 
 impl<'table> InitrdMediaGuid<'table> {
     pub fn as_device_path(&self) -> DevicePath {
+        // Safety: This is just a specific variant of a generic DevicePath
+        // FIXME: This should probably return a reference
+        // It would be safe to cast `&self` to `&DevicePath` because we know their
+        // layouts, and they're transparent.
         unsafe { DevicePath::from_raw(self.interface as *mut _) }
     }
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for InitrdMediaGuid<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -27,6 +32,6 @@ unsafe impl<'table> Protocol<'table> for InitrdMediaGuid<'table> {
     type Raw = RawInitrdMediaGuid;
 
     unsafe fn from_raw(this: *mut RawInitrdMediaGuid) -> Self {
-        unsafe { InitrdMediaGuid::new(this) }
+        InitrdMediaGuid::new(this)
     }
 }

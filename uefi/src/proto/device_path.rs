@@ -16,10 +16,12 @@ interface!(DevicePath(RawDevicePath));
 impl<'table> DevicePath<'table> {
     /// Free the DevicePath
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
+        // Safety: Construction ensures these are valid
         unsafe { boot.free_pool(self.interface as *mut u8) }
     }
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -31,7 +33,7 @@ unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
     type Raw = RawDevicePath;
 
     unsafe fn from_raw(this: *mut RawDevicePath) -> Self {
-        unsafe { DevicePath::new(this) }
+        DevicePath::new(this)
     }
 }
 
@@ -40,6 +42,7 @@ interface!(DevicePathUtil(RawDevicePathUtil));
 impl<'table> DevicePathUtil<'table> {
     /// [DevicePath] size, in bytes. NOT including the End Of Path node.
     pub fn get_device_path_size(&self, node: &DevicePath) -> usize {
+        // Safety: Construction ensures these are valid
         unsafe {
             (self.interface().get_device_path_size)(node.interface)
                 // End of path node
@@ -48,6 +51,7 @@ impl<'table> DevicePathUtil<'table> {
     }
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -59,7 +63,7 @@ unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
     type Raw = RawDevicePathUtil;
 
     unsafe fn from_raw(this: *mut RawDevicePathUtil) -> Self {
-        unsafe { DevicePathUtil::new(this) }
+        DevicePathUtil::new(this)
     }
 }
 
@@ -72,9 +76,13 @@ impl<'table> DevicePathToText<'table> {
     ///
     /// - If memory allocation fails
     pub fn convert_device_node_to_text(&self, node: &DevicePath) -> Result<UefiString> {
-        let ret =
-            unsafe { (self.interface().convert_device_node_to_text)(node.interface, false, false) };
+        // Safety: construction ensures correctness
+        let ret = unsafe {
+            //
+            (self.interface().convert_device_node_to_text)(node.interface, false, false)
+        };
         if !ret.is_null() {
+            // Safety: `ret` is a non-null owned UEFI string
             Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
             Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
@@ -87,9 +95,13 @@ impl<'table> DevicePathToText<'table> {
     ///
     /// - If memory allocation fails
     pub fn convert_device_path_to_text(&self, path: &DevicePath) -> Result<UefiString> {
-        let ret =
-            unsafe { (self.interface().convert_device_path_to_text)(path.interface, false, false) };
+        // Safety: construction ensures correctness
+        let ret = unsafe {
+            //
+            (self.interface().convert_device_path_to_text)(path.interface, false, false)
+        };
         if !ret.is_null() {
+            // Safety: `ret` is a non-null owned UEFI string
             Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
             Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
@@ -97,6 +109,7 @@ impl<'table> DevicePathToText<'table> {
     }
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for DevicePathToText<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -108,6 +121,6 @@ unsafe impl<'table> Protocol<'table> for DevicePathToText<'table> {
     type Raw = RawDevicePathToText;
 
     unsafe fn from_raw(this: *mut RawDevicePathToText) -> Self {
-        unsafe { DevicePathToText::new(this) }
+        DevicePathToText::new(this)
     }
 }

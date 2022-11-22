@@ -14,6 +14,7 @@ impl<'table> SecurityArch<'table> {
     //
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for SecurityArch<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -25,7 +26,7 @@ unsafe impl<'table> Protocol<'table> for SecurityArch<'table> {
     type Raw = RawSecurityArch;
 
     unsafe fn from_raw(this: *mut RawSecurityArch) -> Self {
-        unsafe { SecurityArch::new(this) }
+        SecurityArch::new(this)
     }
 }
 
@@ -35,6 +36,7 @@ impl<'table> SecurityArch2<'table> {
     //
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for SecurityArch2<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -46,6 +48,6 @@ unsafe impl<'table> Protocol<'table> for SecurityArch2<'table> {
     type Raw = RawSecurityArch2;
 
     unsafe fn from_raw(this: *mut RawSecurityArch2) -> Self {
-        unsafe { SecurityArch2::new(this) }
+        SecurityArch2::new(this)
     }
 }

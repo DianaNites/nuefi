@@ -13,6 +13,7 @@ impl<'table> LoadFile2<'table> {
     //
 }
 
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> Protocol<'table> for LoadFile2<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -24,6 +25,6 @@ unsafe impl<'table> Protocol<'table> for LoadFile2<'table> {
     type Raw = RawLoadFile2;
 
     unsafe fn from_raw(this: *mut RawLoadFile2) -> Self {
-        unsafe { LoadFile2::new(this) }
+        LoadFile2::new(this)
     }
 }

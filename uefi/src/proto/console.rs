@@ -23,6 +23,7 @@ impl<'table> SimpleTextOutput<'table> {
             // for (i, char) in string.chars().enumerate() {
             // let char = if char.len_utf16();
             let buf = [char, 0];
+            // Safety: Buf is a nul terminated string
             let ret = unsafe { out(self.interface, buf.as_ptr()) };
             if ret.is_error() {
                 return ret.into();
@@ -38,21 +39,25 @@ impl<'table> SimpleTextOutput<'table> {
     ///
     /// Clears the screen, resets cursor position.
     pub fn reset(&self) -> Result<()> {
+        // Safety: Construction ensures these are valid
         unsafe { (self.interface().reset)(self.interface, false) }.into()
     }
 
     /// Clears the screen, resets cursor position.
     pub fn clear(&self) -> Result<()> {
+        // Safety: Construction ensures these are valid
         unsafe { (self.interface().clear_screen)(self.interface) }.into()
     }
 
     /// Enables the cursor
     pub fn enable_cursor(&self) -> Result<()> {
+        // Safety: Construction ensures these are valid
         unsafe { (self.interface().enable_cursor)(self.interface, true) }.into()
     }
 
     /// Disables the cursor
     pub fn disable_cursor(&self) -> Result<()> {
+        // Safety: Construction ensures these are valid
         unsafe { (self.interface().enable_cursor)(self.interface, false) }.into()
     }
 }
@@ -76,6 +81,8 @@ impl<'t> Write for SimpleTextOutput<'t> {
     }
 }
 
+// TODO: Report clippy bug for GUID
+#[allow(clippy::undocumented_unsafe_blocks)]
 unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
     const GUID: Guid = unsafe {
         Guid::from_bytes([
@@ -87,6 +94,6 @@ unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
     type Raw = RawSimpleTextOutput;
 
     unsafe fn from_raw(this: *mut RawSimpleTextOutput) -> Self {
-        unsafe { SimpleTextOutput::new(this) }
+        SimpleTextOutput::new(this)
     }
 }
