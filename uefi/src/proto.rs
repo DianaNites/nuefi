@@ -42,7 +42,7 @@ pub unsafe trait Protocol<'table> {
 
     /// # Safety
     ///
-    /// - MUST be library author.
+    /// - Must be a valid, non-null, pointer to an instance of Self::Raw
     #[doc(hidden)]
     unsafe fn from_raw(this: *mut Self::Raw) -> Self;
 }
