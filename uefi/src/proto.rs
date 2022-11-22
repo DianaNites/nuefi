@@ -1,10 +1,17 @@
 //! Supported/known UEFI Protocols
 
-use core::fmt::{self, Write};
+use core::{
+    fmt::{self, Write},
+    marker::PhantomData,
+};
+
+use log::error;
 
 use crate::{
     error::{EfiStatus, Result},
+    get_boot_table,
     util::interface,
+    EfiHandle,
 };
 
 pub mod console;
@@ -48,5 +55,45 @@ impl Guid {
     /// - MUST be a valid protocol GUID
     pub const unsafe fn from_bytes(bytes: [u8; 16]) -> Self {
         Self(nuuid::Uuid::from_bytes_me(bytes).to_bytes())
+    }
+}
+
+/// A scope around a [Protocol] that will call
+/// [`crate::BootServices::close_protocol`] on [Drop]
+pub struct Scope<'table, Proto: Protocol<'table>> {
+    proto: Proto,
+    phantom: PhantomData<&'table mut Proto>,
+    handle: EfiHandle,
+    agent: EfiHandle,
+    controller: Option<EfiHandle>,
+}
+
+impl<'table, Proto: Protocol<'table>> Scope<'table, Proto> {
+    pub fn new(
+        proto: Proto,
+        handle: EfiHandle,
+        agent: EfiHandle,
+        controller: Option<EfiHandle>,
+    ) -> Self {
+        Self {
+            proto,
+            phantom: PhantomData,
+            handle,
+            agent,
+            controller,
+        }
+    }
+}
+
+impl<'table, Proto: Protocol<'table>> Drop for Scope<'table, Proto> {
+    fn drop(&mut self) {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            if let Err(e) = boot.close_protocol::<Proto>(self.handle, self.agent, self.controller) {
+                error!("Error dropping scoped protocol: {e}");
+            }
+        } else {
+            error!("Tried dropping scoped protocol after boot services");
+        }
     }
 }
