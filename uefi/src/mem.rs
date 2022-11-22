@@ -1,3 +1,4 @@
+//! UEFI Boot time allocator
 use core::{
     alloc::{GlobalAlloc, Layout},
     ptr::null_mut,
