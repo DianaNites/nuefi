@@ -183,7 +183,7 @@ impl core::fmt::Debug for EfiStatus {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_tuple("EfiStatus")
             .field(&self.0)
-            .field(&format_args!("[Display] {}", self))
+            .field(&format_args!("[Display] {self}"))
             .finish()
     }
 }

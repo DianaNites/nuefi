@@ -219,7 +219,7 @@ impl<'table> Path<'table> {
 impl<'table> Display for Path<'table> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         if let Ok(s) = self.to_string() {
-            write!(f, "{}", s)
+            write!(f, "{s}")
         } else {
             write!(f, "Path (couldn't display, out of memory)")
         }
