@@ -86,7 +86,8 @@ impl<'table> BootServices<'table> {
     ///
     /// # Safety
     ///
-    /// Must have been allocated by [BootServices::allocate_pool]
+    /// - Must have been allocated by [BootServices::allocate_pool]
+    /// - Must be non-null
     pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
         (self.interface().free_pool)(memory).into()
     }
