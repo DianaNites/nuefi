@@ -1,14 +1,18 @@
 //! UEFI Console related protocols
-use core::fmt::{self, Write};
+use core::{
+    fmt::{self, Write},
+    mem::size_of,
+};
 
 use super::{Guid, Str16};
 use crate::{
-    error::{EfiStatus, Result},
+    error::{EfiStatus, Result, UefiError},
+    get_boot_table,
     util::interface,
 };
 
 pub mod raw;
-use raw::RawSimpleTextOutput;
+use raw::{RawGraphicsInfo, RawGraphicsOutput, RawSimpleTextOutput};
 
 /// Text foreground attributes for [SimpleTextOutput]
 #[derive(Debug, Clone, Copy)]
@@ -191,5 +195,92 @@ unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
 
     unsafe fn from_raw(this: *mut RawSimpleTextOutput) -> Self {
         SimpleTextOutput::new(this)
+    }
+}
+
+interface!(GraphicsOutput(RawGraphicsOutput));
+
+impl<'table> GraphicsOutput<'table> {
+    pub fn set_native_res(&self) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn query_mode(&self, mode: u32) -> Result<Mode> {
+        let mut size = 0;
+        let mut info = core::ptr::null();
+        // Safety: Construction ensures these are valid
+        let ret = unsafe {
+            //
+            (self.interface().query_mode)(self.interface, mode, &mut size, &mut info)
+        };
+        if ret.is_success() && !info.is_null() && size >= size_of::<RawGraphicsInfo>() {
+            let mode = Mode::new(
+                // Safety: Checked for null and size above
+                unsafe { *info },
+            );
+            if let Some(table) = get_boot_table() {
+                // Safety: `info` was allocated by UEFI
+                unsafe {
+                    table.boot().free_pool(info as *mut u8)?;
+                }
+            }
+            Ok(mode)
+        } else if !ret.is_success() {
+            Err(UefiError::new(ret))
+        } else {
+            Err(UefiError::new(EfiStatus::BUFFER_TOO_SMALL))
+        }
+    }
+
+    pub fn modes(&self) -> impl Iterator<Item = Result<Mode>> + '_ {
+        let mut mode = 0;
+        core::iter::from_fn(move || {
+            if mode == self.max_mode() {
+                return None;
+            }
+            let m = self.query_mode(mode);
+            mode += 1;
+            Some(m)
+        })
+    }
+
+    fn max_mode(&self) -> u32 {
+        // Safety: Type system
+        unsafe { (*self.interface().mode).max_mode }
+    }
+}
+
+#[allow(clippy::undocumented_unsafe_blocks)]
+unsafe impl<'table> super::Protocol<'table> for GraphicsOutput<'table> {
+    const GUID: Guid = unsafe {
+        Guid::from_bytes([
+            0x90, 0x42, 0xa9, 0xde, 0x23, 0xdc, 0x4a, 0x38, 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80,
+            0x51, 0x6a,
+        ])
+    };
+
+    type Raw = RawGraphicsOutput;
+
+    unsafe fn from_raw(this: *mut Self::Raw) -> Self {
+        GraphicsOutput::new(this)
+    }
+}
+
+/// UEFI Graphics Mode
+#[derive(Debug)]
+pub struct Mode {
+    info: RawGraphicsInfo,
+}
+
+impl Mode {
+    fn new(info: RawGraphicsInfo) -> Self {
+        Self { info }
+    }
+
+    /// UEFI Framebuffer (horizontal, vertical) resolution
+    ///
+    /// Otherwise known as (width, height)
+    pub fn res(&self) -> (u32, u32) {
+        (self.info.horizontal, self.info.vertical)
     }
 }
