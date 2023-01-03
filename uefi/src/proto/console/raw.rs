@@ -155,7 +155,7 @@ pub struct RawGraphicsOutput {
         info_size: *mut usize,
         info: *mut *const RawGraphicsInfo,
     ) -> EfiStatus,
-    pub set_mode: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
+    pub set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> EfiStatus,
     pub blt: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
     pub mode: *mut RawGraphicsMode,
 }
