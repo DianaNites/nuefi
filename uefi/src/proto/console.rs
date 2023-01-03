@@ -283,4 +283,9 @@ impl Mode {
     pub fn res(&self) -> (u32, u32) {
         (self.info.horizontal, self.info.vertical)
     }
+
+    /// UEFI Framebuffer stride
+    pub fn stride(&self) -> u32 {
+        self.info.stride
+    }
 }
