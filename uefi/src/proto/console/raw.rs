@@ -13,7 +13,7 @@ pub struct RawSimpleTextInput {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub struct RawMode {
+pub struct RawTextMode {
     pub max_mode: i32,
     pub mode: i32,
     pub attribute: i32,
@@ -41,7 +41,7 @@ pub struct RawSimpleTextOutput {
     pub set_cursor_position:
         unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus,
     pub enable_cursor: unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus,
-    pub mode: *mut RawMode,
+    pub mode: *mut RawTextMode,
 }
 
 /// EFI Physical Address
