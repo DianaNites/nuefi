@@ -205,7 +205,7 @@ impl<'table> GraphicsOutput<'table> {
         Ok(())
     }
 
-    pub fn query_mode(&self, mode: u32) -> Result<Mode> {
+    pub fn query_mode(&self, mode: u32) -> Result<GraphicsMode> {
         let mut size = 0;
         let mut info = core::ptr::null();
         // Safety: Construction ensures these are valid
@@ -214,7 +214,7 @@ impl<'table> GraphicsOutput<'table> {
             (self.interface().query_mode)(self.interface, mode, &mut size, &mut info)
         };
         if ret.is_success() && !info.is_null() && size >= size_of::<RawGraphicsInfo>() {
-            let mode = Mode::new(
+            let mode = GraphicsMode::new(
                 // Safety: Checked for null and size above
                 unsafe { *info },
             );
@@ -232,7 +232,7 @@ impl<'table> GraphicsOutput<'table> {
         }
     }
 
-    pub fn modes(&self) -> impl Iterator<Item = Result<Mode>> + '_ {
+    pub fn modes(&self) -> impl Iterator<Item = Result<GraphicsMode>> + '_ {
         let mut mode = 0;
         core::iter::from_fn(move || {
             if mode >= self.max_mode() {
@@ -268,11 +268,11 @@ unsafe impl<'table> super::Protocol<'table> for GraphicsOutput<'table> {
 
 /// UEFI Graphics Mode
 #[derive(Debug)]
-pub struct Mode {
+pub struct GraphicsMode {
     info: RawGraphicsInfo,
 }
 
-impl Mode {
+impl GraphicsMode {
     fn new(info: RawGraphicsInfo) -> Self {
         Self { info }
     }
