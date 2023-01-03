@@ -204,6 +204,14 @@ impl<'table> SimpleTextOutput<'table> {
         })
     }
 
+    /// Current [`TextMode`]
+    pub fn mode(&self) -> Result<TextMode> {
+        // Safety: types
+        let mode = unsafe { (*self.interface().mode).mode } as u32;
+        let info = self.query_mode(mode)?;
+        Ok(TextMode::new(mode, info.size()))
+    }
+
     fn max_mode(&self) -> i32 {
         // Safety: Type system
         unsafe { (*self.interface().mode).max_mode }
@@ -265,6 +273,11 @@ impl TextMode {
     pub fn mode(&self) -> u32 {
         self.mode
     }
+
+    /// Size (Cols, Rows)
+    pub fn size(&self) -> (usize, usize) {
+        self.size
+    }
 }
 
 interface!(GraphicsOutput(RawGraphicsOutput));
@@ -314,6 +327,15 @@ impl<'table> GraphicsOutput<'table> {
             mode += 1;
             Some(m)
         })
+    }
+
+    /// Current [`GraphicsMode`]
+    pub fn mode(&self) -> GraphicsMode {
+        // Safety: types
+        let info = unsafe { *(*self.interface().mode).info };
+        // Safety: types
+        let mode = unsafe { (*self.interface().mode).mode };
+        GraphicsMode::new(mode, info)
     }
 
     fn max_mode(&self) -> u32 {
