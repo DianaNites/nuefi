@@ -336,23 +336,27 @@ impl<'table> GraphicsOutput<'table> {
     /// (x, y)
     /// (width, height)
     ///
-    /// # Safety
-    #[allow(clippy::too_many_arguments)]
-    pub unsafe fn blt(
+    /// `buffer` must be at least `width * height * size_of::<RawBltPixel>()`
+    /// or else `INVALID_PARAMETER` will be returned.
+    ///
+    /// Buffer is BGR formatted 32-bit pixels
+    pub fn blt(
         &self,
-        buffer: *mut RawBltPixel,
+        buffer: &[u8],
         op: RawBltOperation,
         src: (usize, usize),
         dest: (usize, usize),
         res: (usize, usize),
         delta: usize,
-    ) {
+    ) -> Result<()> {
+        if buffer.len() < (res.0 * res.1 * size_of::<RawBltPixel>()) {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
         // Safety: Construction ensures these are valid
-
         unsafe {
             (self.interface().blt)(
                 self.interface,
-                buffer,
+                buffer.as_ptr() as *mut RawBltPixel,
                 op,
                 src.0,
                 src.1,
@@ -362,7 +366,8 @@ impl<'table> GraphicsOutput<'table> {
                 res.1,
                 delta,
             )
-        };
+        }
+        .into()
     }
 
     /// Get a mutable byte slice to the current framebuffer
