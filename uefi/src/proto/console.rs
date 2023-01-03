@@ -266,7 +266,7 @@ unsafe impl<'table> super::Protocol<'table> for GraphicsOutput<'table> {
     }
 }
 
-/// UEFI Graphics Mode
+/// UEFI Graphics Mode Information
 #[derive(Debug)]
 pub struct GraphicsMode {
     info: RawGraphicsInfo,
