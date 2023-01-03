@@ -15,7 +15,10 @@ use crate::{
 
 pub mod raw;
 use alloc::vec::Vec;
-use raw::{RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat, RawSimpleTextOutput, RawTextMode};
+use raw::{
+    RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat,
+    RawSimpleTextOutput, RawTextMode,
+};
 
 /// Text foreground attributes for [SimpleTextOutput]
 #[derive(Debug, Clone, Copy)]
@@ -326,6 +329,40 @@ impl<'table> GraphicsOutput<'table> {
         // Safety: types
         let mode = unsafe { (*self.interface().mode).mode };
         GraphicsMode::new(mode, info)
+    }
+
+    /// Blt, or BLock Transfer
+    ///
+    /// (x, y)
+    /// (width, height)
+    ///
+    /// # Safety
+    #[allow(clippy::too_many_arguments)]
+    pub unsafe fn blt(
+        &self,
+        buffer: *mut RawBltPixel,
+        op: RawBltOperation,
+        src: (usize, usize),
+        dest: (usize, usize),
+        res: (usize, usize),
+        delta: usize,
+    ) {
+        // Safety: Construction ensures these are valid
+
+        unsafe {
+            (self.interface().blt)(
+                self.interface,
+                buffer,
+                op,
+                src.0,
+                src.1,
+                dest.0,
+                dest.1,
+                res.0,
+                res.1,
+                delta,
+            )
+        };
     }
 
     /// Get a mutable byte slice to the current framebuffer

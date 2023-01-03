@@ -156,6 +156,74 @@ pub struct RawGraphicsOutput {
         info: *mut *const RawGraphicsInfo,
     ) -> EfiStatus,
     pub set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> EfiStatus,
-    pub blt: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
+    pub blt: unsafe extern "efiapi" fn(
+        //
+        this: *mut Self,
+        buffer: *mut RawBltPixel,
+        op: RawBltOperation,
+        src_x: usize,
+        src_y: usize,
+        dest_x: usize,
+        dest_y: usize,
+        width: usize,
+        height: usize,
+        delta: usize,
+    ) -> EfiStatus,
     pub mode: *mut RawGraphicsMode,
+}
+
+impl fmt::Debug for RawGraphicsOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RawGraphicsOutput")
+            .field("query_mode", &{ self.query_mode as *const () })
+            .field("set_mode", &{ self.set_mode as *const () })
+            .field("blt", &{ self.blt as *const () })
+            .field("mode", &self.mode)
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct RawBltPixel {
+    blue: u8,
+    green: u8,
+    red: u8,
+    reserved: u8,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct RawBltOperation(u32);
+
+impl fmt::Debug for RawBltOperation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::VIDEO_FILL => write!(f, "RawBltOperation::VIDEO_FILL"),
+            Self::VIDEO_TO_BUFFER => write!(f, "RawBltOperation::VIDEO_TO_BUFFER"),
+            Self::BUFFER_TO_VIDEO => write!(f, "RawBltOperation::BUFFER_TO_VIDEO"),
+            Self::VIDEO_TO_VIDEO => write!(f, "RawBltOperation::VIDEO_TO_VIDEO"),
+            Self::OPERATION_MAX => write!(f, "RawBltOperation::OPERATION_MAX"),
+            _ => f.debug_tuple("RawBltOperation").field(&self.0).finish(),
+        }
+    }
+}
+
+impl RawBltOperation {
+    /// Write data from the 0th buffer pixel to every pixel in the block
+    ///
+    /// delta is unused
+    pub const VIDEO_FILL: Self = Self(0);
+
+    /// Read data from video block to buffer block
+    pub const VIDEO_TO_BUFFER: Self = Self(1);
+
+    /// Write data from block buffer to video buffer
+    pub const BUFFER_TO_VIDEO: Self = Self(2);
+
+    /// Copy data from source block to destination block
+    pub const VIDEO_TO_VIDEO: Self = Self(3);
+
+    /// Current max enum value
+    pub const OPERATION_MAX: Self = Self(4);
 }
