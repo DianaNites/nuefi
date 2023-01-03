@@ -15,7 +15,7 @@ use crate::{
 
 pub mod raw;
 use alloc::vec::Vec;
-use raw::{RawGraphicsInfo, RawGraphicsOutput, RawSimpleTextOutput, RawTextMode};
+use raw::{RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat, RawSimpleTextOutput, RawTextMode};
 
 /// Text foreground attributes for [SimpleTextOutput]
 #[derive(Debug, Clone, Copy)]
@@ -401,5 +401,39 @@ impl GraphicsMode {
     /// Mode number
     pub fn mode(&self) -> u32 {
         self.mode
+    }
+
+    /// Pixel Format
+    pub fn format(&self) -> PixelFormat {
+        self.info.format.into()
+    }
+}
+
+/// UEFI Framebuffer pixel format
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum PixelFormat {
+    /// RBG Pixels
+    RGB,
+
+    /// BGR Pixels
+    BGR,
+
+    /// Pixels defined by [`RawPixelMask`]
+    BitMask,
+
+    /// Only blt supported, no framebuffer
+    BltOnly,
+}
+
+impl From<RawPixelFormat> for PixelFormat {
+    fn from(value: RawPixelFormat) -> Self {
+        match value {
+            RawPixelFormat::RGB => PixelFormat::RGB,
+            RawPixelFormat::BGR => PixelFormat::BGR,
+            RawPixelFormat::BIT_MASK => PixelFormat::BitMask,
+            RawPixelFormat::BLT_ONLY => PixelFormat::BltOnly,
+            _ => unimplemented!(),
+        }
     }
 }
