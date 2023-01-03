@@ -235,7 +235,7 @@ impl<'table> GraphicsOutput<'table> {
     pub fn modes(&self) -> impl Iterator<Item = Result<Mode>> + '_ {
         let mut mode = 0;
         core::iter::from_fn(move || {
-            if mode == self.max_mode() {
+            if mode >= self.max_mode() {
                 return None;
             }
             let m = self.query_mode(mode);
