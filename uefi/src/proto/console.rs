@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub mod raw;
-use raw::{RawGraphicsInfo, RawGraphicsOutput, RawSimpleTextOutput};
+use raw::{RawGraphicsInfo, RawGraphicsOutput, RawSimpleTextOutput, RawTextMode};
 
 /// Text foreground attributes for [SimpleTextOutput]
 #[derive(Debug, Clone, Copy)]
@@ -160,6 +160,54 @@ impl<'table> SimpleTextOutput<'table> {
         // Safety: Construction ensures these are valid
         unsafe { (self.interface().enable_cursor)(self.interface, false) }.into()
     }
+
+    /// Set the terminal mode to number `mode`
+    pub fn set_mode(&self, mode: u32) -> Result<()> {
+        // Safety: Construction ensures these are valid
+        unsafe { (self.interface().set_mode)(self.interface, mode as usize) }.into()
+    }
+
+    /// Query terminal mode number `mode`
+    ///
+    /// # Note
+    ///
+    /// UEFI defines:
+    ///
+    /// - mode `0` as `80x25`
+    /// - mode `1` as `80x80` If this doesn't exist
+    /// - mode `2` and onwards as implementation specific
+    pub fn query_mode(&self, mode: u32) -> Result<TextMode> {
+        let mut cols = 0;
+        let mut rows = 0;
+        // Safety: Construction ensures these are valid
+        let ret = unsafe {
+            (self.interface().query_mode)(self.interface, mode as usize, &mut cols, &mut rows)
+        };
+        if ret.is_success() {
+            let mode = TextMode::new(mode, (cols, rows));
+            Ok(mode)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Terminal output modes
+    pub fn modes(&self) -> impl Iterator<Item = Result<TextMode>> + '_ {
+        let mut mode = 0;
+        core::iter::from_fn(move || {
+            if mode >= self.max_mode() {
+                return None;
+            }
+            let m = self.query_mode(mode as u32);
+            mode += 1;
+            Some(m)
+        })
+    }
+
+    fn max_mode(&self) -> i32 {
+        // Safety: Type system
+        unsafe { (*self.interface().mode).max_mode }
+    }
 }
 
 /// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
@@ -198,11 +246,34 @@ unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
     }
 }
 
+/// UEFI Text Mode Information
+#[derive(Debug)]
+pub struct TextMode {
+    /// Mode number
+    mode: u32,
+
+    /// (Cols, Rows)
+    size: (usize, usize),
+}
+
+impl TextMode {
+    fn new(mode: u32, size: (usize, usize)) -> Self {
+        Self { mode, size }
+    }
+
+    /// Mode number
+    pub fn mode(&self) -> u32 {
+        self.mode
+    }
+}
+
 interface!(GraphicsOutput(RawGraphicsOutput));
 
 impl<'table> GraphicsOutput<'table> {
-    pub fn set_native_res(&self) -> Result<()> {
-        Ok(())
+    /// Set the graphic mode to number `mode`
+    pub fn set_mode(&self, mode: u32) -> Result<()> {
+        // Safety: Construction ensures these are valid
+        unsafe { (self.interface().set_mode)(self.interface, mode) }.into()
     }
 
     pub fn query_mode(&self, mode: u32) -> Result<GraphicsMode> {
@@ -215,6 +286,7 @@ impl<'table> GraphicsOutput<'table> {
         };
         if ret.is_success() && !info.is_null() && size >= size_of::<RawGraphicsInfo>() {
             let mode = GraphicsMode::new(
+                mode,
                 // Safety: Checked for null and size above
                 unsafe { *info },
             );
@@ -269,12 +341,15 @@ unsafe impl<'table> super::Protocol<'table> for GraphicsOutput<'table> {
 /// UEFI Graphics Mode Information
 #[derive(Debug)]
 pub struct GraphicsMode {
+    /// Mode number
+    mode: u32,
+
     info: RawGraphicsInfo,
 }
 
 impl GraphicsMode {
-    fn new(info: RawGraphicsInfo) -> Self {
-        Self { info }
+    fn new(mode: u32, info: RawGraphicsInfo) -> Self {
+        Self { mode, info }
     }
 
     /// UEFI Framebuffer (horizontal, vertical) resolution
@@ -287,5 +362,10 @@ impl GraphicsMode {
     /// UEFI Framebuffer stride
     pub fn stride(&self) -> u32 {
         self.info.stride
+    }
+
+    /// Mode number
+    pub fn mode(&self) -> u32 {
+        self.mode
     }
 }
