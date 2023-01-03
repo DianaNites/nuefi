@@ -1,6 +1,7 @@
 //! UEFI Console related protocols
 use core::{
     fmt::{self, Write},
+    iter::once,
     mem::size_of,
 };
 
@@ -12,6 +13,7 @@ use crate::{
 };
 
 pub mod raw;
+use alloc::vec::Vec;
 use raw::{RawGraphicsInfo, RawGraphicsOutput, RawSimpleTextOutput, RawTextMode};
 
 /// Text foreground attributes for [SimpleTextOutput]
@@ -68,22 +70,9 @@ interface!(SimpleTextOutput(RawSimpleTextOutput));
 impl<'table> SimpleTextOutput<'table> {
     pub fn output_string(&self, string: &str) -> Result<()> {
         let out = self.interface().output_string;
-        let mut fin = EfiStatus::SUCCESS;
-        // FIXME: Horribly inefficient
-        for (_i, char) in string.encode_utf16().enumerate() {
-            // for (i, char) in string.chars().enumerate() {
-            // let char = if char.len_utf16();
-            let buf = [char, 0];
-            // Safety: Buf is a nul terminated string
-            let ret = unsafe { out(self.interface, buf.as_ptr()) };
-            if ret.is_error() {
-                return ret.into();
-            }
-            if ret.is_warning() {
-                fin = ret;
-            }
-        }
-        fin.into()
+        let s: Vec<u16> = string.encode_utf16().chain(once(0)).collect();
+        // Safety: s is a nul terminated string
+        unsafe { out(self.interface, s.as_ptr()) }.into()
     }
 
     /// Use these colors for all output to this Protocol within the
