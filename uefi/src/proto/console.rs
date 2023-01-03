@@ -3,6 +3,7 @@ use core::{
     fmt::{self, Write},
     iter::once,
     mem::size_of,
+    slice::from_raw_parts_mut,
 };
 
 use super::{Guid, Str16};
@@ -325,6 +326,28 @@ impl<'table> GraphicsOutput<'table> {
         // Safety: types
         let mode = unsafe { (*self.interface().mode).mode };
         GraphicsMode::new(mode, info)
+    }
+
+    /// Get a mutable byte slice to the current framebuffer
+    ///
+    /// Note that each pixel `(x, y)`
+    /// is at the `<size of a pixel> *`[`GraphicsMode::stride`]
+    pub fn framebuffer(&self) -> Result<&mut [u8]> {
+        // FIXME: This probably isnt sound?
+        // Need some sort of token to prevent changing the framebuffer?
+        // actually what about printing, that causes the gpu to modify it?
+        // Volatile???
+        // Safety:
+        unsafe {
+            let mode = &*self.interface().mode;
+
+            let fb = {
+                let ptr = mode.fb_base as *mut u8;
+                let len = mode.fb_size;
+                from_raw_parts_mut(ptr, len)
+            };
+            Ok(fb)
+        }
     }
 
     fn max_mode(&self) -> u32 {
