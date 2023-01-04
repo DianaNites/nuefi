@@ -8,6 +8,7 @@ use crate::{get_boot_table, EfiHandle};
 
 pub mod console;
 pub mod device_path;
+pub mod graphics;
 pub mod loaded_image;
 pub mod media;
 pub mod platform_init;
