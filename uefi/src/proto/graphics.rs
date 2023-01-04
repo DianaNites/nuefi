@@ -328,6 +328,13 @@ impl Pixel {
         Self { data: [b, g, r, 0] }
     }
 
+    /// Create a new pixel using `data` as-is
+    ///
+    /// Data is assumed to be BGR888
+    pub fn from_bytes(data: [u8; 4]) -> Self {
+        Self { data }
+    }
+
     /// Get an array with each 8 bit color component in a byte
     ///
     /// Last byte is always 0
