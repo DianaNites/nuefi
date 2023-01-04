@@ -2,8 +2,10 @@
 use core::{
     fmt::{self, Write},
     iter::once,
+    marker::PhantomData,
     mem::size_of,
-    slice::from_raw_parts_mut,
+    ops::{Index, IndexMut},
+    slice::{from_raw_parts, from_raw_parts_mut},
 };
 
 use super::{Guid, Str16};
@@ -81,20 +83,20 @@ impl<'table> GraphicsOutput<'table> {
     /// (x, y)
     /// (width, height)
     ///
-    /// `buffer` must be at least `width * height * size_of::<RawBltPixel>()`
+    /// `buffer` must be at least `width * height`
     /// or else `INVALID_PARAMETER` will be returned.
     ///
     /// Buffer is BGR formatted 32-bit pixels
     pub fn blt(
         &self,
-        buffer: &[u8],
+        buffer: &[Pixel],
         op: BltOperation,
         src: (usize, usize),
         dest: (usize, usize),
         res: (usize, usize),
         delta: usize,
     ) -> Result<()> {
-        if buffer.len() < (res.0 * res.1 * size_of::<RawBltPixel>()) {
+        if buffer.len() < (res.0 * res.1) {
             return Err(EfiStatus::INVALID_PARAMETER.into());
         }
         // Safety: Construction ensures these are valid
@@ -119,20 +121,14 @@ impl<'table> GraphicsOutput<'table> {
     ///
     /// Note that each pixel `(x, y)`
     /// is at the `<size of a pixel> *`[`GraphicsMode::stride`]
-    pub fn framebuffer(&self) -> Result<&mut [u8]> {
-        // FIXME: This probably isnt sound?
-        // Need some sort of token to prevent changing the framebuffer?
-        // actually what about printing, that causes the gpu to modify it?
-        // Volatile???
+    pub fn framebuffer(&self) -> Result<Framebuffer<'_>> {
+        // FIXME: Volatile?
         // Safety:
         unsafe {
             let mode = &*self.interface().mode;
-
-            let fb = {
-                let ptr = mode.fb_base as *mut u8;
-                let len = mode.fb_size;
-                from_raw_parts_mut(ptr, len)
-            };
+            let ptr = mode.fb_base as *mut u8;
+            let size = mode.fb_size;
+            let fb = Framebuffer::new(ptr, size, self.mode().stride());
             Ok(fb)
         }
     }
@@ -258,5 +254,108 @@ impl From<RawBltOperation> for BltOperation {
 impl From<BltOperation> for RawBltOperation {
     fn from(value: BltOperation) -> Self {
         RawBltOperation::new(value as u32)
+    }
+}
+
+/// UEFI Framebuffer
+#[derive(Debug)]
+pub struct Framebuffer<'mode> {
+    ptr: *mut u8,
+    size: usize,
+    stride: u32,
+    phantom: PhantomData<&'mode u8>,
+}
+
+impl<'mode> Framebuffer<'mode> {
+    /// Create new Framebuffer wrapper
+    ///
+    /// - `ptr` MUST be valid for `size` bytes
+    unsafe fn new(ptr: *mut u8, size: usize, stride: u32) -> Self {
+        Self {
+            ptr,
+            size,
+            stride,
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn pixels(&self) -> &'mode [Pixel] {
+        let ptr = self.ptr as *mut Pixel;
+        let len = self.size / size_of::<Pixel>();
+        // Safety:
+        unsafe { from_raw_parts(ptr, len) }
+    }
+
+    pub fn pixels_mut(&mut self) -> &'mode mut [Pixel] {
+        let ptr = self.ptr as *mut Pixel;
+        let len = self.size / size_of::<Pixel>();
+        // Safety:
+        unsafe { from_raw_parts_mut(ptr, len) }
+    }
+}
+
+impl<'m> Index<(u32, u32)> for Framebuffer<'m> {
+    type Output = Pixel;
+
+    fn index(&self, (x, y): (u32, u32)) -> &Self::Output {
+        let index = ((y * self.stride) + x) as usize;
+        // Safety:
+        unsafe {
+            //
+            &*self.ptr.add(index).cast::<Pixel>()
+        }
+    }
+}
+
+/// A UEFI BGR888 Pixel
+///
+/// 32-bits in size, 24-bits usable
+///
+/// ABI Compatible with `[u8; 4]`
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(transparent)]
+pub struct Pixel {
+    data: [u8; 4],
+}
+
+impl Pixel {
+    /// Create a new pixel
+    ///
+    /// # Note
+    ///
+    /// Takes arguments in RGB order for convenience
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Self { data: [b, g, r, 0] }
+    }
+
+    /// Get an array with each 8 bit color component in a byte
+    ///
+    /// Last byte is always 0
+    pub fn as_bytes(&self) -> &[u8; 4] {
+        &self.data
+    }
+
+    pub fn red(&self) -> u8 {
+        self.data[2]
+    }
+
+    pub fn green(&self) -> u8 {
+        self.data[1]
+    }
+
+    pub fn blue(&self) -> u8 {
+        self.data[0]
+    }
+}
+
+/// UEFI Pixel Coordinate
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+// Stores x, y coordinates
+pub struct Coord(u32, u32);
+
+impl Coord {
+    pub fn new(x: u32, y: u32) -> Self {
+        Self(x, y)
     }
 }
