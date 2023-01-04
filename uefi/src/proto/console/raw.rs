@@ -211,8 +211,6 @@ impl fmt::Debug for RawBltOperation {
 
 impl RawBltOperation {
     /// Write data from the 0th buffer pixel to every pixel in the block
-    ///
-    /// delta is unused
     pub const VIDEO_FILL: Self = Self(0);
 
     /// Read data from video block to buffer block
@@ -226,4 +224,10 @@ impl RawBltOperation {
 
     /// Current max enum value
     pub const OPERATION_MAX: Self = Self(4);
+}
+
+impl RawBltOperation {
+    pub(crate) fn new(value: u32) -> RawBltOperation {
+        Self(value)
+    }
 }

@@ -343,7 +343,7 @@ impl<'table> GraphicsOutput<'table> {
     pub fn blt(
         &self,
         buffer: &[u8],
-        op: RawBltOperation,
+        op: BltOperation,
         src: (usize, usize),
         dest: (usize, usize),
         res: (usize, usize),
@@ -357,7 +357,7 @@ impl<'table> GraphicsOutput<'table> {
             (self.interface().blt)(
                 self.interface,
                 buffer.as_ptr() as *mut RawBltPixel,
-                op,
+                op.into(),
                 src.0,
                 src.1,
                 dest.0,
@@ -477,5 +477,41 @@ impl From<RawPixelFormat> for PixelFormat {
             RawPixelFormat::BLT_ONLY => PixelFormat::BltOnly,
             _ => unimplemented!(),
         }
+    }
+}
+
+/// UEFI Framebuffer pixel format
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum BltOperation {
+    /// Write data from the 0th buffer pixel to every pixel in the block
+    VideoFill,
+
+    /// Read data from video block to buffer block
+    VideoToBuffer,
+
+    /// Write data from block buffer to video buffer
+    BufferToVideo,
+
+    /// Copy data from source block to destination block
+    VideoToVideo,
+}
+
+impl From<RawBltOperation> for BltOperation {
+    fn from(value: RawBltOperation) -> Self {
+        match value {
+            RawBltOperation::VIDEO_FILL => BltOperation::VideoFill,
+            RawBltOperation::VIDEO_TO_BUFFER => BltOperation::VideoToBuffer,
+            RawBltOperation::BUFFER_TO_VIDEO => BltOperation::BufferToVideo,
+            RawBltOperation::VIDEO_TO_VIDEO => BltOperation::VideoToVideo,
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl From<BltOperation> for RawBltOperation {
+    fn from(value: BltOperation) -> Self {
+        RawBltOperation::new(value as u32)
     }
 }
