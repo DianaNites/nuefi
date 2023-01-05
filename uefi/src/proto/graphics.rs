@@ -86,6 +86,9 @@ impl<'table> GraphicsOutput<'table> {
     /// `buffer` must be at least `width * height`
     /// or else `INVALID_PARAMETER` will be returned.
     ///
+    /// If the width in `buffer` is not the same as the display then
+    /// `delta` must contain the data width (pixels) or else output will be garbled.
+    ///
     /// Buffer is BGR formatted 32-bit pixels
     pub fn blt(
         &self,
@@ -111,7 +114,7 @@ impl<'table> GraphicsOutput<'table> {
                 dest.1,
                 res.0,
                 res.1,
-                delta,
+                delta * size_of::<RawBltPixel>(),
             )
         }
         .into()
