@@ -15,6 +15,7 @@ use crate::{
 
 pub mod raw;
 use alloc::vec::Vec;
+
 use raw::{RawSimpleTextOutput, RawTextMode};
 
 /// Text foreground attributes for [SimpleTextOutput]

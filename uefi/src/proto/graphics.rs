@@ -1,4 +1,5 @@
 //! UEFI Graphics related protocols
+use alloc::vec::Vec;
 use core::{
     fmt::{self, Write},
     iter::once,
@@ -8,15 +9,14 @@ use core::{
     slice::{from_raw_parts, from_raw_parts_mut},
 };
 
+use raw::{RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat};
+
 use super::{Guid, Str16};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     util::interface,
 };
-
-use alloc::vec::Vec;
-use raw::{RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat};
 
 pub mod raw;
 
@@ -87,7 +87,8 @@ impl<'table> GraphicsOutput<'table> {
     /// or else `INVALID_PARAMETER` will be returned.
     ///
     /// If the width in `buffer` is not the same as the display then
-    /// `delta` must contain the data width (pixels) or else output will be garbled.
+    /// `delta` must contain the data width (pixels) or else output will be
+    /// garbled.
     ///
     /// Buffer is BGR formatted 32-bit pixels
     pub fn blt(

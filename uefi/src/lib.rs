@@ -96,7 +96,8 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     }
 }
 
-#[panic_handler]
+// Helps with faulty rust-analyzer errors
+#[cfg_attr(not(test), panic_handler)]
 fn panic(info: &PanicInfo) -> ! {
     if let Some(table) = get_boot_table() {
         let mut stdout = table.stdout();
