@@ -125,7 +125,7 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[alloc_error_handler]
+#[cfg_attr(not(test), alloc_error_handler)]
 fn alloc_error(layout: core::alloc::Layout) -> ! {
     panic!("Couldn't allocate {} bytes", layout.size())
 }
