@@ -98,10 +98,27 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64>;
         static __INTERNAL_NUEFI_LOG: Option<bool>;
     }
+    // #[cfg(miri)]
+    // let ext = Some(false);
+
+    // #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let ext = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
+
+    // #[cfg(miri)]
+    // let dur = Some(30);
+
+    // #[cfg(not(miri))]
+    // Safety: Unsure how it can be unsafe tbh.
     let dur = unsafe { __INTERNAL_NUEFI_EXIT_DURATION };
+
+    // #[cfg(miri)]
+    // let log = Some(true);
+
+    // #[cfg(not(miri))]
+    // Safety: Unsure how it can be unsafe tbh.
     let log = unsafe { __INTERNAL_NUEFI_LOG };
+
     let log = if let Some(log) = log {
         log
     } else {
@@ -150,3 +167,56 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
 
 #[doc(hidden)]
 pub mod handlers;
+
+#[cfg(test)]
+mod tests {
+    #![allow(unreachable_code, unused_mut)]
+    use super::*;
+    use crate::{entry, error::Result};
+
+    #[cfg(no)]
+    fn setup() {
+        #[no_mangle]
+        static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool> = None;
+
+        #[no_mangle]
+        static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64> = None;
+
+        #[no_mangle]
+        static __INTERNAL_NUEFI_LOG: Option<bool> = None;
+    }
+
+    #[cfg(no)]
+    #[export_name = "__internal__nuefi__main"]
+    pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+        panic!();
+        let stdout = table.stdout();
+        // stdout.set_background(TextBackground::BLACK)?;
+        stdout.reset()?;
+        Ok(())
+    }
+
+    #[entry(crate = "self")]
+    pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+        // panic!();
+        // let stdout = table.stdout();
+        // stdout.set_background(TextBackground::BLACK)?;
+        // stdout.reset()?;
+        Ok(())
+    }
+
+    #[test]
+    fn miri() -> Result<()> {
+        // setup();
+        let id = 69420;
+        // Safety: yes
+        let mut st = unsafe { RawSystemTable::mock() };
+        let image = EfiHandle(&id as *const _ as *mut _);
+        // info!("{st:?}");
+        let ret = efi_main(image, &mut st);
+        // info!("{ret:?}");
+        //
+        // panic!("{:#?}", ret);
+        Ok(())
+    }
+}
