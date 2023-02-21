@@ -170,3 +170,33 @@ fn panic(info: &PanicInfo) -> ! {
     // The UEFI watchdog will kill us eventually.
     loop {}
 }
+
+// Helps with faulty rust-analyzer/linking errors
+// #[cfg_attr(not(any(test, special_test)), alloc_error_handler)]
+#[cfg_attr(not(test), alloc_error_handler)]
+fn alloc_error(layout: core::alloc::Layout) -> ! {
+    // Safety: We ensure elsewhere that ALLOC_HANDLER is never set to an improper
+    // pointer
+    let alloc = ALLOC_HANDLER.load(Ordering::Relaxed);
+    let alloc = unsafe { alloc.as_ref() };
+    if let Some(Some(alloc)) = alloc {
+        // Safety: Above
+        let alloc = unsafe { alloc.as_ref() };
+        alloc(layout);
+    } else if let Some(None) = alloc {
+        // Handler overridden, but to do nothing, so do nothing, I guess?
+        // UEFI watchdog will kill us eventually(~5 minutes from boot)
+        // This may not actually be possible.
+        loop {}
+    } else {
+        panic!("Couldn't allocate {} bytes", layout.size())
+    }
+}
+
+use core::ptr::NonNull;
+
+type AllocFn = fn(core::alloc::Layout) -> !;
+type PanicFn = fn(&PanicInfo) -> !;
+
+static ALLOC_HANDLER: AtomicPtr<Option<NonNull<AllocFn>>> = AtomicPtr::new(core::ptr::null_mut());
+static PANIC_HANDLER: AtomicPtr<Option<NonNull<PanicFn>>> = AtomicPtr::new(core::ptr::null_mut());

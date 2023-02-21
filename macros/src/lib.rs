@@ -93,6 +93,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                 }
             }
             syn::NestedMeta::Meta(m @ Meta::Path(p)) => {
+                #[allow(clippy::if_same_then_else)]
                 if let Some(i) = p.get_ident() {
                     if i == "exit_prompt" {
                         if exit_prompt {
@@ -104,11 +105,11 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                             errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
                         }
                         should_log = true;
-                    } else if i == "alloc" {
-                        if handle_alloc {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
-                        }
-                        handle_alloc = true;
+                    } else if i == "_alloc" { // TODO: Alloc
+                         // if handle_alloc {
+                         //     errors.push(Error::new(p.span(), "Duplicate
+                         // attribute `alloc`")); }
+                         // handle_alloc = true;
                     } else if i == "_panic" { // TODO: Panic
                          // if handle_panic {
                          //     errors.push(Error::new(p.span(), "Duplicate
@@ -240,18 +241,11 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
     //     quote! {}
     // };
 
-    let alloc = if handle_alloc {
-        quote! {
-            // #![feature(alloc_error_handler)]
-            // Helps with faulty rust-analyzer/linking errors
-            #[cfg_attr(not(any(test, special_test)), alloc_error_handler)]
-            fn alloc_error(layout: ::core::alloc::Layout) -> ! {
-                panic!("Couldn't allocate {} bytes", layout.size())
-            }
-        }
-    } else {
-        quote! {}
-    };
+    // let alloc = if handle_alloc {
+    //     quote! {}
+    // } else {
+    //     quote! {}
+    // };
 
     // NOTE: Macro can/should/MUST do linker hacks to
     // ensure persistent runtime panic/alloc_error hooks
@@ -292,7 +286,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
 
         // #panic
 
-        #alloc
+        // #alloc
     };
 
     if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
