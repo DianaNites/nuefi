@@ -75,12 +75,12 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 /// /// - Rename the crate internally to `uefi2`
 /// /// - Enable some internal logging after startup/during exit
 /// ///     - This uses the `log` crate, and works if you set up a logger
-/// /// - Enable a 30 second delay if `e_main` returns `Err`, displaying the error for debugging.
-/// /// - Enables a default panic handler implementation
+/// /// - `delay(n)` - Enable a 30 second delay if `e_main` returns `Err`, displaying the error for debugging.
+/// /// - `panic` - Enables a default panic handler implementation
 /// ///     - This implementation allows changing at runtime
-/// /// - Enables a default alloc error handler implementation
+/// /// - `alloc` - Enables a default alloc error handler implementation
 /// ///     - This implementation allows changing at runtime
-/// #[entry(crate = "uefi2", log, delay(30), panic)]
+/// #[entry(crate = "uefi2", log, delay(30))]
 /// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 ///     Ok(())
 /// }
