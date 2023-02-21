@@ -63,9 +63,15 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 #[no_mangle]
 extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> EfiStatus {
     extern "Rust" {
-        fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
+        fn __internal__nuefi__main(
+            handle: EfiHandle,
+            table: SystemTable<Boot>,
+        ) -> error::Result<()>;
+        static __INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED: Option<bool>;
     }
-    if image.0.is_null() || system_table.is_null() {
+    // Safety: Unsure how it can be unsafe tbh.
+    let ext = unsafe { __INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED };
+    if image.0.is_null() || system_table.is_null() || matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
     }
     // SAFETY: Pointer is valid from firmware
@@ -76,11 +82,10 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
     // Safety: Main must exist or won't link.
-    // FIXME: Could be wrong signature until derive macro is written.
-    // After that, its out of scope.
+    // Signature is verified by `__INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED` above
     //
-    // system_table is non-null, valid from firmware.
-    let ret = unsafe { main(image, SystemTable::new(system_table)) };
+    // `system_table` is non-null, we trust it from firmware.
+    let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
     info!("Returned from user main with status {ret:?}");
     match ret {
         Ok(_) => EfiStatus::SUCCESS,

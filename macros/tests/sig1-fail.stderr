@@ -1,5 +1,54 @@
-error: Missing `handle` and `table` arguments
- --> tests/sig1-fail.rs:2:1
+error: Incorrect function signature, expected `fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
+       Try `fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
+ --> tests/sig1-fail.rs:4:1
   |
-2 | fn e_main() {}
+4 | fn e_main() {}
   | ^^^^^^^^^^^
+
+error[E0308]: mismatched types
+ --> tests/sig1-fail.rs:4:4
+  |
+4 | fn e_main() {}
+  |    ^^^^^^ incorrect number of function parameters
+  |
+  = note: expected fn pointer `fn(EfiHandle, SystemTable<Boot>) -> Result<(), UefiError>`
+                found fn item `fn() {e_main}`
+  = note: when the arguments and return types match, functions can be coerced to function pointers
+
+error[E0061]: this function takes 0 arguments but 2 arguments were supplied
+ --> tests/sig1-fail.rs:4:4
+  |
+3 | #[macros::entry]
+  | ----------------
+  | |
+  | unexpected argument of type `EfiHandle`
+  | unexpected argument of type `SystemTable<Boot>`
+4 | fn e_main() {}
+  |    ^^^^^^
+  |
+note: function defined here
+ --> tests/sig1-fail.rs:4:4
+  |
+4 | fn e_main() {}
+  |    ^^^^^^
+help: remove the extra arguments
+  |
+3 | #[macros::entry]
+  |
+
+error[E0308]: mismatched types
+ --> tests/sig1-fail.rs:3:1
+  |
+3 | #[macros::entry]
+  | ^^^^^^^^^^^^^^^^
+  | |
+  | expected `Result<(), UefiError>`, found `()`
+  | expected `Result<(), UefiError>` because of return type
+  |
+  = note:   expected enum `Result<(), UefiError>`
+          found unit type `()`
+  = note: this error originates in the attribute macro `macros::entry` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: try wrapping the expression in `Ok`
+  |
+3 | Ok(#[macros::entry])
+  | +++                +

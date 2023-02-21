@@ -1,5 +1,31 @@
-error: cannot be a method
+error: Cannot be a method
  --> tests/sig4-fail.rs:7:15
   |
 7 |     fn e_main(&self, table: ()) {}
   |               ^^^^^
+
+error: `const` items in this context need a name
+ --> tests/sig4-fail.rs:6:5
+  |
+6 |     #[macros::entry]
+  |     ^^^^^^^^^^^^^^^^ `_` is not a valid name for this `const` item
+  |
+  = note: this error originates in the attribute macro `macros::entry` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0425]: cannot find value `e_main` in this scope
+  --> tests/sig4-fail.rs:7:8
+   |
+7  |     fn e_main(&self, table: ()) {}
+   |        ^^^^^^ help: a function with a similar name exists: `main`
+...
+10 | fn main() {}
+   | --------- similarly named function `main` defined here
+
+error[E0425]: cannot find function `e_main` in this scope
+  --> tests/sig4-fail.rs:7:8
+   |
+7  |     fn e_main(&self, table: ()) {}
+   |        ^^^^^^ help: a function with a similar name exists: `main`
+...
+10 | fn main() {}
+   | --------- similarly named function `main` defined here
