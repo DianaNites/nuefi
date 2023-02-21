@@ -60,6 +60,28 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 ///
 /// This does some basic initial setup, preparing the user entry point from the
 /// UEFI one, validating tables, handling `main`s return value.
+///
+/// # Example
+///
+/// ```rust
+/// # use uefi as nuefi;
+/// use nuefi as uefi2;
+/// use uefi2::entry;
+/// use uefi2::EfiHandle;
+/// use uefi2::SystemTable;
+/// use uefi2::table::Boot;
+/// use uefi2::error::Result;
+///
+/// /// - Rename the crate internally to `uefi2`
+/// /// - Enable some internal logging after startup/during exit
+/// /// - Enable a 30 second delay if `e_main` returns `Err`, displaying the error for debugging.
+/// #[entry(crate = "uefi2", log, delay(30))]
+/// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+///     Ok(())
+/// }
+///
+/// # fn main() {}
+/// ```
 #[no_mangle]
 extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> EfiStatus {
     extern "Rust" {
