@@ -219,30 +219,12 @@ impl RawSystemTable {
             configuration_table: null_mut(),
         };
 
-        // const MOCK_BOOT: RawBootServices = RawBootServices::mock();
-
         struct YesSync<T>(T);
         /// Safety: yeah trust me. no
         unsafe impl<T> Sync for YesSync<T> {}
 
         static MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
         static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
-
-        static MOCK: YesSync<RawSystemTable> = YesSync(RawSystemTable {
-            header: MOCK_HEADER,
-            firmware_vendor: MOCK_VENDOR_16,
-            firmware_revision: 69420,
-            console_in_handle: EfiHandle(null_mut()),
-            con_in: null_mut(),
-            console_out_handle: EfiHandle(null_mut()),
-            con_out: null_mut(),
-            standard_error_handle: EfiHandle(null_mut()),
-            std_err: null_mut(),
-            runtime_services: null_mut(),
-            boot_services: null_mut(),
-            number_of_table_entries: 0,
-            configuration_table: null_mut(),
-        });
 
         let mut s = MOCK_SYSTEM;
 
@@ -254,6 +236,7 @@ impl RawSystemTable {
             digest.update(s.to_bytes());
             digest.finalize()
         };
+
         s
     }
 }
@@ -435,67 +418,28 @@ pub struct RawBootServices {
 impl RawBootServices {
     const SIGNATURE: u64 = 0x56524553544f4f42;
 
+    fn to_bytes(&self) -> &[u8] {
+        // Safety: `self` is valid by definition
+        // Lifetime is bound to self
+        let bytes = unsafe {
+            core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
+        };
+        bytes
+    }
+
     const fn mock() -> Self {
         const MOCK_HEADER: Header = Header {
             signature: RawBootServices::SIGNATURE,
             revision: Revision::new(2, 70),
             size: size_of::<RawBootServices>() as u32,
-            crc32: 0,
+            crc32: 0x3E7360CB,
             reserved: 0,
         };
         let b = [0u8; size_of::<Self>()];
         // Safety:
         let mut t: RawBootServices = unsafe { core::mem::transmute::<_, _>(b) };
         t.header = MOCK_HEADER;
-        return t;
-        #[cfg(no)]
-        RawBootServices {
-            header: MOCK_HEADER,
-            raise_tpl: null_mut(),
-            restore_tpl: null_mut(),
-            allocate_pages: null_mut(),
-            free_pages: null_mut(),
-            get_memory_map: null_mut(),
-            allocate_pool: null_mut(),
-            free_pool: null_mut(),
-            create_event: null_mut(),
-            set_timer: null_mut(),
-            wait_for_event: null_mut(),
-            signal_event: null_mut(),
-            close_event: null_mut(),
-            check_event: null_mut(),
-            install_protocol_interface: null_mut(),
-            reinstall_protocol_interface: null_mut(),
-            uninstall_protocol_interface: null_mut(),
-            handle_protocol: null_mut(),
-            reserved: null_mut(),
-            register_protocol_notify: null_mut(),
-            locate_handle: null_mut(),
-            locate_device_path: null_mut(),
-            install_configuration_table: null_mut(),
-            load_image: null_mut(),
-            start_image: null_mut(),
-            exit: null_mut(),
-            unload_image: null_mut(),
-            exit_boot_services: null_mut(),
-            get_next_monotonic_count: null_mut(),
-            stall: null_mut(),
-            set_watchdog_timer: null_mut(),
-            connect_controller: null_mut(),
-            disconnect_controller: null_mut(),
-            open_protocol: null_mut(),
-            close_protocol: null_mut(),
-            open_protocol_information: null_mut(),
-            protocols_per_handle: null_mut(),
-            locate_handle_buffer: null_mut(),
-            locate_protocol: null_mut(),
-            install_multiple_protocol_interfaces: null_mut(),
-            uninstall_multiple_protocol_interfaces: null_mut(),
-            calculate_crc32: null_mut(),
-            copy_mem: null_mut(),
-            set_mem: null_mut(),
-            create_event_ex: null_mut(),
-        }
+        t
     }
 }
 
@@ -509,12 +453,21 @@ pub struct RawRuntimeServices {
 impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
 
+    fn to_bytes(&self) -> &[u8] {
+        // Safety: `self` is valid by definition
+        // Lifetime is bound to self
+        let bytes = unsafe {
+            core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
+        };
+        bytes
+    }
+
     const fn mock() -> Self {
         const MOCK_HEADER: Header = Header {
             signature: RawRuntimeServices::SIGNATURE,
             revision: Revision::new(2, 70),
             size: size_of::<RawRuntimeServices>() as u32,
-            crc32: 0,
+            crc32: 0xF383B8DD,
             reserved: 0,
         };
         let b = [0u8; size_of::<Self>()];
