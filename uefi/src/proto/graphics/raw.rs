@@ -110,35 +110,42 @@ impl RawPixelFormat {
 /// https://uefi.org/specs/UEFI/2.10/12_Protocols_Console_Support.html#graphics-output-protocol
 #[repr(C)]
 pub struct RawGraphicsOutput {
-    pub query_mode: unsafe extern "efiapi" fn(
-        this: *mut Self,
-        mode: u32,
-        info_size: *mut usize,
-        info: *mut *const RawGraphicsInfo,
-    ) -> EfiStatus,
-    pub set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> EfiStatus,
-    pub blt: unsafe extern "efiapi" fn(
-        //
-        this: *mut Self,
-        buffer: *mut RawBltPixel,
-        op: RawBltOperation,
-        src_x: usize,
-        src_y: usize,
-        dest_x: usize,
-        dest_y: usize,
-        width: usize,
-        height: usize,
-        delta: usize,
-    ) -> EfiStatus,
+    pub query_mode: Option<
+        unsafe extern "efiapi" fn(
+            this: *mut Self,
+            mode: u32,
+            info_size: *mut usize,
+            info: *mut *const RawGraphicsInfo,
+        ) -> EfiStatus,
+    >,
+
+    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> EfiStatus>,
+
+    pub blt: Option<
+        unsafe extern "efiapi" fn(
+            //
+            this: *mut Self,
+            buffer: *mut RawBltPixel,
+            op: RawBltOperation,
+            src_x: usize,
+            src_y: usize,
+            dest_x: usize,
+            dest_y: usize,
+            width: usize,
+            height: usize,
+            delta: usize,
+        ) -> EfiStatus,
+    >,
+
     pub mode: *mut RawGraphicsMode,
 }
 
 impl fmt::Debug for RawGraphicsOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RawGraphicsOutput")
-            .field("query_mode", &{ self.query_mode as *const () })
-            .field("set_mode", &{ self.set_mode as *const () })
-            .field("blt", &{ self.blt as *const () })
+            .field("query_mode", &{ &self.query_mode as *const _ })
+            .field("set_mode", &{ &self.set_mode as *const _ })
+            .field("blt", &{ &self.blt as *const _ })
             .field("mode", &self.mode)
             .finish()
     }

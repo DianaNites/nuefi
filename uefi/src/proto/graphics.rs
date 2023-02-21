@@ -26,7 +26,7 @@ impl<'table> GraphicsOutput<'table> {
     /// Set the graphic mode to number `mode`
     pub fn set_mode(&self, mode: u32) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().set_mode)(self.interface, mode) }.into()
+        unsafe { (self.interface().set_mode.unwrap())(self.interface, mode) }.into()
     }
 
     pub fn query_mode(&self, mode: u32) -> Result<GraphicsMode> {
@@ -35,7 +35,7 @@ impl<'table> GraphicsOutput<'table> {
         // Safety: Construction ensures these are valid
         let ret = unsafe {
             //
-            (self.interface().query_mode)(self.interface, mode, &mut size, &mut info)
+            (self.interface().query_mode.unwrap())(self.interface, mode, &mut size, &mut info)
         };
         if ret.is_success() && !info.is_null() && size >= size_of::<RawGraphicsInfo>() {
             let mode = GraphicsMode::new(
@@ -105,7 +105,7 @@ impl<'table> GraphicsOutput<'table> {
         }
         // Safety: Construction ensures these are valid
         unsafe {
-            (self.interface().blt)(
+            (self.interface().blt.unwrap())(
                 self.interface,
                 buffer.as_ptr() as *mut RawBltPixel,
                 op.into(),

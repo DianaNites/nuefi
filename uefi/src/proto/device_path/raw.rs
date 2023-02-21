@@ -43,7 +43,7 @@ impl RawDevicePath {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawDevicePathUtil {
-    pub get_device_path_size: unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize,
+    pub get_device_path_size: Option<unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize>,
     pub duplicate_device_path: *mut u8,
     pub append_device_path: *mut u8,
     pub append_device_node: *mut u8,
@@ -57,14 +57,19 @@ pub struct RawDevicePathUtil {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawDevicePathToText {
-    pub convert_device_node_to_text: unsafe extern "efiapi" fn(
-        node: *mut RawDevicePath,
-        display: bool,
-        shortcuts: bool,
-    ) -> *mut u16,
-    pub convert_device_path_to_text: unsafe extern "efiapi" fn(
-        path: *mut RawDevicePath,
-        display: bool,
-        shortcuts: bool,
-    ) -> *mut u16,
+    pub convert_device_node_to_text: Option<
+        unsafe extern "efiapi" fn(
+            node: *mut RawDevicePath,
+            display: bool,
+            shortcuts: bool,
+        ) -> *mut u16,
+    >,
+
+    pub convert_device_path_to_text: Option<
+        unsafe extern "efiapi" fn(
+            path: *mut RawDevicePath,
+            display: bool,
+            shortcuts: bool,
+        ) -> *mut u16,
+    >,
 }

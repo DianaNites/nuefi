@@ -44,7 +44,7 @@ impl<'table> DevicePathUtil<'table> {
     pub fn get_device_path_size(&self, node: &DevicePath) -> usize {
         // Safety: Construction ensures these are valid
         unsafe {
-            (self.interface().get_device_path_size)(node.interface)
+            (self.interface().get_device_path_size.unwrap())(node.interface)
                 // End of path node
                 - core::mem::size_of::<RawDevicePath>()
         }
@@ -79,7 +79,7 @@ impl<'table> DevicePathToText<'table> {
         // Safety: construction ensures correctness
         let ret = unsafe {
             //
-            (self.interface().convert_device_node_to_text)(node.interface, false, false)
+            (self.interface().convert_device_node_to_text.unwrap())(node.interface, false, false)
         };
         if !ret.is_null() {
             // Safety: `ret` is a non-null owned UEFI string
@@ -98,7 +98,7 @@ impl<'table> DevicePathToText<'table> {
         // Safety: construction ensures correctness
         let ret = unsafe {
             //
-            (self.interface().convert_device_path_to_text)(path.interface, false, false)
+            (self.interface().convert_device_path_to_text.unwrap())(path.interface, false, false)
         };
         if !ret.is_null() {
             // Safety: `ret` is a non-null owned UEFI string

@@ -107,9 +107,9 @@ impl<'table> BootServices<'table> {
     pub fn locate_protocol<'boot, T: proto::Protocol<'boot>>(&'boot self) -> Result<Option<T>> {
         let mut out: *mut u8 = null_mut();
         let mut guid = T::GUID;
+        let lp = self.interface().locate_protocol.unwrap();
         // Safety: Construction ensures safety. Statically verified arguments.
-        let ret =
-            unsafe { (self.interface().locate_protocol.unwrap())(&mut guid, null_mut(), &mut out) };
+        let ret = unsafe { (lp)(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
             // Safety: Success means out is valid
             unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
