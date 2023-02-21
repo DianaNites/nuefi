@@ -1,0 +1,17 @@
+error: Duplicate attribute `exit_prompt`
+ --> tests/sig7-fail.rs:9:5
+  |
+9 |     exit_prompt,
+  |     ^^^^^^^^^^^
+
+error: Duplicate attribute `log`
+  --> tests/sig7-fail.rs:10:5
+   |
+10 |     log,
+   |     ^^^
+
+error: Duplicate attribute `delay`
+  --> tests/sig7-fail.rs:12:5
+   |
+12 |     delay(420)
+   |     ^^^^^^^^^^

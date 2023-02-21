@@ -20,11 +20,11 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut delay: Option<u64> = None;
 
     for arg in args {
-        match arg {
+        match &arg {
             syn::NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
                     if i == "crate" {
-                        if let Lit::Str(s) = m.lit {
+                        if let Lit::Str(s) = &m.lit {
                             krate = format_ident!("{}", s.value());
                         } else {
                             errors.push(Error::new(m.lit.span(), "Expected string literal"));
@@ -53,12 +53,17 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                                 syn::NestedMeta::Lit(li) => match li {
                                     Lit::Int(lit) => {
                                         if let Ok(lit) = lit.base10_parse::<u64>() {
-                                            delay = Some(lit);
+                                            if delay.replace(lit).is_some() {
+                                                errors.push(Error::new(
+                                                    l.span(),
+                                                    "Duplicate attribute `delay`",
+                                                ));
+                                            }
                                         }
                                     }
                                     v => {
                                         errors.push(Error::new(
-                                            l.span(),
+                                            li.span(),
                                             format!("Expected integer, got: {:?}", f),
                                         ));
                                     }
@@ -85,19 +90,23 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                     ));
                 }
             }
-            syn::NestedMeta::Meta(Meta::Path(p)) => {
+            syn::NestedMeta::Meta(m @ Meta::Path(p)) => {
                 if let Some(i) = p.get_ident() {
                     if i == "exit_prompt" {
+                        if exit_prompt {
+                            errors.push(Error::new(p.span(), "Duplicate attribute `exit_prompt`"));
+                        }
                         exit_prompt = true;
                     } else if i == "log" {
+                        if should_log {
+                            errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
+                        }
                         should_log = true;
                     } else if i == "delay" {
-                        if let Some(i) = p.get_ident() {
-                            errors.push(Error::new(
-                                p.span(),
-                                format!("Attribute `{}` expected value. Try `{0}(VALUE)`", i),
-                            ));
-                        }
+                        errors.push(Error::new(
+                            p.span(),
+                            "Attribute `delay` expected value. Try `delay(VALUE)`",
+                        ));
                     } else {
                         errors.push(Error::new(
                             p.span(),
