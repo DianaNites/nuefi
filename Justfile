@@ -25,6 +25,7 @@ export MIRIFLAGS := "\
 
 @miri *args='':
     cargo +nightly miri nextest run {{args}}
+    # cargo +nightly miri {{args}}
 
 @test *args='':
     RUSTFLAGS="--cfg special_test" \
