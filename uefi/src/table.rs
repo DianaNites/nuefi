@@ -383,19 +383,25 @@ impl SystemTable<Boot> {
 
     /// Output on stdout
     pub fn stdout(&self) -> SimpleTextOutput<'_> {
+        let ptr = self.table().con_out;
+        assert!(!ptr.is_null(), "con_out handle was null");
         // Safety: Construction ensures safety.
-        unsafe { SimpleTextOutput::new(self.table().con_out) }
+        unsafe { SimpleTextOutput::new(ptr) }
     }
 
     /// Output on stderr
     pub fn stderr(&self) -> SimpleTextOutput<'_> {
+        let ptr = self.table().std_err;
+        assert!(!ptr.is_null(), "std_err handle was null");
         // Safety: Construction ensures safety.
-        unsafe { SimpleTextOutput::new(self.table().std_err) }
+        unsafe { SimpleTextOutput::new(ptr) }
     }
 
     /// Reference to the UEFI Boot services.
     pub fn boot(&self) -> BootServices<'_> {
+        let ptr = self.table().boot_services;
+        assert!(!ptr.is_null(), "boot_services handle was null");
         // Safety: Construction ensures safety.
-        unsafe { BootServices::new(self.table().boot_services) }
+        unsafe { BootServices::new(ptr) }
     }
 }
