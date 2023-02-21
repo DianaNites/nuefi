@@ -170,8 +170,8 @@ mod tests {
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         let stdout = table.stdout();
         stdout.reset()?;
-        loop {}
-        // stdout.set_background(TextBackground::BLACK)?;
+        let vendor = table.firmware_vendor();
+        panic!("{vendor}");
         Ok(())
     }
 
@@ -187,7 +187,9 @@ mod tests {
         let ret = efi_main(image, st);
         // info!("{ret:?}");
         //
-        panic!("{:#?}", ret);
+        if !ret.is_success() {
+            panic!("{:#?}", ret);
+        }
         Ok(())
     }
 }
