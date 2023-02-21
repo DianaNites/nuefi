@@ -71,7 +71,7 @@ interface!(SimpleTextOutput(RawSimpleTextOutput));
 
 impl<'table> SimpleTextOutput<'table> {
     pub fn output_string(&self, string: &str) -> Result<()> {
-        let out = self.interface().output_string;
+        let out = self.interface().output_string.unwrap();
         let s: Vec<u16> = string.encode_utf16().chain(once(0)).collect();
         // Safety: s is a nul terminated string
         unsafe { out(self.interface, s.as_ptr()) }.into()
@@ -123,7 +123,8 @@ impl<'table> SimpleTextOutput<'table> {
 
     pub fn set_attributes(&self, fore: TextForeground, back: TextBackground) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().set_attribute)(self.interface, fore.0 | back.0 << 4) }.into()
+        unsafe { (self.interface().set_attribute.unwrap())(self.interface, fore.0 | back.0 << 4) }
+            .into()
     }
 
     /// Reset the device associated with this protocol
@@ -131,31 +132,31 @@ impl<'table> SimpleTextOutput<'table> {
     /// Clears the screen, resets cursor position.
     pub fn reset(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().reset)(self.interface, false) }.into()
+        unsafe { (self.interface().reset.unwrap())(self.interface, false) }.into()
     }
 
     /// Clears the screen, resets cursor position.
     pub fn clear(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().clear_screen)(self.interface) }.into()
+        unsafe { (self.interface().clear_screen.unwrap())(self.interface) }.into()
     }
 
     /// Enables the cursor
     pub fn enable_cursor(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().enable_cursor)(self.interface, true) }.into()
+        unsafe { (self.interface().enable_cursor.unwrap())(self.interface, true) }.into()
     }
 
     /// Disables the cursor
     pub fn disable_cursor(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().enable_cursor)(self.interface, false) }.into()
+        unsafe { (self.interface().enable_cursor.unwrap())(self.interface, false) }.into()
     }
 
     /// Set the terminal mode to number `mode`
     pub fn set_mode(&self, mode: u32) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().set_mode)(self.interface, mode as usize) }.into()
+        unsafe { (self.interface().set_mode.unwrap())(self.interface, mode as usize) }.into()
     }
 
     /// Query terminal mode number `mode`

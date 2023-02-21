@@ -26,20 +26,30 @@ pub struct RawTextMode {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawSimpleTextOutput {
-    pub reset: unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus,
-    pub output_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
-    pub test_string: unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus,
+    pub reset: Option<unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus>,
+
+    pub output_string:
+        Option<unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus>,
+
+    pub test_string: Option<unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus>,
+
     pub query_mode: unsafe extern "efiapi" fn(
         this: *mut Self,
         mode: usize,
         cols: *mut usize,
         rows: *mut usize,
     ) -> EfiStatus,
-    pub set_mode: unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus,
-    pub set_attribute: unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> EfiStatus,
-    pub clear_screen: unsafe extern "efiapi" fn(this: *mut Self) -> EfiStatus,
+
+    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus>,
+
+    pub set_attribute: Option<unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> EfiStatus>,
+
+    pub clear_screen: Option<unsafe extern "efiapi" fn(this: *mut Self) -> EfiStatus>,
+
     pub set_cursor_position:
-        unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus,
-    pub enable_cursor: unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus,
+        Option<unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus>,
+
+    pub enable_cursor:
+        Option<unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus>,
     pub mode: *mut RawTextMode,
 }
