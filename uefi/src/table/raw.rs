@@ -190,12 +190,13 @@ impl RawSystemTable {
     #[doc(hidden)]
     #[allow(unreachable_code, unused_mut)]
     pub unsafe fn mock() -> Self {
-        const MOCK_VENDOR: &[u8] = b"Mock Vendor";
-        let mut mock_vendor = [0u8; MOCK_VENDOR.len()];
-        // let len = MOCK_VENDOR.chars().fold(0, |a, e| a + e.len_utf16());
-        // firmware_vendor.encode_utf16();
+        const MOCK_VENDOR: &str = "Mock Vendor";
+        static mut BUF: &mut [u16] = &mut [0u16; MOCK_VENDOR.len() + 1];
+        MOCK_VENDOR
+            .encode_utf16()
+            .enumerate()
+            .for_each(|(i, f)| BUF[i] = f);
 
-        const MOCK_VENDOR_16: *const u16 = null_mut();
         const MOCK_HEADER: Header = Header {
             signature: RawSystemTable::SIGNATURE,
             revision: Revision::new(2, 70),
@@ -205,7 +206,7 @@ impl RawSystemTable {
         };
         const MOCK_SYSTEM: RawSystemTable = RawSystemTable {
             header: MOCK_HEADER,
-            firmware_vendor: MOCK_VENDOR_16,
+            firmware_vendor: null_mut(),
             firmware_revision: 69420,
             console_in_handle: EfiHandle(null_mut()),
             con_in: null_mut(),
@@ -232,6 +233,7 @@ impl RawSystemTable {
         s.boot_services = &MOCK_BOOT.0 as *const _ as *mut _;
         s.runtime_services = &MOCK_RUN.0 as *const _ as *mut _;
         s.con_out = &MOCK_OUT.0 as *const _ as *mut _;
+        s.firmware_vendor = BUF.as_ptr();
 
         s.header.crc32 = {
             let mut digest = CRC.digest();
