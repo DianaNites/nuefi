@@ -174,34 +174,18 @@ mod tests {
     use super::*;
     use crate::{entry, error::Result};
 
-    #[cfg(no)]
-    fn setup() {
-        #[no_mangle]
-        static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool> = None;
-
-        #[no_mangle]
-        static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64> = None;
-
-        #[no_mangle]
-        static __INTERNAL_NUEFI_LOG: Option<bool> = None;
-    }
-
-    #[cfg(no)]
-    #[export_name = "__internal__nuefi__main"]
-    pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
-        panic!();
-        let stdout = table.stdout();
-        // stdout.set_background(TextBackground::BLACK)?;
-        stdout.reset()?;
-        Ok(())
-    }
+    // TODO: Write more library/infrastructure for writing a mock library
+    // slash actual UEFI implementation in software to test against,
+    // or even use in hardware. lol.
 
     #[entry(crate = "self")]
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         // panic!();
-        // let stdout = table.stdout();
+        // FIXME: Nothing ensures the validity of data at the handles.
+        let stdout = table.stdout();
+        stdout.reset()?;
+        loop {}
         // stdout.set_background(TextBackground::BLACK)?;
-        // stdout.reset()?;
         Ok(())
     }
 
@@ -210,13 +194,14 @@ mod tests {
         // setup();
         let id = 69420;
         // Safety: yes
-        let mut st = unsafe { RawSystemTable::mock() };
+        let st = unsafe { RawSystemTable::mock() };
+        let st = &st as *const _ as *mut _;
         let image = EfiHandle(&id as *const _ as *mut _);
         // info!("{st:?}");
-        let ret = efi_main(image, &mut st);
+        let ret = efi_main(image, st);
         // info!("{ret:?}");
         //
-        // panic!("{:#?}", ret);
+        panic!("{:#?}", ret);
         Ok(())
     }
 }
