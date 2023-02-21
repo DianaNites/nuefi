@@ -105,16 +105,22 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                             errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
                         }
                         should_log = true;
-                    } else if i == "_alloc" { // TODO: Alloc
-                         // if handle_alloc {
-                         //     errors.push(Error::new(p.span(), "Duplicate
-                         // attribute `alloc`")); }
-                         // handle_alloc = true;
-                    } else if i == "_panic" { // TODO: Panic
-                         // if handle_panic {
-                         //     errors.push(Error::new(p.span(), "Duplicate
-                         // attribute `panic`")); }
-                         // handle_panic = true;
+                    } else if i == "alloc" {
+                        // TODO: Alloc
+                        if handle_alloc {
+                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
+                        }
+                        handle_alloc = true;
+                    } else if i == "panic" {
+                        // TODO: Panic
+                        if handle_panic {
+                            errors.push(Error::new(
+                                p.span(),
+                                "Duplicate
+                         attribute `panic`",
+                            ));
+                        }
+                        handle_panic = true;
                     } else if i == "delay" {
                         errors.push(Error::new(
                             p.span(),
@@ -233,19 +239,73 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         }
     };
 
-    // let panic = if handle_panic {
-    //     quote! {
-    //         //
-    //     }
-    // } else {
-    //     quote! {}
-    // };
+    let panic = if handle_panic {
+        quote! {
+            const _: () = {
+                use #krate::handlers::PANIC_HANDLER;
+                use core::{
+                    panic::PanicInfo,
+                    sync::atomic::Ordering,
+                };
 
-    // let alloc = if handle_alloc {
-    //     quote! {}
-    // } else {
-    //     quote! {}
-    // };
+                // Helps with faulty rust-analyzer/linking errors
+                #[cfg_attr(not(test), panic_handler)]
+                fn panic(info: &PanicInfo) -> ! {
+                    // Safety: We ensure elsewhere that PANIC_HANDLER is never set to an improper
+                    // pointer
+                    let panic = PANIC_HANDLER.load(Ordering::Relaxed);
+                    let panic = unsafe { panic.as_ref() };
+                    if let Some(Some(panic)) = panic {
+                        // Safety: Above
+                        let panic = unsafe { panic.as_ref() };
+                        panic(info);
+                    } else {
+                        // Do nothing, I guess?
+                        // UEFI watchdog will kill us eventually(~5 minutes from boot)
+                        // This may not actually be possible.
+                        loop {}
+                    }
+                }
+            };
+        }
+    } else {
+        quote! {}
+    };
+
+    let alloc = if handle_alloc {
+        quote! {
+            const _: () = {
+                use #krate::handlers::ALLOC_HANDLER;
+                use core::{
+                    alloc::Layout,
+                    sync::atomic::Ordering
+                };
+
+                // Helps with faulty rust-analyzer/linking errors
+                #[cfg_attr(not(test), alloc_error_handler)]
+                fn alloc_error(layout: core::alloc::Layout) -> ! {
+                    // Safety: We ensure elsewhere that ALLOC_HANDLER is never set to an improper
+                    // pointer
+                    let alloc = ALLOC_HANDLER.load(Ordering::Relaxed);
+                    let alloc = unsafe { alloc.as_ref() };
+                    if let Some(Some(alloc)) = alloc {
+                        // Safety: Above
+                        let alloc = unsafe { alloc.as_ref() };
+                        alloc(layout);
+                    } else if let Some(None) = alloc {
+                        // Handler overridden, but to do nothing, so do nothing, I guess?
+                        // UEFI watchdog will kill us eventually(~5 minutes from boot)
+                        // This may not actually be possible.
+                        loop {}
+                    } else {
+                        panic!("Couldn't allocate {} bytes", layout.size())
+                    }
+                }
+            };
+        }
+    } else {
+        quote! {}
+    };
 
     // NOTE: Macro can/should/MUST do linker hacks to
     // ensure persistent runtime panic/alloc_error hooks
@@ -284,9 +344,9 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
 
         #input
 
-        // #panic
+        #panic
 
-        // #alloc
+        #alloc
     };
 
     if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
