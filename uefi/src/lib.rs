@@ -170,9 +170,3 @@ fn panic(info: &PanicInfo) -> ! {
     // The UEFI watchdog will kill us eventually.
     loop {}
 }
-
-// Helps with faulty rust-analyzer/linking errors
-#[cfg_attr(not(any(test, special_test)), alloc_error_handler)]
-fn alloc_error(layout: core::alloc::Layout) -> ! {
-    panic!("Couldn't allocate {} bytes", layout.size())
-}

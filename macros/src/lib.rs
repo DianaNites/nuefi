@@ -18,6 +18,8 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut exit_prompt = false;
     let mut should_log = false;
     let mut delay: Option<u64> = None;
+    let mut handle_alloc = false;
+    let mut handle_panic = false;
 
     for arg in args {
         match &arg {
@@ -102,6 +104,16 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                             errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
                         }
                         should_log = true;
+                    } else if i == "alloc" {
+                        if handle_alloc {
+                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
+                        }
+                        handle_alloc = true;
+                    } else if i == "_panic" { // TODO: Panic
+                         // if handle_panic {
+                         //     errors.push(Error::new(p.span(), "Duplicate
+                         // attribute `panic`")); }
+                         // handle_panic = true;
                     } else if i == "delay" {
                         errors.push(Error::new(
                             p.span(),
@@ -200,33 +212,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         const _chk: MainCheck = #ident;
     };
 
-    let (log1, log2) = if should_log {
-        (
-            quote! {
-                info!("Returned from user main with status {:?}", ret);
-            },
-            quote! {
-                error!("UEFI User main exited with error: {}", e);
-                error!("Waiting 30 seconds");
-            },
-        )
-    } else {
-        let x = quote! {};
-        (
-            //
-            x.clone(),
-            x,
-        )
-    };
-
-    let exit = if exit_prompt {
-        quote! {
-            const _: () = {};
-        }
-    } else {
-        quote! {}
-    };
-
     let exit_dur = if let Some(d) = delay {
         quote! {
             Some(#d)
@@ -245,6 +230,27 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         quote! {
             Some(false)
         }
+    };
+
+    // let panic = if handle_panic {
+    //     quote! {
+    //         //
+    //     }
+    // } else {
+    //     quote! {}
+    // };
+
+    let alloc = if handle_alloc {
+        quote! {
+            // #![feature(alloc_error_handler)]
+            // Helps with faulty rust-analyzer/linking errors
+            #[cfg_attr(not(any(test, special_test)), alloc_error_handler)]
+            fn alloc_error(layout: ::core::alloc::Layout) -> ! {
+                panic!("Couldn't allocate {} bytes", layout.size())
+            }
+        }
+    } else {
+        quote! {}
     };
 
     // NOTE: Macro can/should/MUST do linker hacks to
@@ -283,6 +289,10 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         };
 
         #input
+
+        // #panic
+
+        #alloc
     };
 
     if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
