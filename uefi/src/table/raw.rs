@@ -68,7 +68,7 @@ impl Header {
     ///
     /// - Must be called with a valid pointed to a UEFI table
     unsafe fn validate(table: *mut Self, sig: u64) -> Result<()> {
-        assert!(!table.is_null(), "Table Header ({sig}) was null");
+        assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
         let header = &*table;
         let expected = header.crc32;
         let len = header.size;
@@ -170,7 +170,6 @@ impl RawSystemTable {
             header.boot_services as *mut Header,
             RawBootServices::SIGNATURE,
         )?;
-        loop {}
         Header::validate(
             header.runtime_services as *mut Header,
             RawRuntimeServices::SIGNATURE,
@@ -220,9 +219,35 @@ impl RawSystemTable {
             configuration_table: null_mut(),
         };
 
-        const MOCK_BOOT: RawBootServices = RawBootServices::mock();
+        // const MOCK_BOOT: RawBootServices = RawBootServices::mock();
+
+        struct YesSync<T>(T);
+        /// Safety: yeah trust me. no
+        unsafe impl<T> Sync for YesSync<T> {}
+
+        static MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
+        static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
+
+        static MOCK: YesSync<RawSystemTable> = YesSync(RawSystemTable {
+            header: MOCK_HEADER,
+            firmware_vendor: MOCK_VENDOR_16,
+            firmware_revision: 69420,
+            console_in_handle: EfiHandle(null_mut()),
+            con_in: null_mut(),
+            console_out_handle: EfiHandle(null_mut()),
+            con_out: null_mut(),
+            standard_error_handle: EfiHandle(null_mut()),
+            std_err: null_mut(),
+            runtime_services: null_mut(),
+            boot_services: null_mut(),
+            number_of_table_entries: 0,
+            configuration_table: null_mut(),
+        });
 
         let mut s = MOCK_SYSTEM;
+
+        s.boot_services = &MOCK_BOOT.0 as *const _ as *mut _;
+        s.runtime_services = &MOCK_RUN.0 as *const _ as *mut _;
 
         s.header.crc32 = {
             let mut digest = CRC.digest();
@@ -244,30 +269,42 @@ pub struct RawBootServices {
     pub restore_tpl: *mut u8,
 
     // Memory
-    pub allocate_pages: unsafe extern "efiapi" fn(
-        ty: crate::mem::AllocateType,
-        mem_ty: crate::mem::MemoryType,
-        pages: usize,
-        memory: *mut crate::mem::PhysicalAddress,
-    ) -> EfiStatus,
-    pub free_pages: unsafe extern "efiapi" fn(
-        //
-        memory: crate::mem::PhysicalAddress,
-        pages: usize,
-    ) -> EfiStatus,
-    pub get_memory_map: unsafe extern "efiapi" fn(
-        map_size: *mut usize,
-        map: *mut crate::mem::MemoryDescriptor,
-        key: *mut usize,
-        entry_size: *mut usize,
-        entry_version: *mut u32,
-    ) -> EfiStatus,
-    pub allocate_pool: unsafe extern "efiapi" fn(
-        mem_ty: crate::mem::MemoryType,
-        size: usize,
-        out: *mut *mut u8,
-    ) -> EfiStatus,
-    pub free_pool: unsafe extern "efiapi" fn(mem: *mut u8) -> EfiStatus,
+    pub allocate_pages: Option<
+        unsafe extern "efiapi" fn(
+            ty: crate::mem::AllocateType,
+            mem_ty: crate::mem::MemoryType,
+            pages: usize,
+            memory: *mut crate::mem::PhysicalAddress,
+        ) -> EfiStatus,
+    >,
+
+    pub free_pages: Option<
+        unsafe extern "efiapi" fn(
+            //
+            memory: crate::mem::PhysicalAddress,
+            pages: usize,
+        ) -> EfiStatus,
+    >,
+
+    pub get_memory_map: Option<
+        unsafe extern "efiapi" fn(
+            map_size: *mut usize,
+            map: *mut crate::mem::MemoryDescriptor,
+            key: *mut usize,
+            entry_size: *mut usize,
+            entry_version: *mut u32,
+        ) -> EfiStatus,
+    >,
+
+    pub allocate_pool: Option<
+        unsafe extern "efiapi" fn(
+            mem_ty: crate::mem::MemoryType,
+            size: usize,
+            out: *mut *mut u8,
+        ) -> EfiStatus,
+    >,
+
+    pub free_pool: Option<unsafe extern "efiapi" fn(mem: *mut u8) -> EfiStatus>,
 
     // Timers/Events
     pub create_event: *mut u8,
@@ -278,12 +315,14 @@ pub struct RawBootServices {
     pub check_event: *mut u8,
 
     // Protocols
-    pub install_protocol_interface: unsafe extern "efiapi" fn(
-        handle: *mut EfiHandle,
-        guid: *mut proto::Guid,
-        interface_ty: u32,
-        interface: *mut u8,
-    ) -> EfiStatus,
+    pub install_protocol_interface: Option<
+        unsafe extern "efiapi" fn(
+            handle: *mut EfiHandle,
+            guid: *mut proto::Guid,
+            interface_ty: u32,
+            interface: *mut u8,
+        ) -> EfiStatus,
+    >,
     pub reinstall_protocol_interface: *mut u8,
     pub uninstall_protocol_interface: *mut u8,
     pub handle_protocol: *mut u8,
@@ -294,69 +333,93 @@ pub struct RawBootServices {
     pub install_configuration_table: *mut u8,
 
     // Images
-    pub load_image: unsafe extern "efiapi" fn(
-        policy: bool,
-        parent: EfiHandle,
-        path: *mut DevicePath,
-        source: *mut u8,
-        source_size: usize,
-        out: *mut EfiHandle,
-    ) -> EfiStatus,
-    pub start_image: unsafe extern "efiapi" fn(
-        //
-        handle: EfiHandle,
-        exit_size: *mut usize,
-        exit: *mut *mut u8,
-    ) -> EfiStatus,
-    pub exit: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        status: EfiStatus,
-        data_size: usize,
-        data: proto::Str16,
-    ) -> EfiStatus,
-    pub unload_image: unsafe extern "efiapi" fn(handle: EfiHandle) -> EfiStatus,
-    pub exit_boot_services: unsafe extern "efiapi" fn(handle: EfiHandle, key: usize) -> EfiStatus,
+    pub load_image: Option<
+        unsafe extern "efiapi" fn(
+            policy: bool,
+            parent: EfiHandle,
+            path: *mut DevicePath,
+            source: *mut u8,
+            source_size: usize,
+            out: *mut EfiHandle,
+        ) -> EfiStatus,
+    >,
+
+    pub start_image: Option<
+        unsafe extern "efiapi" fn(
+            //
+            handle: EfiHandle,
+            exit_size: *mut usize,
+            exit: *mut *mut u8,
+        ) -> EfiStatus,
+    >,
+
+    pub exit: Option<
+        unsafe extern "efiapi" fn(
+            handle: EfiHandle,
+            status: EfiStatus,
+            data_size: usize,
+            data: proto::Str16,
+        ) -> EfiStatus,
+    >,
+
+    pub unload_image: Option<unsafe extern "efiapi" fn(handle: EfiHandle) -> EfiStatus>,
+
+    pub exit_boot_services:
+        Option<unsafe extern "efiapi" fn(handle: EfiHandle, key: usize) -> EfiStatus>,
 
     // Misc
-    pub get_next_monotonic_count: unsafe extern "efiapi" fn(count: *mut u64) -> EfiStatus,
-    pub stall: unsafe extern "efiapi" fn(microseconds: usize) -> EfiStatus,
-    pub set_watchdog_timer: unsafe extern "efiapi" fn(
-        timeout: usize,
-        code: u64,
-        data_size: usize,
-        data: proto::Str16,
-    ) -> EfiStatus,
+    pub get_next_monotonic_count: Option<unsafe extern "efiapi" fn(count: *mut u64) -> EfiStatus>,
+
+    pub stall: Option<unsafe extern "efiapi" fn(microseconds: usize) -> EfiStatus>,
+
+    pub set_watchdog_timer: Option<
+        unsafe extern "efiapi" fn(
+            timeout: usize,
+            code: u64,
+            data_size: usize,
+            data: proto::Str16,
+        ) -> EfiStatus,
+    >,
 
     // Drivers
     pub connect_controller: *mut u8,
     pub disconnect_controller: *mut u8,
 
     // Protocols again
-    pub open_protocol: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        guid: *mut proto::Guid,
-        out: *mut *mut u8,
-        agent_handle: EfiHandle,
-        controller_handle: EfiHandle,
-        attributes: u32,
-    ) -> EfiStatus,
-    pub close_protocol: unsafe extern "efiapi" fn(
-        handle: EfiHandle,
-        guid: *mut proto::Guid,
-        agent_handle: EfiHandle,
-        controller_handle: EfiHandle,
-    ) -> EfiStatus,
+    pub open_protocol: Option<
+        unsafe extern "efiapi" fn(
+            handle: EfiHandle,
+            guid: *mut proto::Guid,
+            out: *mut *mut u8,
+            agent_handle: EfiHandle,
+            controller_handle: EfiHandle,
+            attributes: u32,
+        ) -> EfiStatus,
+    >,
+
+    pub close_protocol: Option<
+        unsafe extern "efiapi" fn(
+            handle: EfiHandle,
+            guid: *mut proto::Guid,
+            agent_handle: EfiHandle,
+            controller_handle: EfiHandle,
+        ) -> EfiStatus,
+    >,
     pub open_protocol_information: *mut u8,
 
     // Library?
     pub protocols_per_handle: *mut u8,
     pub locate_handle_buffer: *mut u8,
-    pub locate_protocol: unsafe extern "efiapi" fn(
-        //
-        guid: *mut proto::Guid,
-        key: *mut u8,
-        out: *mut *mut u8,
-    ) -> EfiStatus,
+
+    pub locate_protocol: Option<
+        unsafe extern "efiapi" fn(
+            //
+            guid: *mut proto::Guid,
+            key: *mut u8,
+            out: *mut *mut u8,
+        ) -> EfiStatus,
+    >,
+
     pub install_multiple_protocol_interfaces: *mut u8,
     pub uninstall_multiple_protocol_interfaces: *mut u8,
 
@@ -445,6 +508,21 @@ pub struct RawRuntimeServices {
 
 impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
+
+    const fn mock() -> Self {
+        const MOCK_HEADER: Header = Header {
+            signature: RawRuntimeServices::SIGNATURE,
+            revision: Revision::new(2, 70),
+            size: size_of::<RawRuntimeServices>() as u32,
+            crc32: 0,
+            reserved: 0,
+        };
+        let b = [0u8; size_of::<Self>()];
+        // Safety:
+        let mut t: RawRuntimeServices = unsafe { core::mem::transmute::<_, _>(b) };
+        t.header = MOCK_HEADER;
+        t
+    }
 }
 
 #[cfg(test)]

@@ -24,7 +24,7 @@ impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`
     pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
         // Safety: Construction ensures safety
-        unsafe { (self.interface().exit)(handle, status, 0, null_mut()) }.into()
+        unsafe { (self.interface().exit.unwrap())(handle, status, 0, null_mut()) }.into()
     }
 
     /// Stall for [`Duration`]
@@ -41,14 +41,14 @@ impl<'table> BootServices<'table> {
             Err(e) => return e.into(),
         };
         // Safety: Construction ensures safety
-        unsafe { (self.interface().stall)(time) }.into()
+        unsafe { (self.interface().stall.unwrap())(time) }.into()
     }
 
     /// The next monotonic count
     pub fn next_monotonic_count(&self) -> Result<u64> {
         let mut out = 0;
         // Safety: Construction ensures safety
-        let ret = unsafe { (self.interface().get_next_monotonic_count)(&mut out) };
+        let ret = unsafe { (self.interface().get_next_monotonic_count.unwrap())(&mut out) };
         if ret.is_success() {
             return Ok(out);
         }
@@ -67,14 +67,15 @@ impl<'table> BootServices<'table> {
             Err(e) => return e.into(),
         };
         // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().set_watchdog_timer)(secs, 0x10000, 0, null_mut()) }.into()
+        unsafe { (self.interface().set_watchdog_timer.unwrap())(secs, 0x10000, 0, null_mut()) }
+            .into()
     }
 
     /// Allocate `size` bytes of memory from pool of type `ty`
     pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
         let mut out: *mut u8 = null_mut();
         // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe { (self.interface().allocate_pool)(ty, size, &mut out) };
+        let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
         if ret.is_success() {
             Ok(out)
         } else {
@@ -89,7 +90,7 @@ impl<'table> BootServices<'table> {
     /// - Must have been allocated by [BootServices::allocate_pool]
     /// - Must be non-null
     pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
-        (self.interface().free_pool)(memory).into()
+        (self.interface().free_pool.unwrap())(memory).into()
     }
 
     /// Find and return an arbitrary protocol instance from an arbitrary handle
@@ -107,7 +108,8 @@ impl<'table> BootServices<'table> {
         let mut out: *mut u8 = null_mut();
         let mut guid = T::GUID;
         // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe { (self.interface().locate_protocol)(&mut guid, null_mut(), &mut out) };
+        let ret =
+            unsafe { (self.interface().locate_protocol.unwrap())(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
             // Safety: Success means out is valid
             unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
@@ -134,7 +136,7 @@ impl<'table> BootServices<'table> {
         let mut guid = T::GUID;
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
-            (self.interface().open_protocol)(
+            (self.interface().open_protocol.unwrap())(
                 handle,
                 &mut guid,
                 &mut out,
@@ -173,7 +175,7 @@ impl<'table> BootServices<'table> {
         let mut guid = T::GUID;
         // Safety: Construction ensures safety. Statically verified arguments.
         unsafe {
-            (self.interface().close_protocol)(
+            (self.interface().close_protocol.unwrap())(
                 handle,
                 &mut guid,
                 agent,
@@ -192,7 +194,7 @@ impl<'table> BootServices<'table> {
         let mut out = EfiHandle(null_mut());
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
-            (self.interface().load_image)(
+            (self.interface().load_image.unwrap())(
                 false,
                 parent,
                 // TODO: Provide fake device path
@@ -215,13 +217,13 @@ impl<'table> BootServices<'table> {
     /// Unload an earlier loaded image
     pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
         // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().start_image)(handle, &mut 0, null_mut()).into() }
+        unsafe { (self.interface().start_image.unwrap())(handle, &mut 0, null_mut()).into() }
     }
 
     /// Unload an earlier loaded image
     pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
         // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().unload_image)(handle).into() }
+        unsafe { (self.interface().unload_image.unwrap())(handle).into() }
     }
 
     /// Install an instance of [proto::Protocol] on `handle`
@@ -249,8 +251,13 @@ impl<'table> BootServices<'table> {
         let mut guid = T::GUID;
         let mut h = handle;
 
-        (self.interface().install_protocol_interface)(&mut h, &mut guid, 0, interface as *mut u8)
-            .into()
+        (self.interface().install_protocol_interface.unwrap())(
+            &mut h,
+            &mut guid,
+            0,
+            interface as *mut u8,
+        )
+        .into()
     }
 }
 
