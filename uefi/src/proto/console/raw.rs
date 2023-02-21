@@ -33,12 +33,14 @@ pub struct RawSimpleTextOutput {
 
     pub test_string: Option<unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus>,
 
-    pub query_mode: unsafe extern "efiapi" fn(
-        this: *mut Self,
-        mode: usize,
-        cols: *mut usize,
-        rows: *mut usize,
-    ) -> EfiStatus,
+    pub query_mode: Option<
+        unsafe extern "efiapi" fn(
+            this: *mut Self,
+            mode: usize,
+            cols: *mut usize,
+            rows: *mut usize,
+        ) -> EfiStatus,
+    >,
 
     pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus>,
 

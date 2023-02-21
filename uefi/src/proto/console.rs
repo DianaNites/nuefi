@@ -173,7 +173,12 @@ impl<'table> SimpleTextOutput<'table> {
         let mut rows = 0;
         // Safety: Construction ensures these are valid
         let ret = unsafe {
-            (self.interface().query_mode)(self.interface, mode as usize, &mut cols, &mut rows)
+            (self.interface().query_mode.unwrap())(
+                self.interface,
+                mode as usize,
+                &mut cols,
+                &mut rows,
+            )
         };
         if ret.is_success() {
             let mode = TextMode::new(mode, (cols, rows));
