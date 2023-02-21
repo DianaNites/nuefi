@@ -2,6 +2,7 @@
 name = "macros"
 version = "0.1.0"
 edition = "2021"
+autotests = false
 
 [lib]
 proc-macro = true
@@ -15,4 +16,5 @@ quote = "1.0.23"
 syn = { version = "1.0.107", features = ["full", "fold"] }
 
 [dev-dependencies]
-trybuild = "1.0.77"
+trybuild = { version = "1.0.77", features = ["diff"] }
+uefi = { path = "../uefi" }

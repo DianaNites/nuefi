@@ -1,0 +1,5 @@
+error: Missing `table` argument
+ --> tests/sig3-fail.rs:2:11
+  |
+2 | fn e_main(handle: ()) {}
+  |           ^^^^^^^^^^

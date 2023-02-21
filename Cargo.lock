@@ -71,6 +71,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dissimilar"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "210ec60ae7d710bed8683e333e9d2855a8a56a3e9892b38bad3bb0d4d29b0d5e"
+
+[[package]]
 name = "generic-array"
 version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -114,6 +120,7 @@ dependencies = [
  "quote",
  "syn",
  "trybuild",
+ "uefi",
 ]
 
 [[package]]
@@ -255,6 +262,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a44da5a6f2164c8e14d3bbc0657d69c5966af9f5f6930d4f600b1f5c4a673413"
 dependencies = [
  "basic-toml",
+ "dissimilar",
  "glob",
  "once_cell",
  "serde",

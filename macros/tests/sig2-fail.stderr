@@ -1,0 +1,11 @@
+error: Unexpected argument
+ --> tests/sig2-fail.rs:2:34
+  |
+2 | fn e_main(handle: (), table: (), extra: (), extra2: ()) {}
+  |                                  ^^^^^^^^^
+
+error: Unexpected argument
+ --> tests/sig2-fail.rs:2:45
+  |
+2 | fn e_main(handle: (), table: (), extra: (), extra2: ()) {}
+  |                                             ^^^^^^^^^^

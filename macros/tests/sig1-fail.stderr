@@ -1,0 +1,5 @@
+error: Missing `handle` and `table` arguments
+ --> tests/sig1-fail.rs:2:1
+  |
+2 | fn e_main() {}
+  | ^^^^^^^^^^^

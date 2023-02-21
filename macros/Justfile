@@ -1,0 +1,9 @@
+export RUSTFLAGS := "\
+--cfg special_test\
+"
+
+@test *args='':
+    # cargo +nightly nextest run {{args}}
+    cargo test {{args}}
+
+@_default:

@@ -1,0 +1,5 @@
+error: cannot be a method
+ --> tests/sig4-fail.rs:7:15
+  |
+7 |     fn e_main(&self, table: ()) {}
+  |               ^^^^^

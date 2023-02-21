@@ -97,8 +97,8 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     }
 }
 
-// Helps with faulty rust-analyzer errors
-#[cfg_attr(not(test), panic_handler)]
+// Helps with faulty rust-analyzer/linking errors
+#[cfg_attr(not(any(test, special_test)), panic_handler)]
 fn panic(info: &PanicInfo) -> ! {
     if let Some(table) = get_boot_table() {
         let mut stdout = table.stdout();
@@ -126,7 +126,8 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[cfg_attr(not(test), alloc_error_handler)]
+// Helps with faulty rust-analyzer/linking errors
+#[cfg_attr(not(any(test, special_test)), alloc_error_handler)]
 fn alloc_error(layout: core::alloc::Layout) -> ! {
     panic!("Couldn't allocate {} bytes", layout.size())
 }
