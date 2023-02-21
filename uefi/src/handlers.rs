@@ -15,9 +15,9 @@ type PanicFn = fn(&PanicInfo) -> !;
 /// Default panic handler
 #[doc(hidden)]
 pub fn panic(info: &PanicInfo) -> ! {
+    let panic = PANIC_HANDLER.load(Ordering::Relaxed);
     // Safety: We ensure elsewhere that PANIC_HANDLER is never set to an improper
     // pointer
-    let panic = PANIC_HANDLER.load(Ordering::Relaxed);
     let panic = unsafe { panic.as_ref() };
     if let Some(Some(panic)) = panic {
         // Safety: Above
@@ -49,16 +49,18 @@ pub fn panic(info: &PanicInfo) -> ! {
         // Do nothing, I guess?
         // UEFI watchdog will kill us eventually(~5 minutes from boot)
         // This may not actually be possible.
-        loop {}
+        loop {
+            hlt()
+        }
     }
 }
 
 /// Default alloc error handler
 #[doc(hidden)]
 pub fn alloc_error(layout: Layout) -> ! {
+    let alloc = ALLOC_HANDLER.load(Ordering::Relaxed);
     // Safety: We ensure elsewhere that ALLOC_HANDLER is never set to an improper
     // pointer
-    let alloc = ALLOC_HANDLER.load(Ordering::Relaxed);
     let alloc = unsafe { alloc.as_ref() };
     if let Some(Some(alloc)) = alloc {
         // Safety: Above
@@ -68,7 +70,9 @@ pub fn alloc_error(layout: Layout) -> ! {
         // Handler overridden, but to do nothing, so do nothing, I guess?
         // UEFI watchdog will kill us eventually(~5 minutes from boot)
         // This may not actually be possible.
-        loop {}
+        loop {
+            hlt()
+        }
     } else {
         panic!("Couldn't allocate {} bytes", layout.size())
     }
@@ -79,3 +83,8 @@ static ALLOC_HANDLER: AtomicPtr<Option<NonNull<AllocFn>>> = AtomicPtr::new(core:
 
 /// Panic handler pointer
 static PANIC_HANDLER: AtomicPtr<Option<NonNull<PanicFn>>> = AtomicPtr::new(core::ptr::null_mut());
+
+fn hlt() {
+    // Safety: Yeah
+    unsafe { core::arch::asm!("hlt") };
+}
