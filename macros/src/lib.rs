@@ -1,19 +1,7 @@
-#![allow(unused_imports, unused_variables, dead_code)]
+// #![allow(unused_imports, unused_variables, dead_code)]
 use proc_macro::TokenStream;
-use quote::{__private::Span, format_ident, quote, quote_spanned, ToTokens};
-use syn::{
-    parse_macro_input,
-    spanned::Spanned,
-    AttributeArgs,
-    Error,
-    Ident,
-    ItemFn,
-    Lit,
-    Meta,
-    Pat,
-    Type,
-    TypePath,
-};
+use quote::{format_ident, quote};
+use syn::{parse_macro_input, spanned::Spanned, AttributeArgs, Error, ItemFn, Lit, Meta, Pat};
 
 /// The UEFI Entry point
 ///
@@ -61,7 +49,6 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let sig = &input.sig;
     let ident = &sig.ident;
     let attrs = &input.attrs;
-    let body = &input.block;
     if !attrs.is_empty() {
         // panic!("Had {} attributes and expected zero", input.attrs.len());
     }
@@ -107,13 +94,14 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             syn::FnArg::Receiver(a) => {
                 errors.push(Error::new(a.span(), "Cannot be a method"));
             }
-            syn::FnArg::Typed(a) => {}
+            syn::FnArg::Typed(_) => {
+                // NOTE: Apparently not possible to verify types in proc macro?
+            }
         };
     }
 
     // NOTE: Keep `MainCheck` up with actual definition.
     // This is breaking to change.
-    let span = sig.span();
     let chk = quote! {
         type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
 
@@ -133,7 +121,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             #chk
 
             #[no_mangle]
-            pub static __INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED: Option<bool> = Some(false);
+            pub static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool> = Some(false);
 
             #[no_mangle]
             fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
@@ -156,8 +144,4 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
     } else {
         TokenStream::from(expanded)
     }
-}
-
-fn entry_impl() {
-    //
 }

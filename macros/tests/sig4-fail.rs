@@ -1,3 +1,4 @@
+//! Tests that methods fail nicely
 struct Embedded {
     //
 }

@@ -67,10 +67,10 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
             handle: EfiHandle,
             table: SystemTable<Boot>,
         ) -> error::Result<()>;
-        static __INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED: Option<bool>;
+        static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool>;
     }
     // Safety: Unsure how it can be unsafe tbh.
-    let ext = unsafe { __INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED };
+    let ext = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
     if image.0.is_null() || system_table.is_null() || matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
     }
@@ -82,7 +82,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
     // Safety: Main must exist or won't link.
-    // Signature is verified by `__INTERNAL_PRIVATE_NUEFI_MACRO_SIG_VERIFIED` above
+    // Signature is verified by `__INTERNAL_NUEFI_YOU_MUST_USE_MACRO` above
     //
     // `system_table` is non-null, we trust it from firmware.
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
