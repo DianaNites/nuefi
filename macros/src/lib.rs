@@ -242,29 +242,13 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
     let panic = if handle_panic {
         quote! {
             const _: () = {
-                use #krate::handlers::PANIC_HANDLER;
-                use core::{
-                    panic::PanicInfo,
-                    sync::atomic::Ordering,
-                };
+                use #krate::handlers::panic;
+                use core::panic::PanicInfo;
 
                 // Helps with faulty rust-analyzer/linking errors
                 #[cfg_attr(not(test), panic_handler)]
-                fn panic(info: &PanicInfo) -> ! {
-                    // Safety: We ensure elsewhere that PANIC_HANDLER is never set to an improper
-                    // pointer
-                    let panic = PANIC_HANDLER.load(Ordering::Relaxed);
-                    let panic = unsafe { panic.as_ref() };
-                    if let Some(Some(panic)) = panic {
-                        // Safety: Above
-                        let panic = unsafe { panic.as_ref() };
-                        panic(info);
-                    } else {
-                        // Do nothing, I guess?
-                        // UEFI watchdog will kill us eventually(~5 minutes from boot)
-                        // This may not actually be possible.
-                        loop {}
-                    }
+                fn handle_panic(info: &PanicInfo) -> ! {
+                    panic(info);
                 }
             };
         }
@@ -275,31 +259,13 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
     let alloc = if handle_alloc {
         quote! {
             const _: () = {
-                use #krate::handlers::ALLOC_HANDLER;
-                use core::{
-                    alloc::Layout,
-                    sync::atomic::Ordering
-                };
+                use #krate::handlers::alloc_error;
+                use core::alloc::Layout;
 
                 // Helps with faulty rust-analyzer/linking errors
                 #[cfg_attr(not(test), alloc_error_handler)]
-                fn alloc_error(layout: core::alloc::Layout) -> ! {
-                    // Safety: We ensure elsewhere that ALLOC_HANDLER is never set to an improper
-                    // pointer
-                    let alloc = ALLOC_HANDLER.load(Ordering::Relaxed);
-                    let alloc = unsafe { alloc.as_ref() };
-                    if let Some(Some(alloc)) = alloc {
-                        // Safety: Above
-                        let alloc = unsafe { alloc.as_ref() };
-                        alloc(layout);
-                    } else if let Some(None) = alloc {
-                        // Handler overridden, but to do nothing, so do nothing, I guess?
-                        // UEFI watchdog will kill us eventually(~5 minutes from boot)
-                        // This may not actually be possible.
-                        loop {}
-                    } else {
-                        panic!("Couldn't allocate {} bytes", layout.size())
-                    }
+                fn handle_alloc(layout: core::alloc::Layout) -> ! {
+                    alloc_error(layout);
                 }
             };
         }
