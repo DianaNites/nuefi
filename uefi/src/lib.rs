@@ -98,24 +98,12 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64>;
         static __INTERNAL_NUEFI_LOG: Option<bool>;
     }
-    // #[cfg(miri)]
-    // let ext = Some(false);
-
-    // #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let ext = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
 
-    // #[cfg(miri)]
-    // let dur = Some(30);
-
-    // #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let dur = unsafe { __INTERNAL_NUEFI_EXIT_DURATION };
 
-    // #[cfg(miri)]
-    // let log = Some(true);
-
-    // #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let log = unsafe { __INTERNAL_NUEFI_LOG };
 
@@ -180,8 +168,6 @@ mod tests {
 
     #[entry(crate = "self")]
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
-        // panic!();
-        // FIXME: Nothing ensures the validity of data at the handles.
         let stdout = table.stdout();
         stdout.reset()?;
         loop {}
