@@ -102,9 +102,10 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     } else {
         return EfiStatus::INVALID_PARAMETER;
     };
-    if image.0.is_null() || system_table.is_null() || matches!(ext, Some(false)) {
+    if image.0.is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
     }
+
     // SAFETY: Pointer is valid from firmware
     let valid = unsafe { RawSystemTable::validate(system_table) };
     if let Err(e) = valid {
