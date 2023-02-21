@@ -225,11 +225,13 @@ impl RawSystemTable {
 
         static MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
         static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
+        static MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
 
         let mut s = MOCK_SYSTEM;
 
         s.boot_services = &MOCK_BOOT.0 as *const _ as *mut _;
         s.runtime_services = &MOCK_RUN.0 as *const _ as *mut _;
+        s.con_out = &MOCK_OUT.0 as *const _ as *mut _;
 
         s.header.crc32 = {
             let mut digest = CRC.digest();
