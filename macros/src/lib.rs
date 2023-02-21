@@ -288,9 +288,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 error::EfiStatus,
             };
 
-            use log::{info, error};
-            use core::time::Duration;
-
             #chk
 
             #[no_mangle]
