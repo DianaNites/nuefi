@@ -14,6 +14,7 @@ use core::{
 
 use error::EfiStatus;
 use log::{error, info};
+pub use macros::entry;
 use table::{raw::RawSystemTable, Boot};
 
 pub use crate::table::SystemTable;
