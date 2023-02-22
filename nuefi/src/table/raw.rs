@@ -72,6 +72,12 @@ impl Header {
     /// # Safety
     ///
     /// - Must be called with a valid pointed to a UEFI table
+    /// - `table` is implicitly trusted as valid/sensible where it is not
+    ///   possible to verify.
+    ///     - Broken/buggy UEFI implementations will be able to cause  the
+    ///       following UB:
+    ///         - // TODO: List UB
+    ///         - Uninitialized padding readings from system tables
     unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
         let header = &*table;
