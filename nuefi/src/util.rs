@@ -53,7 +53,7 @@ macro_rules! interface {
                     // Ensured valid in construction.
                     // Continued validity ensured by the type system
                     // Should be statically impossible to invalidate
-                    unsafe { &*self.interface }
+                    unsafe { &*(self.interface as *const $in) }
                 }
 
                 /// Return a mutable reference to the interface by dereferencing and reborrowing its pointer
