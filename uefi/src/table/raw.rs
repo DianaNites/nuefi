@@ -10,6 +10,8 @@ use crate::{
         self,
         console::raw::{RawSimpleTextInput, RawSimpleTextOutput},
         device_path::DevicePath,
+        graphics::{raw::RawGraphicsOutput, GraphicsOutput},
+        Protocol,
     },
     EfiHandle,
 };
@@ -223,11 +225,7 @@ impl RawSystemTable {
             configuration_table: null_mut(),
         };
 
-        struct YesSync<T>(T);
-        /// Safety: yeah trust me. no
-        unsafe impl<T> Sync for YesSync<T> {}
-
-        static MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
+        static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
         static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
         static MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
 
@@ -238,6 +236,40 @@ impl RawSystemTable {
         s.con_out = &MOCK_OUT.0 as *const _ as *mut _;
         s.firmware_vendor = BUF.as_ptr();
 
+        // To update pre-generated CRCs
+        #[cfg(no)]
+        {
+            let mut digest = CRC.digest();
+            digest.update(MOCK_BOOT.0.to_bytes());
+            let crc = digest.finalize();
+            panic!("crc = {crc:#X}");
+        }
+
+        static MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(RawGraphicsOutput::mock());
+
+        unsafe extern "efiapi" fn locate_protocol(
+            guid: *mut proto::Guid,
+            key: *mut u8,
+            out: *mut *mut u8,
+        ) -> EfiStatus {
+            let guid = *guid;
+            if guid == GraphicsOutput::GUID {
+                out.write(&MOCK_GOP as *const _ as *mut _);
+                EfiStatus::SUCCESS
+            } else {
+                out.write(null_mut());
+                EfiStatus::NOT_FOUND
+            }
+        }
+
+        MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
+
+        MOCK_BOOT.0.header.crc32 = {
+            let mut digest = CRC.digest();
+            digest.update(MOCK_BOOT.0.to_bytes());
+            digest.finalize()
+        };
+
         s.header.crc32 = {
             let mut digest = CRC.digest();
             digest.update(s.to_bytes());
@@ -247,6 +279,10 @@ impl RawSystemTable {
         s
     }
 }
+
+struct YesSync<T>(T);
+/// Safety: yeah trust me. no
+unsafe impl<T> Sync for YesSync<T> {}
 
 // #[derive(Debug)]
 #[repr(C)]
@@ -439,7 +475,7 @@ impl RawBootServices {
             signature: RawBootServices::SIGNATURE,
             revision: Revision::new(2, 70),
             size: size_of::<RawBootServices>() as u32,
-            crc32: 0x3E7360CB,
+            crc32: 0,
             reserved: 0,
         };
         let b = [0u8; size_of::<Self>()];

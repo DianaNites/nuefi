@@ -1,6 +1,6 @@
 //! Raw Graphics types
 
-use core::fmt;
+use core::{fmt, ptr::null_mut};
 
 use super::Str16;
 use crate::error::EfiStatus;
@@ -138,6 +138,21 @@ pub struct RawGraphicsOutput {
     >,
 
     pub mode: *mut RawGraphicsMode,
+}
+
+impl RawGraphicsOutput {
+    pub(crate) const fn mock() -> Self {
+        unsafe extern "efiapi" fn set_mode(this: *mut RawGraphicsOutput, mode: u32) -> EfiStatus {
+            EfiStatus::DEVICE_ERROR
+        }
+
+        Self {
+            query_mode: None,
+            set_mode: Some(set_mode),
+            blt: None,
+            mode: null_mut(),
+        }
+    }
 }
 
 impl fmt::Debug for RawGraphicsOutput {

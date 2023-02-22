@@ -40,7 +40,7 @@ pub unsafe trait Protocol<'table> {
 }
 
 /// UEFI GUID
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(C, align(64))]
 // #[repr(transparent)]
 // FIXME: should be 64-bit aligned?

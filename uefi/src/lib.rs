@@ -160,7 +160,7 @@ pub mod handlers;
 mod tests {
     #![allow(unreachable_code, unused_mut)]
     use super::*;
-    use crate::{entry, error::Result};
+    use crate::{entry, error::Result, proto::graphics::GraphicsOutput};
 
     // TODO: Write more library/infrastructure for writing a mock library
     // slash actual UEFI implementation in software to test against,
@@ -171,7 +171,12 @@ mod tests {
         let stdout = table.stdout();
         stdout.reset()?;
         let vendor = table.firmware_vendor();
-        panic!("{vendor}");
+
+        let boot = table.boot();
+
+        let gop = boot.locate_protocol::<GraphicsOutput>()?.unwrap();
+        let _ = gop.set_mode(69);
+        // panic!("{gop:?}");
         Ok(())
     }
 
