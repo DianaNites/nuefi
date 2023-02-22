@@ -23,6 +23,12 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// The struct this is applied to MUST have been created with the
 /// [`uefi::util::interface`] macro.
 /// It is designed to work with this macro.
+///
+/// # Safety
+///
+/// It is important that the GUID match the type provided.
+///
+/// Serious UB and type confusion will result if you don't.
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
