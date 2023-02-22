@@ -64,7 +64,6 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 /// # Example
 ///
 /// ```rust
-/// # use uefi as nuefi;
 /// use nuefi as uefi2;
 /// use uefi2::entry;
 /// use uefi2::EfiHandle;

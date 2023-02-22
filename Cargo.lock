@@ -123,15 +123,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "nuefi"
+version = "0.1.0"
+dependencies = [
+ "crc",
+ "log",
+ "nuefi_macros",
+ "nuuid",
+ "sha-1",
+]
+
+[[package]]
 name = "nuefi_macros"
 version = "0.1.0"
 dependencies = [
  "log",
+ "nuefi",
  "nuuid",
  "quote",
  "syn",
  "trybuild",
- "uefi",
 ]
 
 [[package]]
@@ -278,17 +289,6 @@ name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
-
-[[package]]
-name = "uefi"
-version = "0.1.0"
-dependencies = [
- "crc",
- "log",
- "nuefi_macros",
- "nuuid",
- "sha-1",
-]
 
 [[package]]
 name = "unicode-ident"
