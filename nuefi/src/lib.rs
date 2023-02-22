@@ -1,4 +1,10 @@
-#![allow(unused_imports, unused_variables, clippy::let_and_return, dead_code)]
+#![allow(
+    unused_imports,
+    unused_variables,
+    clippy::let_and_return,
+    dead_code,
+    unreachable_code
+)]
 #![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
 #![no_std]
 #![feature(alloc_error_handler)]
@@ -97,12 +103,24 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64>;
         static __INTERNAL_NUEFI_LOG: Option<bool>;
     }
+    #[cfg(miri)]
+    let (ext, dur, log) = {
+        (
+            Some(false), //
+            Some(30),    //
+            Some(true),
+        )
+    };
+
+    #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let ext = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
 
+    #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let dur = unsafe { __INTERNAL_NUEFI_EXIT_DURATION };
 
+    #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
     let log = unsafe { __INTERNAL_NUEFI_LOG };
 

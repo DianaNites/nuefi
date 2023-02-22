@@ -21,7 +21,9 @@ target := "/boot/vmlinuz-linux"
 export MIRIFLAGS := "\
 -Zmiri-strict-provenance \
 -Zmiri-symbolic-alignment-check \
+-Zmiri-isolation-error=warn-nobacktrace \
 "
+# -Zmiri-disable-isolation \
 
 @miri *args='':
     cargo +nightly miri nextest run {{args}}
