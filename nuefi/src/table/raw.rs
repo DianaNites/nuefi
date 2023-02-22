@@ -67,6 +67,36 @@ pub struct Header {
 }
 
 impl Header {
+    // `376` is the biggest table size we know about.
+    // `352` is that minus `24`, the Header size
+    fn to_rem_bytes(&self, ptr: *const u8, len: usize) -> ([u8; 352], usize) {
+        union Buf {
+            h: core::mem::ManuallyDrop<Header>,
+            buf: [u8; 352],
+        }
+
+        let mut buf = [0u8; 352];
+        let len = len.saturating_sub(size_of::<Header>());
+        // Safety:
+        unsafe {
+            ptr.add(size_of::<Header>()).copy_to(buf.as_mut_ptr(), len);
+            return (buf, len);
+            // let ptr
+            let bytes = core::slice::from_raw_parts(
+                ptr.add(size_of::<Header>()),
+                len.saturating_sub(size_of::<Header>()),
+            );
+            // FIXME: Alignment? Uninit Padding? Causes various hard to detect UB?
+            // Miri is reporting problems here but only for RawSystemHeader?
+            // It has uninit padding
+            // The standard requires we read for `size` *bytes* though, not
+            // fields, so we need a solution. fucking C.
+            // Maybe its a stacked borrows/miri bug and not UB?
+            // bytes
+            (bytes.try_into().unwrap(), len)
+        }
+    }
+
     /// Validate the header
     ///
     /// # Safety
@@ -93,12 +123,9 @@ impl Header {
         digest.update(&0u32.to_ne_bytes());
         digest.update(&header.reserved.to_ne_bytes());
         // Calculate the remaining table, header digested above.
-        let bytes = core::slice::from_raw_parts(
-            table.cast::<u8>().add(size_of::<Header>()),
-            (len as usize)
-                .checked_sub(size_of::<Header>())
-                .ok_or(EfiStatus::BUFFER_TOO_SMALL)?,
-        );
+        let (bytes, len) = header.to_rem_bytes(table, len as usize);
+        let bytes = &bytes[..len];
+
         digest.update(bytes);
         if expected != digest.finalize() {
             return EfiStatus::CRC_ERROR.into();
@@ -131,6 +158,12 @@ pub struct RawSystemTable {
     ///
     /// Firmware vendor specific version value
     pub firmware_revision: u32,
+
+    /// Padding inherent in the layout.
+    /// We rely on initialized data here for safety.
+    ///
+    /// This padding is only? on 64-bit because `EfiHandle` is a a pointer
+    // pub _pad1: [u8; 4],
 
     ///
     pub console_in_handle: EfiHandle,
@@ -196,13 +229,45 @@ impl RawSystemTable {
         Ok(())
     }
 
-    fn to_bytes(&self) -> &[u8] {
+    // FIXME: This
+    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
+        #[cfg(no)]
+        panic!(
+            "\n\n\n\n\n\
+RawSystemTable:
+    align {} // 8
+    size {} // 120
+
+RawBootServices:
+    align {} // 8
+    size {} // 376
+
+RawRuntimeServices:
+    align {} // 8
+    size {} // 24
+
+Header:
+    align {} // 8
+    size {} // 24
+        \n\n\n\n\n",
+            core::mem::align_of::<Self>(),
+            core::mem::size_of::<Self>(),
+            core::mem::align_of::<RawBootServices>(),
+            core::mem::size_of::<RawBootServices>(),
+            core::mem::align_of::<RawRuntimeServices>(),
+            core::mem::size_of::<RawRuntimeServices>(),
+            core::mem::align_of::<Header>(),
+            core::mem::size_of::<Header>(),
+        );
+        // #[cfg(no)]
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        let bytes = unsafe {
-            core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
-        };
-        bytes
+        unsafe {
+            let b =
+                core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>());
+            // b.try_into().unwrap()
+            [0u8; size_of::<Self>()]
+        }
     }
 
     const fn new_mock(header: Header) -> Self {
@@ -227,8 +292,7 @@ impl RawSystemTable {
 
     /// Mock instance of [`RawSystemTable`]
     #[doc(hidden)]
-    #[allow(unreachable_code, unused_mut)]
-    pub unsafe fn mock() -> Self {
+    pub unsafe fn mock() -> *mut Self {
         const MOCK_VENDOR: &str = "Mock Vendor";
         static mut BUF: &mut [u16] = &mut [0u16; MOCK_VENDOR.len() + 1];
         MOCK_VENDOR
@@ -243,68 +307,75 @@ impl RawSystemTable {
             crc32: 0,
             reserved: 0,
         };
-        const MOCK_SYSTEM: RawSystemTable = RawSystemTable::new_mock(MOCK_HEADER);
+        static mut MOCK_SYSTEM: RawSystemTable = RawSystemTable::new_mock(MOCK_HEADER);
+
         static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
-        static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
-        static MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
+        static mut MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
+        static mut MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
+        static mut MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(RawGraphicsOutput::mock());
 
-        let mut s = MOCK_SYSTEM;
+        // Safety: We only mock once, single threaded
+        if MOCK_SYSTEM.header.crc32 == 0 {
+            let mut s = &mut MOCK_SYSTEM;
 
-        s.boot_services = &MOCK_BOOT.0 as *const _ as *mut _;
-        s.runtime_services = &MOCK_RUN.0 as *const _ as *mut _;
-        s.con_out = &MOCK_OUT.0 as *const _ as *mut _;
-        s.firmware_vendor = BUF.as_ptr();
+            // Safety:
+            // It is important for safety/miri that references not be created
+            // slash that these pointers not be derived from them.
+            s.boot_services = core::ptr::addr_of!(MOCK_BOOT.0) as *mut _;
+            s.runtime_services = core::ptr::addr_of!(MOCK_RUN.0) as *mut _;
+            s.con_out = core::ptr::addr_of!(MOCK_OUT.0) as *mut _;
+            s.firmware_vendor = BUF.as_ptr();
 
-        // To update pre-generated CRCs
-        #[cfg(no)]
-        {
-            let mut digest = CRC.digest();
-            digest.update(MOCK_BOOT.0.to_bytes());
-            let crc = digest.finalize();
-            panic!("crc = {crc:#X}");
-        }
-
-        static MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(RawGraphicsOutput::mock());
-
-        unsafe extern "efiapi" fn locate_protocol(
-            guid: *mut proto::Guid,
-            key: *mut u8,
-            out: *mut *mut u8,
-        ) -> EfiStatus {
-            let guid = *guid;
-            if guid == GraphicsOutput::GUID {
-                out.write(&MOCK_GOP as *const _ as *mut _);
-                EfiStatus::SUCCESS
-            } else {
-                out.write(null_mut());
-                EfiStatus::NOT_FOUND
+            unsafe extern "efiapi" fn locate_protocol(
+                guid: *mut proto::Guid,
+                key: *mut u8,
+                out: *mut *mut u8,
+            ) -> EfiStatus {
+                let guid = *guid;
+                if guid == GraphicsOutput::GUID {
+                    out.write(core::ptr::addr_of!(MOCK_GOP) as *mut _);
+                    EfiStatus::SUCCESS
+                } else {
+                    out.write(null_mut());
+                    EfiStatus::NOT_FOUND
+                }
             }
+
+            // To update pre-generated CRCs
+            #[cfg(no)]
+            {
+                let mut digest = CRC.digest();
+                digest.update(&MOCK_BOOT.0.to_bytes());
+                let crc = digest.finalize();
+                panic!("crc = {crc:#X}");
+            }
+
+            MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
+
+            MOCK_BOOT.0.header.crc32 = {
+                let mut digest = CRC.digest();
+                digest.update(&MOCK_BOOT.0.to_bytes());
+                digest.finalize()
+            };
+
+            MOCK_RUN.0.header.crc32 = {
+                let mut digest = CRC.digest();
+                digest.update(&MOCK_RUN.0.to_bytes());
+                digest.finalize()
+            };
+
+            s.header.crc32 = {
+                let mut digest = CRC.digest();
+                digest.update(&s.to_bytes());
+                digest.finalize()
+            };
         }
 
-        MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
-
-        MOCK_BOOT.0.header.crc32 = {
-            let mut digest = CRC.digest();
-            digest.update(MOCK_BOOT.0.to_bytes());
-            digest.finalize()
-        };
-
-        MOCK_RUN.0.header.crc32 = {
-            let mut digest = CRC.digest();
-            digest.update(MOCK_RUN.0.to_bytes());
-            digest.finalize()
-        };
-
-        s.header.crc32 = {
-            let mut digest = CRC.digest();
-            digest.update(s.to_bytes());
-            digest.finalize()
-        };
-
-        s
+        core::ptr::addr_of_mut!(MOCK_SYSTEM)
     }
 }
 
+#[repr(transparent)]
 struct YesSync<T>(T);
 /// Safety: yeah trust me. no
 unsafe impl<T> Sync for YesSync<T> {}
@@ -486,13 +557,15 @@ pub struct RawBootServices {
 impl RawBootServices {
     const SIGNATURE: u64 = 0x56524553544f4f42;
 
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        let bytes = unsafe {
+        unsafe {
+            //
             core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
-        };
-        bytes
+                .try_into()
+                .unwrap()
+        }
     }
 
     const fn mock() -> Self {
@@ -521,13 +594,15 @@ pub struct RawRuntimeServices {
 impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
 
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        let bytes = unsafe {
+        unsafe {
+            //
             core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
-        };
-        bytes
+                .try_into()
+                .unwrap()
+        }
     }
 
     const fn mock() -> Self {

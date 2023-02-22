@@ -203,7 +203,6 @@ mod tests {
         let id = 69420;
         // Safety: yes
         let st = unsafe { RawSystemTable::mock() };
-        let st = &st as *const _ as *mut _;
         let image = EfiHandle(&id as *const _ as *mut _);
         // info!("{st:?}");
         let ret = efi_main(image, st);
