@@ -23,7 +23,9 @@ export MIRIFLAGS := "\
 -Zmiri-symbolic-alignment-check \
 -Zmiri-isolation-error=warn-nobacktrace \
 "
+# -Zmiri-disable-stacked-borrows \
 # -Zmiri-disable-isolation \
+# -Zmiri-retag-fields \
 
 @miri *args='':
     cargo +nightly miri nextest run {{args}}
