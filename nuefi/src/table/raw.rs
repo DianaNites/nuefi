@@ -1,7 +1,8 @@
 //! Raw UEFI data types
 use core::{
-    mem::size_of,
+    mem::{size_of, transmute, ManuallyDrop, MaybeUninit},
     ptr::{null_mut, NonNull},
+    slice::from_raw_parts,
 };
 
 use crate::{
@@ -71,14 +72,41 @@ impl Header {
     // `352` is that minus `24`, the Header size
     fn to_rem_bytes(&self, ptr: *const u8, len: usize) -> ([u8; 352], usize) {
         union Buf {
-            h: core::mem::ManuallyDrop<Header>,
-            buf: [u8; 352],
+            h: ManuallyDrop<Header>,
+            // 120 is the size of RawSystemTable, the one giving us issues.
+            buf: [MaybeUninit<u8>; 120],
         }
 
-        let mut buf = [0u8; 352];
+        let buf = [0u8; 352];
         let len = len.saturating_sub(size_of::<Header>());
+
+        // #[cfg(no)]
         // Safety:
         unsafe {
+            // let ptr = ptr.add(size_of::<Header>());
+            let ptr = ptr as *const Buf;
+            if self.signature == RawSystemTable::SIGNATURE {
+                let b = (&*ptr).buf;
+
+                #[allow(unused_mut)]
+                let mut b: [MaybeUninit<u8>; 96] = b[size_of::<Header>()..].try_into().unwrap();
+
+                // FIXME: Theres padding here but we *need* to read it.
+                // Init it hackily.
+                #[cfg(miri)]
+                {
+                    b[12..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
+                };
+                let mut newb = [MaybeUninit::new(0u8); 352];
+                newb[..96].copy_from_slice(&b);
+                return (transmute(newb), len);
+            }
+        }
+
+        // #[cfg(no)]
+        // Safety:
+        unsafe {
+            let mut buf = buf;
             ptr.add(size_of::<Header>()).copy_to(buf.as_mut_ptr(), len);
             return (buf, len);
             // let ptr
@@ -210,7 +238,7 @@ impl RawSystemTable {
     /// - Must only be called before running user code.
     pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
         // FIXME: Miri failure here. Actual uB or bug or TBD?
-        #[cfg(not(miri))]
+        // #[cfg(not(miri))]
         {
             // Safety: Pointer to first C struct member
             Header::validate(this as *const u8, Self::SIGNATURE)?;
@@ -264,11 +292,6 @@ Header:
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
         unsafe {
-            use core::{
-                mem::{transmute, MaybeUninit},
-                slice::from_raw_parts,
-            };
-
             let ptr = self as *const _ as *const MaybeUninit<u8>;
 
             let mut b: [MaybeUninit<u8>; size_of::<Self>()] =
@@ -278,8 +301,7 @@ Header:
             // Init it hackily.
             #[cfg(miri)]
             {
-                // 36 + 4
-                b[36..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
+                b[36..][..4].copy_from_slice(&[MaybeUninit::new(0u8); 4]);
             };
             // b
             transmute(b)
