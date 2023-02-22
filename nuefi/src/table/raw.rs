@@ -270,6 +270,12 @@ impl RawSystemTable {
             digest.finalize()
         };
 
+        MOCK_RUN.0.header.crc32 = {
+            let mut digest = CRC.digest();
+            digest.update(MOCK_RUN.0.to_bytes());
+            digest.finalize()
+        };
+
         s.header.crc32 = {
             let mut digest = CRC.digest();
             digest.update(s.to_bytes());
@@ -510,7 +516,7 @@ impl RawRuntimeServices {
             signature: RawRuntimeServices::SIGNATURE,
             revision: Revision::new(2, 70),
             size: size_of::<RawRuntimeServices>() as u32,
-            crc32: 0xF383B8DD,
+            crc32: 0,
             reserved: 0,
         };
         let b = [0u8; size_of::<Self>()];
