@@ -1,5 +1,5 @@
 //! This file tests the output when the entire signature is wrong
-use uefi::entry;
+use nuefi::entry;
 
 #[entry]
 fn e_main() {}

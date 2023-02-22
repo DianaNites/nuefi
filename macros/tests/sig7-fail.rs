@@ -1,9 +1,9 @@
 //! Tests whether `crate` actually works
-use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
-use uefi as nuefi;
+use nuefi as NotNuefi;
+use NotNuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
 #[entry(
-    crate = "nuefi",
+    crate = "NotNuefi",
     exit_prompt,
     log,
     exit_prompt,

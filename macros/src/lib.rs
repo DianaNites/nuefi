@@ -35,15 +35,15 @@ mod proto;
 /// Showing how to use the attribute and some basic options
 ///
 /// ```rust
-/// # use nuefi::entry;
-/// # use nuefi::EfiHandle;
-/// # use nuefi::SystemTable;
-/// # use nuefi::table::Boot;
-/// # use nuefi::error::Result;
+/// # use uefi::entry;
+/// # use uefi::EfiHandle;
+/// # use uefi::SystemTable;
+/// # use uefi::table::Boot;
+/// # use uefi::error::Result;
 /// // Or through the `package` key in `Cargo.toml`!
-/// use uefi as nuefi;
+/// use nuefi as uefi;
 ///
-/// #[entry(crate = "nuefi", delay(69))]
+/// #[entry(crate = "uefi", delay(69))]
 /// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 ///     Ok(())
 /// }
@@ -70,8 +70,8 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
-/// # use uefi::interface;
-/// # use uefi::Protocol;
+/// # use nuefi::interface;
+/// # use nuefi::Protocol;
 /// # pub struct RawMyProtocol;
 /// #
 /// interface!(

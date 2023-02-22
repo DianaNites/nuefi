@@ -1,8 +1,8 @@
 //! Tests whether `crate` actually works
-use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
-use uefi as nuefi;
+use nuefi as NotNuefi;
+use NotNuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
-#[entry(crate = "nuefi", exit_prompt, log, delay(69))]
+#[entry(crate = "NotNuefi", exit_prompt, log, delay(69))]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())
 }

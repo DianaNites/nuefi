@@ -1,5 +1,5 @@
 //! Tests that methods fail nicely
-use uefi::entry;
+use nuefi::entry;
 
 struct Embedded {
     //

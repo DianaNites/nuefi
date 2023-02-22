@@ -76,7 +76,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemStruct);
     let mut errors: Vec<Error> = Vec::new();
 
-    let mut krate = format_ident!("uefi");
+    let mut krate = format_ident!("nuefi");
     let mut guid: Option<String> = None;
 
     parse_args(&args, &mut errors, &mut krate, &mut guid);

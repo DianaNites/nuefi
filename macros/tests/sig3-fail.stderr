@@ -4,14 +4,6 @@ error: Missing `table` argument
 5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |           ^^^^^^^^^^^^^^^^^^
 
-warning: unused imports: `SystemTable`, `table::Boot`
- --> tests/sig3-fail.rs:2:34
-  |
-2 | use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
-  |                                  ^^^^^^^^^^^             ^^^^^^^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
-
 error[E0308]: mismatched types
  --> tests/sig3-fail.rs:5:4
   |

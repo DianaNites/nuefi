@@ -1,11 +1,11 @@
 //! Tests whether `crate` actually works
-use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
-use uefi as nuefi;
+use nuefi as NotNuefi;
+use NotNuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
 mod imp {
     use super::*;
 
-    #[entry(crate = "nuefi")]
+    #[entry(crate = "NotNuefi")]
     #[no_mangle]
     fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
         Ok(())

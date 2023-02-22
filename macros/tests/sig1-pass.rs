@@ -1,5 +1,5 @@
 //! Test that everything works correctly, including the internal static
-use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
+use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
 #[entry]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {

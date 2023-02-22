@@ -1,11 +1,11 @@
 //! Test that the Protocol macro works correctly
 use core::ptr::null_mut;
 
-use nuuid::Uuid;
-use uefi::{
+use nuefi::{
     proto::{Guid, Protocol},
     Protocol,
 };
+use nuuid::Uuid;
 
 // Random UUID from `uuidgen`
 const GUID: &str = "c986ec27-af54-4b55-80aa-91697fcdf8eb";

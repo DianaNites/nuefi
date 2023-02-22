@@ -7,7 +7,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemFn);
     let mut errors = Vec::new();
 
-    let mut krate = format_ident!("uefi");
+    let mut krate = format_ident!("nuefi");
     let mut exit_prompt = false;
     let mut should_log = false;
     let mut delay: Option<u64> = None;
