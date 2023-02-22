@@ -17,18 +17,28 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// A UEFI Protocol
 ///
-/// This implements the [`uefi::proto::Protocol`] trait,
-/// and is the only valid way to do so.
+/// This is the only valid way to implement the [`uefi::proto::Protocol`] trait.
+///
+/// This macro accepts the GUID as a string literal, in mixed-endian hex.
 ///
 /// The struct this is applied to MUST have been created with the
 /// [`uefi::util::interface`] macro.
 /// It is designed to work with this macro.
 ///
+/// # Example
+///
+/// ```rust
+/// interface!(
+///     // Ignore the `crate` for now!
+///     #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839", crate = "nuefi")]
+///     MyProtocol(RawMyProtocol)
+/// );
+/// ```
+///
 /// # Safety
 ///
-/// It is important that the GUID match the type provided.
-///
-/// Serious UB and type confusion will result if you don't.
+/// The GUID MUST be valid for the type signature you provide,
+/// otherwise unsafe/undefined type mismatch and confusion will result.
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
