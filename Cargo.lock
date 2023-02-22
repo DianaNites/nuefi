@@ -118,6 +118,7 @@ name = "macros"
 version = "0.1.0"
 dependencies = [
  "log",
+ "nuuid",
  "quote",
  "syn",
  "trybuild",
