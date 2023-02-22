@@ -278,7 +278,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 SystemTable,
                 table::Boot,
                 error,
-                error::EfiStatus,
             };
 
             #chk
@@ -293,7 +292,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             pub static __INTERNAL_NUEFI_LOG: Option<bool> = #should_log;
 
             #[no_mangle]
-            fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+            pub fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
                 #ident(handle, table)
             }
         };
