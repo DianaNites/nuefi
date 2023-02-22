@@ -80,7 +80,9 @@ impl Header {
     ///         - Uninitialized padding readings from system tables
     unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
-        let header = &*table;
+
+        // Safety: `table` is non-null and trusted by firmware
+        let header = &*(table as *const Self);
         let expected = header.crc32;
         let len = header.size;
         // Calculate the CRC
