@@ -198,6 +198,26 @@ impl RawSystemTable {
         bytes
     }
 
+    const fn new_mock(header: Header) -> Self {
+        RawSystemTable {
+            header,
+            firmware_vendor: null_mut(),
+            firmware_revision: 69420,
+            console_in_handle: EfiHandle(null_mut()),
+            con_in: null_mut(),
+            console_out_handle: EfiHandle(null_mut()),
+            con_out: null_mut(),
+            standard_error_handle: EfiHandle(null_mut()),
+            std_err: null_mut(),
+            runtime_services: null_mut(),
+            boot_services: null_mut(),
+            number_of_table_entries: 0,
+            configuration_table: null_mut(),
+            // _pad1: [0u8; 4],
+            // _pad2: [0u8; 2],
+        }
+    }
+
     /// Mock instance of [`RawSystemTable`]
     #[doc(hidden)]
     #[allow(unreachable_code, unused_mut)]
@@ -216,22 +236,7 @@ impl RawSystemTable {
             crc32: 0,
             reserved: 0,
         };
-        const MOCK_SYSTEM: RawSystemTable = RawSystemTable {
-            header: MOCK_HEADER,
-            firmware_vendor: null_mut(),
-            firmware_revision: 69420,
-            console_in_handle: EfiHandle(null_mut()),
-            con_in: null_mut(),
-            console_out_handle: EfiHandle(null_mut()),
-            con_out: null_mut(),
-            standard_error_handle: EfiHandle(null_mut()),
-            std_err: null_mut(),
-            runtime_services: null_mut(),
-            boot_services: null_mut(),
-            number_of_table_entries: 0,
-            configuration_table: null_mut(),
-        };
-
+        const MOCK_SYSTEM: RawSystemTable = RawSystemTable::new_mock(MOCK_HEADER);
         static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
         static MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
         static MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
