@@ -114,7 +114,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "macros"
+name = "md-5"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6365506850d44bff6e2fbcb5176cf63650e48bd45ef2fe2665ae1570e0f4b9ca"
+dependencies = [
+ "digest",
+]
+
+[[package]]
+name = "nuefi_macros"
 version = "0.1.0"
 dependencies = [
  "log",
@@ -123,15 +132,6 @@ dependencies = [
  "syn",
  "trybuild",
  "uefi",
-]
-
-[[package]]
-name = "md-5"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6365506850d44bff6e2fbcb5176cf63650e48bd45ef2fe2665ae1570e0f4b9ca"
-dependencies = [
- "digest",
 ]
 
 [[package]]
@@ -285,7 +285,7 @@ version = "0.1.0"
 dependencies = [
  "crc",
  "log",
- "macros",
+ "nuefi_macros",
  "nuuid",
  "sha-1",
 ]

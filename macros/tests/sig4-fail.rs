@@ -1,10 +1,12 @@
 //! Tests that methods fail nicely
+use uefi::entry;
+
 struct Embedded {
     //
 }
 
 impl Embedded {
-    #[macros::entry]
+    #[entry]
     fn e_main(&self, table: ()) {}
 }
 

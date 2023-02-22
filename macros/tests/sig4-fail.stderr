@@ -1,31 +1,31 @@
 error: Cannot be a method
- --> tests/sig4-fail.rs:8:15
-  |
-8 |     fn e_main(&self, table: ()) {}
-  |               ^^^^^
+  --> tests/sig4-fail.rs:10:15
+   |
+10 |     fn e_main(&self, table: ()) {}
+   |               ^^^^^
 
 error: `const` items in this context need a name
- --> tests/sig4-fail.rs:7:5
+ --> tests/sig4-fail.rs:9:5
   |
-7 |     #[macros::entry]
-  |     ^^^^^^^^^^^^^^^^ `_` is not a valid name for this `const` item
+9 |     #[entry]
+  |     ^^^^^^^^ `_` is not a valid name for this `const` item
   |
-  = note: this error originates in the attribute macro `macros::entry` (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the attribute macro `entry` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0425]: cannot find value `e_main` in this scope
-  --> tests/sig4-fail.rs:8:8
+  --> tests/sig4-fail.rs:10:8
    |
-8  |     fn e_main(&self, table: ()) {}
+10 |     fn e_main(&self, table: ()) {}
    |        ^^^^^^ help: a function with a similar name exists: `main`
 ...
-11 | fn main() {}
+13 | fn main() {}
    | --------- similarly named function `main` defined here
 
 error[E0425]: cannot find function `e_main` in this scope
-  --> tests/sig4-fail.rs:8:8
+  --> tests/sig4-fail.rs:10:8
    |
-8  |     fn e_main(&self, table: ()) {}
+10 |     fn e_main(&self, table: ()) {}
    |        ^^^^^^ help: a function with a similar name exists: `main`
 ...
-11 | fn main() {}
+13 | fn main() {}
    | --------- similarly named function `main` defined here

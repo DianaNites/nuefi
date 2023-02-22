@@ -1,13 +1,21 @@
 error: Missing `table` argument
- --> tests/sig3-fail.rs:6:11
+ --> tests/sig3-fail.rs:5:11
   |
-6 | fn e_main(_handle: EfiHandle) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |           ^^^^^^^^^^^^^^^^^^
 
-error[E0308]: mismatched types
- --> tests/sig3-fail.rs:6:4
+warning: unused imports: `SystemTable`, `table::Boot`
+ --> tests/sig3-fail.rs:2:34
   |
-6 | fn e_main(_handle: EfiHandle) -> Result<()> {
+2 | use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
+  |                                  ^^^^^^^^^^^             ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+error[E0308]: mismatched types
+ --> tests/sig3-fail.rs:5:4
+  |
+5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |    ^^^^^^ incorrect number of function parameters
   |
   = note: expected fn pointer `fn(EfiHandle, SystemTable<Boot>) -> Result<_, _>`
@@ -15,17 +23,17 @@ error[E0308]: mismatched types
   = note: when the arguments and return types match, functions can be coerced to function pointers
 
 error[E0061]: this function takes 1 argument but 2 arguments were supplied
- --> tests/sig3-fail.rs:6:4
+ --> tests/sig3-fail.rs:5:4
   |
-5 | #[macros::entry]
-  | ----------------- help: remove the extra argument
+4 | #[entry]
+  | --------- help: remove the extra argument
   | |
   | unexpected argument of type `SystemTable<Boot>`
-6 | fn e_main(_handle: EfiHandle) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |    ^^^^^^
   |
 note: function defined here
- --> tests/sig3-fail.rs:6:4
+ --> tests/sig3-fail.rs:5:4
   |
-6 | fn e_main(_handle: EfiHandle) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |    ^^^^^^ ------------------

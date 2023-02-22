@@ -1,19 +1,19 @@
 error: Unexpected argument: `extra`
- --> tests/sig2-fail.rs:6:58
+ --> tests/sig2-fail.rs:5:58
   |
-6 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |                                                          ^^^^^^^^^
 
 error: Unexpected argument: `extra2`
- --> tests/sig2-fail.rs:6:69
+ --> tests/sig2-fail.rs:5:69
   |
-6 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |                                                                     ^^^^^^^^^^
 
 error[E0308]: mismatched types
- --> tests/sig2-fail.rs:6:4
+ --> tests/sig2-fail.rs:5:4
   |
-6 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |    ^^^^^^ incorrect number of function parameters
   |
   = note: expected fn pointer `fn(EfiHandle, SystemTable<Boot>) -> Result<_, _>`
@@ -21,19 +21,19 @@ error[E0308]: mismatched types
   = note: when the arguments and return types match, functions can be coerced to function pointers
 
 error[E0061]: this function takes 4 arguments but 2 arguments were supplied
- --> tests/sig2-fail.rs:6:4
+ --> tests/sig2-fail.rs:5:4
   |
-5 | #[macros::entry]
-  | ---------------- two arguments of type `()` and `()` are missing
-6 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
+4 | #[entry]
+  | -------- two arguments of type `()` and `()` are missing
+5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |    ^^^^^^
   |
 note: function defined here
- --> tests/sig2-fail.rs:6:4
+ --> tests/sig2-fail.rs:5:4
   |
-6 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
+5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |    ^^^^^^ ------------------  -------------------------  ---------  ----------
 help: provide the arguments
   |
-5 | e_main(#[macros::entry], #[macros::entry], (), ())
+4 | e_main(#[entry], #[entry], (), ())
   |

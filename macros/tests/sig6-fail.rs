@@ -1,7 +1,7 @@
 //! Tests that unexpected crates fail nicely
-use ::uefi::{error::Result, table::Boot, EfiHandle, SystemTable};
+use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
-#[macros::entry(crate = "bytes")]
+#[entry(crate = "bytes")]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())
 }

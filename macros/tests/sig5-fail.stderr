@@ -1,11 +1,11 @@
 error: Expected string literal
- --> tests/sig5-fail.rs:4:25
+ --> tests/sig5-fail.rs:4:17
   |
-4 | #[macros::entry(crate = b"bytes", fake = true)]
-  |                         ^^^^^^^^
+4 | #[entry(crate = b"bytes", fake = true)]
+  |                 ^^^^^^^^
 
 error: Unexpected argument `fake`
- --> tests/sig5-fail.rs:4:35
+ --> tests/sig5-fail.rs:4:27
   |
-4 | #[macros::entry(crate = b"bytes", fake = true)]
-  |                                   ^^^^^^^^^^^
+4 | #[entry(crate = b"bytes", fake = true)]
+  |                           ^^^^^^^^^^^

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 crc = "3.0.1"
 log = "0.4.17"
-macros = { path = "../macros" }
+macros = { path = "../macros", package = "nuefi_macros" }
 nuuid = { version = "0.4.6", default-features = false }
 # Required so nuuid doesn't fail to compile
 sha-1 = { version = "0.10.1", default-features = false, features = [

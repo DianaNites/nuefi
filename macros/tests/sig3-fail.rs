@@ -1,8 +1,7 @@
 //! This file tests when there is a missing argument
-#[allow(unused_imports)]
-use ::uefi::{error::Result, table::Boot, EfiHandle, SystemTable};
+use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
-#[macros::entry]
+#[entry]
 fn e_main(_handle: EfiHandle) -> Result<()> {
     Ok(())
 }

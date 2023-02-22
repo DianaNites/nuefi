@@ -1,7 +1,7 @@
 //! Test that everything works correctly, including the internal static
-use ::uefi::{error::Result, table::Boot, EfiHandle, SystemTable};
+use uefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
-#[macros::entry]
+#[entry]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())
 }
