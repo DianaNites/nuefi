@@ -32,6 +32,9 @@ export MIRIFLAGS := "\
     cargo +nightly test {{args}}
     # cargo +nightly nextest run {{args}}
 
+@doc *args='':
+    cargo +nightly doc --no-deps {{args}}
+
 @_default:
 
 # @_default: _setup
