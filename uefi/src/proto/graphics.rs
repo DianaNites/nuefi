@@ -16,11 +16,15 @@ use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     util::interface,
+    Protocol,
 };
 
 pub mod raw;
 
-interface!(GraphicsOutput(RawGraphicsOutput));
+interface!(
+    #[Protocol("9042A9DE-23DC-4A38-96FB-7ADED080516A", crate = "crate")]
+    GraphicsOutput(RawGraphicsOutput)
+);
 
 impl<'table> GraphicsOutput<'table> {
     /// Set the graphic mode to number `mode`
@@ -140,22 +144,6 @@ impl<'table> GraphicsOutput<'table> {
     fn max_mode(&self) -> u32 {
         // Safety: Type system
         unsafe { (*self.interface().mode).max_mode }
-    }
-}
-
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> super::Protocol<'table> for GraphicsOutput<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x90, 0x42, 0xa9, 0xde, 0x23, 0xdc, 0x4a, 0x38, 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80,
-            0x51, 0x6a,
-        ])
-    };
-
-    type Raw = RawGraphicsOutput;
-
-    unsafe fn from_raw(this: *mut Self::Raw) -> Self {
-        GraphicsOutput::new(this)
     }
 }
 

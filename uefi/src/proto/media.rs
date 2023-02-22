@@ -1,30 +1,19 @@
 //! UEFI Media protocols
+use raw::RawLoadFile2;
+
 use crate::{
     proto::{Guid, Protocol},
     util::interface,
+    Protocol,
 };
 
 pub mod raw;
-use raw::RawLoadFile2;
 
-interface!(LoadFile2(RawLoadFile2));
+interface!(
+    #[Protocol("4006C0C1-FCB3-403E-996D-4A6C8724E06D", crate = "crate")]
+    LoadFile2(RawLoadFile2)
+);
 
 impl<'table> LoadFile2<'table> {
     //
-}
-
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for LoadFile2<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x40, 0x06, 0xc0, 0xc1, 0xfc, 0xb3, 0x40, 0x3e, 0x99, 0x6d, 0x4a, 0x6c, 0x87, 0x24,
-            0xe0, 0x6d,
-        ])
-    };
-
-    type Raw = RawLoadFile2;
-
-    unsafe fn from_raw(this: *mut RawLoadFile2) -> Self {
-        LoadFile2::new(this)
-    }
 }

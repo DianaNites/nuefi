@@ -1,53 +1,29 @@
 //! UEFI PI Security Protocols
 
+use raw::{RawSecurityArch, RawSecurityArch2};
+
 use crate::{
     proto::{Guid, Protocol},
     util::interface,
+    Protocol,
 };
 
 pub mod raw;
-use raw::{RawSecurityArch, RawSecurityArch2};
 
-interface!(SecurityArch(RawSecurityArch));
+interface!(
+    #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839", crate = "crate")]
+    SecurityArch(RawSecurityArch)
+);
 
 impl<'table> SecurityArch<'table> {
     //
 }
 
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for SecurityArch<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0xA4, 0x64, 0x23, 0xE3, 0x46, 0x17, 0x49, 0xf1, 0xB9, 0xFF, 0xD1, 0xBF, 0xA9, 0x11,
-            0x58, 0x39,
-        ])
-    };
-
-    type Raw = RawSecurityArch;
-
-    unsafe fn from_raw(this: *mut RawSecurityArch) -> Self {
-        SecurityArch::new(this)
-    }
-}
-
-interface!(SecurityArch2(RawSecurityArch2));
+interface!(
+    #[Protocol("94AB2F58-1438-4EF1-9152-18941A3A0E68", crate = "crate")]
+    SecurityArch2(RawSecurityArch2)
+);
 
 impl<'table> SecurityArch2<'table> {
     //
-}
-
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for SecurityArch2<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x94, 0xab, 0x2f, 0x58, 0x14, 0x38, 0x4e, 0xf1, 0x91, 0x52, 0x18, 0x94, 0x1a, 0x3a,
-            0xe, 0x68,
-        ])
-    };
-
-    type Raw = RawSecurityArch2;
-
-    unsafe fn from_raw(this: *mut RawSecurityArch2) -> Self {
-        SecurityArch2::new(this)
-    }
 }

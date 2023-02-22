@@ -18,6 +18,8 @@ use alloc::vec::Vec;
 
 use raw::{RawSimpleTextOutput, RawTextMode};
 
+use crate::Protocol;
+
 /// Text foreground attributes for [SimpleTextOutput]
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -67,7 +69,10 @@ impl TextBackground {
 
 // interface!(SimpleTextInput(RawSimpleTextInput));
 
-interface!(SimpleTextOutput(RawSimpleTextOutput));
+interface!(
+    #[Protocol("387477C2-69C7-11D2-8E39-00A0C969723B", crate = "crate")]
+    SimpleTextOutput(RawSimpleTextOutput)
+);
 
 impl<'table> SimpleTextOutput<'table> {
     pub fn output_string(&self, string: &str) -> Result<()> {
@@ -231,23 +236,6 @@ impl<'t> Write for SimpleTextOutput<'t> {
         } else {
             ret
         }
-    }
-}
-
-// TODO: Report clippy bug for GUID
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> super::Protocol<'table> for SimpleTextOutput<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x38, 0x74, 0x77, 0xc2, 0x69, 0xc7, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
-            0x72, 0x3b,
-        ])
-    };
-
-    type Raw = RawSimpleTextOutput;
-
-    unsafe fn from_raw(this: *mut RawSimpleTextOutput) -> Self {
-        SimpleTextOutput::new(this)
     }
 }
 

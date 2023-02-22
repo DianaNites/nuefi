@@ -1,13 +1,17 @@
 //! UEFI Loaded image Protocol
 use core::mem::size_of;
 
-use super::{device_path::DevicePath, Guid, Protocol};
-use crate::{string::Path, util::interface, EfiHandle};
-
-pub mod raw;
 use raw::RawLoadedImage;
 
-interface!(LoadedImage(RawLoadedImage));
+use super::{device_path::DevicePath, Guid, Protocol};
+use crate::{string::Path, util::interface, EfiHandle, Protocol};
+
+pub mod raw;
+
+interface!(
+    #[Protocol("5B1B31A1-9562-11D2-8E3F-00A0C969723B", crate = "crate")]
+    LoadedImage(RawLoadedImage)
+);
 
 impl<'table> LoadedImage<'table> {
     const _REVISION: u32 = 0x1000;
@@ -78,21 +82,5 @@ impl<'table> LoadedImage<'table> {
     /// Only use this if you know what you're doing
     pub unsafe fn set_path(&self, path: &Path) {
         self.interface_mut().path = path.as_device().as_ptr();
-    }
-}
-
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for LoadedImage<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x5B, 0x1B, 0x31, 0xA1, 0x95, 0x62, 0x11, 0xd2, 0x8E, 0x3F, 0x00, 0xA0, 0xC9, 0x69,
-            0x72, 0x3B,
-        ])
-    };
-
-    type Raw = RawLoadedImage;
-
-    unsafe fn from_raw(this: *mut RawLoadedImage) -> Self {
-        LoadedImage::new(this)
     }
 }

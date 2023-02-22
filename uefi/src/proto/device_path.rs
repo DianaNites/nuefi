@@ -6,12 +6,16 @@ use crate::{
     string::UefiString,
     table::BootServices,
     util::interface,
+    Protocol,
 };
 
 pub mod raw;
 use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
-interface!(DevicePath(RawDevicePath));
+interface!(
+    #[Protocol("09576E91-6D3F-11D2-8E39-00A0C969723B", crate = "crate")]
+    DevicePath(RawDevicePath)
+);
 
 impl<'table> DevicePath<'table> {
     /// Free the DevicePath
@@ -21,23 +25,10 @@ impl<'table> DevicePath<'table> {
     }
 }
 
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for DevicePath<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x09, 0x57, 0x6e, 0x91, 0x6d, 0x3f, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
-            0x72, 0x3b,
-        ])
-    };
-
-    type Raw = RawDevicePath;
-
-    unsafe fn from_raw(this: *mut RawDevicePath) -> Self {
-        DevicePath::new(this)
-    }
-}
-
-interface!(DevicePathUtil(RawDevicePathUtil));
+interface!(
+    #[Protocol("0379BE4E-D706-437D-B037-EDB82FB772A4", crate = "crate")]
+    DevicePathUtil(RawDevicePathUtil)
+);
 
 impl<'table> DevicePathUtil<'table> {
     /// [DevicePath] size, in bytes. NOT including the End Of Path node.
@@ -51,23 +42,10 @@ impl<'table> DevicePathUtil<'table> {
     }
 }
 
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for DevicePathUtil<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x03, 0x79, 0xBE, 0x4E, 0xD7, 0x06, 0x43, 0x7d, 0xB0, 0x37, 0xED, 0xB8, 0x2F, 0xB7,
-            0x72, 0xA4,
-        ])
-    };
-
-    type Raw = RawDevicePathUtil;
-
-    unsafe fn from_raw(this: *mut RawDevicePathUtil) -> Self {
-        DevicePathUtil::new(this)
-    }
-}
-
-interface!(DevicePathToText(RawDevicePathToText));
+interface!(
+    #[Protocol("8B843E20-8132-4852-90CC-551A4E4A7F1C", crate = "crate")]
+    DevicePathToText(RawDevicePathToText)
+);
 
 impl<'table> DevicePathToText<'table> {
     /// Returns an owned [UefiString] of `node`, a component of a [DevicePath]
@@ -106,21 +84,5 @@ impl<'table> DevicePathToText<'table> {
         } else {
             Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
         }
-    }
-}
-
-#[allow(clippy::undocumented_unsafe_blocks)]
-unsafe impl<'table> Protocol<'table> for DevicePathToText<'table> {
-    const GUID: Guid = unsafe {
-        Guid::from_bytes([
-            0x8b, 0x84, 0x3e, 0x20, 0x81, 0x32, 0x48, 0x52, 0x90, 0xcc, 0x55, 0x1a, 0x4e, 0x4a,
-            0x7f, 0x1c,
-        ])
-    };
-
-    type Raw = RawDevicePathToText;
-
-    unsafe fn from_raw(this: *mut RawDevicePathToText) -> Self {
-        DevicePathToText::new(this)
     }
 }
