@@ -6,6 +6,12 @@
 /// Uses a phantom lifetime `'table` to ensure it won't outlive the System Table
 ///
 /// All interfaces derive [`Debug`]
+///
+/// # Safety
+///
+/// - You must be a developer of this library
+#[macro_export]
+#[doc(hidden)]
 macro_rules! interface {
     ($(
         $(#[$meta:meta])*

@@ -28,9 +28,12 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// # use uefi::interface;
+/// # use uefi::Protocol;
+/// # pub struct RawMyProtocol;
+///
 /// interface!(
-///     // Ignore the `crate` for now!
-///     #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839", crate = "nuefi")]
+///     #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839")]
 ///     MyProtocol(RawMyProtocol)
 /// );
 /// ```
