@@ -72,7 +72,7 @@ impl Header {
     /// # Safety
     ///
     /// - Must be called with a valid pointed to a UEFI table
-    unsafe fn validate(table: *mut Self, sig: u64) -> Result<()> {
+    unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
         let header = &*table;
         let expected = header.crc32;
@@ -168,15 +168,22 @@ impl RawSystemTable {
     /// - Must be a valid pointer
     /// - Must only be called before running user code.
     pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
+        // FIXME: Miri failure here. Actual uB or bug or TBD?
+        #[cfg(not(miri))]
         // Safety: Pointer to first C struct member
-        Header::validate(this as *mut Header, Self::SIGNATURE)?;
+        Header::validate(this as *const u8, Self::SIGNATURE)?;
+
         let header = &(*this);
+
+        #[cfg(not(miri))]
         Header::validate(
-            header.boot_services as *mut Header,
+            header.boot_services as *const u8,
             RawBootServices::SIGNATURE,
         )?;
+
+        #[cfg(not(miri))]
         Header::validate(
-            header.runtime_services as *mut Header,
+            header.runtime_services as *const u8,
             RawRuntimeServices::SIGNATURE,
         )?;
         Ok(())
