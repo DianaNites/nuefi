@@ -17,6 +17,7 @@ use syn::{
     NestedMeta,
     Pat,
     Type,
+    TypeGroup,
     TypePath,
 };
 
@@ -103,10 +104,24 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let mut match_group = |elem: &syn::Type, span, errors: &mut Vec<Error>| match elem {
+        syn::Type::Path(TypePath { path, .. }) => match_path(path, span, errors),
+        _ => {
+            errors.push(Error::new(
+                span,
+                "Invalid type (4). This macro MUST only be used with `interface` types",
+            ));
+            error_def.clone()
+        }
+    };
+
     let mut match_ty = |ty: &Type, span| match ty {
         syn::Type::Path(TypePath { path, .. }) => match_path(path, span, &mut errors),
+
         syn::Type::Ptr(ptr) => match &*ptr.elem {
             syn::Type::Path(TypePath { path, .. }) => match_path(path, span, &mut errors),
+
+            syn::Type::Group(TypeGroup { elem, .. }) => match_group(elem, span, &mut errors),
 
             _ => {
                 errors.push(Error::new(
