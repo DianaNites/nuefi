@@ -260,13 +260,30 @@ Header:
             core::mem::size_of::<Header>(),
         );
         // #[cfg(no)]
+        #[allow(unused_mut)]
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
         unsafe {
-            let b =
-                core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>());
-            // b.try_into().unwrap()
-            [0u8; size_of::<Self>()]
+            use core::{
+                mem::{transmute, MaybeUninit},
+                slice::from_raw_parts,
+            };
+
+            let ptr = self as *const _ as *const MaybeUninit<u8>;
+
+            let mut b: [MaybeUninit<u8>; size_of::<Self>()] =
+                from_raw_parts(ptr, size_of::<Self>()).try_into().unwrap();
+
+            // FIXME: Theres padding here but we *need* to read it.
+            // Init it hackily.
+            #[cfg(miri)]
+            {
+                // 36 + 4
+                b[36..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
+            };
+            // b
+            transmute(b)
+            // [0u8; size_of::<Self>()]
         }
     }
 
