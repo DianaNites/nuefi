@@ -7,7 +7,7 @@ use crate::error::EfiStatus;
 
 /// EFI Physical Address
 ///
-/// Defined at https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html#efi-boot-services-allocatepages
+/// Defined at <https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html#efi-boot-services-allocatepages>
 pub type EfiPhysicalAddress = u64;
 
 /// Read only structure defining information about available video modes
@@ -107,7 +107,7 @@ impl RawPixelFormat {
 
 /// UEFI Graphics Output Protocol
 ///
-/// https://uefi.org/specs/UEFI/2.10/12_Protocols_Console_Support.html#graphics-output-protocol
+/// <https://uefi.org/specs/UEFI/2.10/12_Protocols_Console_Support.html#graphics-output-protocol>
 #[repr(C)]
 pub struct RawGraphicsOutput {
     pub query_mode: Option<

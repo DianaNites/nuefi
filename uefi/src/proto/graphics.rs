@@ -194,7 +194,7 @@ pub enum PixelFormat {
     /// BGR Pixels
     BGR,
 
-    /// Pixels defined by [`RawPixelMask`]
+    /// Pixels defined by [`raw::RawPixelMask`]
     BitMask,
 
     /// Only blt supported, no framebuffer
