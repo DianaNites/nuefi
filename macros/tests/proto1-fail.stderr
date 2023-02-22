@@ -1,0 +1,7 @@
+error: Invalid GUID: ParseUuidError
+  --> tests/proto1-fail.rs:16:1
+   |
+16 | #[Protocol("c986ec27-69420-af54-4b55-80aa-91697fcdf8eb")]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `Protocol` (in Nightly builds, run with -Z macro-backtrace for more info)

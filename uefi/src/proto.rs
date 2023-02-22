@@ -3,6 +3,7 @@
 use core::{marker::PhantomData, ops::Deref};
 
 use log::error;
+use nuuid::Uuid;
 
 use crate::{get_boot_table, EfiHandle};
 
@@ -37,6 +38,10 @@ pub unsafe trait Protocol<'table> {
     /// - Must be a valid, non-null, pointer to an instance of Self::Raw
     #[doc(hidden)]
     unsafe fn from_raw(this: *mut Self::Raw) -> Self;
+
+    fn guid(&self) -> Guid {
+        Self::GUID
+    }
 }
 
 /// UEFI GUID
@@ -49,12 +54,39 @@ pub unsafe trait Protocol<'table> {
 #[allow(clippy::undocumented_unsafe_blocks)]
 pub struct Guid([u8; 16]);
 
+impl core::fmt::Debug for Guid {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let uuid = Uuid::from_bytes_me(self.0);
+        f.debug_tuple("Guid") //.
+            .field(&self.0)
+            .field(&format_args!("[Guid] {uuid}"))
+            .finish()
+    }
+}
+
 impl Guid {
     /// # Safety
     ///
     /// - MUST be a valid protocol GUID
     pub const unsafe fn from_bytes(bytes: [u8; 16]) -> Self {
         Self(nuuid::Uuid::from_bytes_me(bytes).to_bytes())
+    }
+
+    /// # Safety
+    ///
+    /// - MUST be a valid protocol GUID
+    /// - MUST only be called by the [`crate::Protocol`] macro
+    #[doc(hidden)]
+    pub const unsafe fn __from_bytes_protocol(bytes: [u8; 16]) -> Self {
+        Self(bytes)
+    }
+
+    /// # Safety
+    ///
+    /// - MUST only be called by the [`crate::Protocol`] macro
+    #[doc(hidden)]
+    pub const unsafe fn _to_bytes(self) -> [u8; 16] {
+        self.0
     }
 }
 
