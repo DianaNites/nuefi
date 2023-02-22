@@ -85,7 +85,7 @@ impl Guid {
     ///
     /// - MUST only be called by the [`crate::Protocol`] macro
     #[doc(hidden)]
-    pub const unsafe fn _to_bytes(self) -> [u8; 16] {
+    pub const unsafe fn to_bytes(self) -> [u8; 16] {
         self.0
     }
 }

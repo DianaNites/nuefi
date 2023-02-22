@@ -46,7 +46,7 @@ fn main() {
     assert_eq!(p.guid(), guid);
 
     let mut buf = [0u8; 36];
-    let s = Uuid::from_bytes_me(unsafe { p.guid()._to_bytes() }).to_str(&mut buf);
+    let s = Uuid::from_bytes_me(unsafe { p.guid().to_bytes() }).to_str(&mut buf);
     assert_eq!(s, GUID, "Protocol macro didn't do GUID correctly");
 
     // println!("{:?}", p.guid());
