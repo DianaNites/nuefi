@@ -16,17 +16,25 @@ struct RawProto {
 }
 
 #[Protocol("c986ec27-af54-4b55-80aa-91697fcdf8eb")]
-#[repr(C)]
-struct Proto(RawProto);
+#[derive(Debug)]
+#[repr(transparent)]
+struct Proto<'table> {
+    /// .
+    interface: *mut RawProto,
+    phantom: core::marker::PhantomData<&'table mut RawProto>,
+}
 
-impl Proto {
-    fn new(pro: *mut RawProto) -> Self {
-        Self(RawProto { pro })
+impl<'t> Proto<'t> {
+    pub(crate) unsafe fn new(interface: *mut RawProto) -> Self {
+        Self {
+            interface,
+            phantom: core::marker::PhantomData,
+        }
     }
 }
 
 fn main() {
-    let p = Proto::new(null_mut());
+    let p = unsafe { Proto::new(null_mut()) };
 
     let guid = unsafe {
         // `parse_me` because thats what the macro expects

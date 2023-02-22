@@ -1,11 +1,7 @@
 //! Test that an obviously invalid GUID fails
-#![allow(unused_imports, unused_variables, dead_code, unused_mut)]
-use core::ptr::null_mut;
+use uefi::Protocol;
 
-use ::uefi::Protocol;
-use nuuid::Uuid;
-
-// Random UUID from `uuidgen`
+// Random UUID from `uuidgen` with 69420 added to it
 const GUID: &str = "c986ec27-69420-af54-4b55-80aa-91697fcdf8eb";
 
 #[repr(C)]
@@ -14,15 +10,21 @@ struct RawProto {
 }
 
 #[Protocol("c986ec27-69420-af54-4b55-80aa-91697fcdf8eb")]
-#[repr(C)]
-struct Proto(RawProto);
+#[derive(Debug)]
+#[repr(transparent)]
+struct Proto<'table> {
+    /// .
+    interface: *mut RawProto,
+    phantom: core::marker::PhantomData<&'table mut RawProto>,
+}
 
-impl Proto {
-    fn new(pro: *mut RawProto) -> Self {
-        Self(RawProto { pro })
+impl<'t> Proto<'t> {
+    pub(crate) unsafe fn new(interface: *mut RawProto) -> Self {
+        Self {
+            interface,
+            phantom: core::marker::PhantomData,
+        }
     }
 }
 
-fn main() {
-    let p = Proto::new(null_mut());
-}
+fn main() {}

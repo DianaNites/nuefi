@@ -16,6 +16,8 @@ use syn::{
     Meta,
     NestedMeta,
     Pat,
+    Type,
+    TypePath,
 };
 
 fn parse_args(
@@ -80,20 +82,75 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let imp_struct = &input.ident;
     let imp_generics = &input.generics;
+
+    // This makes errors really nice
+    let error_def = quote! {
+        ()
+    };
+
+    // FIXME: Workaround the interface macro Type being `*mut Ty`
+    let mut imp_raw_ty_ident = quote! {()};
+
+    let mut match_path = |path: &syn::Path, span, errors: &mut Vec<Error>| {
+        if let Some(path) = path.get_ident() {
+            quote! { #path }
+        } else {
+            errors.push(Error::new(
+                span,
+                "Invalid type (1). This macro MUST only be used with `interface` types",
+            ));
+            error_def.clone()
+        }
+    };
+
+    let mut match_ty = |ty: &Type, span| match ty {
+        syn::Type::Path(TypePath { path, .. }) => match_path(path, span, &mut errors),
+        syn::Type::Ptr(ptr) => match &*ptr.elem {
+            syn::Type::Path(TypePath { path, .. }) => match_path(path, span, &mut errors),
+
+            _ => {
+                errors.push(Error::new(
+                    span,
+                    "Invalid type (2). This macro MUST only be used with `interface` types",
+                ));
+                error_def.clone()
+            }
+        },
+        _ => {
+            errors.push(Error::new(
+                span,
+                "Invalid type (3). This macro MUST only be used with `interface` types",
+            ));
+            error_def.clone()
+        }
+    };
+
     let imp_first_field = match &input.fields {
-        syn::Fields::Named(_) => todo!("named fields"),
+        syn::Fields::Named(fields) => {
+            if let Some(first) = fields.named.first() {
+                let ty = &first.ty;
+                let i = match_ty(ty, fields.named.span());
+                imp_raw_ty_ident = quote! { #i };
+                quote! { #ty }
+            } else {
+                errors.push(Error::new(fields.named.span(), "Missing Protocol GUID"));
+                error_def
+            }
+        }
         syn::Fields::Unnamed(fields) => {
             if let Some(first) = fields.unnamed.first() {
                 let ty = &first.ty;
+                let i = match_ty(ty, fields.unnamed.span());
+                imp_raw_ty_ident = quote! { #i };
                 quote! { #ty }
             } else {
                 errors.push(Error::new(fields.unnamed.span(), "Missing Protocol GUID"));
-                quote! {}
+                error_def
             }
         }
         syn::Fields::Unit => {
             errors.push(Error::new(input.fields.span(), "Missing Protocol GUID"));
-            quote! {}
+            error_def
         }
     };
 
@@ -144,9 +201,9 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         unsafe impl<'table> #krate::proto::Protocol<'table> for #imp_struct #imp_generics {
             const GUID: #krate::proto::Guid = #guid_bytes;
 
-            type Raw = #imp_first_field;
+            type Raw = #imp_raw_ty_ident;
 
-            unsafe fn from_raw(this: *mut #imp_first_field) -> Self {
+            unsafe fn from_raw(this: #imp_first_field) -> Self {
                 #imp_struct::new(this)
             }
         }
