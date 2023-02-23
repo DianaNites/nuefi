@@ -136,8 +136,8 @@ impl Header {
     ///   possible to verify.
     ///     - Broken/buggy UEFI implementations will be able to cause the
     ///       following UB:
-    ///         - // TODO: List UB
     ///         - Uninitialized padding readings from system tables
+    ///         - // TODO: List UB
     unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
 
