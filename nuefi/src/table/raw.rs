@@ -70,12 +70,14 @@ pub struct Header {
 impl Header {
     // `376` is the biggest table size we know about.
     // `352` is that minus `24`, the Header size
+    // FIXME: This
     fn to_rem_bytes(&self, ptr: *const u8, len: usize) -> ([u8; 352], usize) {
         #[repr(C)]
         union Buf {
             h: ManuallyDrop<Header>,
             // 120 is the size of RawSystemTable, the one giving us issues.
-            buf: [MaybeUninit<u8>; 120],
+            // 96, that minus the header size, 24.
+            buf: [MaybeUninit<u8>; 96],
         }
 
         let buf = [0u8; 352];
@@ -84,20 +86,17 @@ impl Header {
         // #[cfg(no)]
         // Safety:
         unsafe {
-            // let ptr = ptr.add(size_of::<Header>());
-            let ptr = ptr as *const Buf;
+            let ptr = ptr.add(size_of::<Header>()) as *const Buf;
             if self.signature == RawSystemTable::SIGNATURE {
-                let b = (&*ptr).buf;
-
                 #[allow(unused_mut)]
-                let mut b: [MaybeUninit<u8>; 96] = b[size_of::<Header>()..].try_into().unwrap();
+                let mut b = (&*ptr).buf;
 
                 // FIXME: Theres padding here but we *need* to read it.
                 // Init it hackily.
                 #[cfg(miri)]
                 {
                     // panic!("{:#?}", &transmute::<_, [u8; 96]>(b)[12..][..4]);
-                    b[12..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
+                    // b[12..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
                 };
                 let mut newb = [MaybeUninit::new(0u8); 352];
                 newb[..96].copy_from_slice(&b);
@@ -191,6 +190,12 @@ pub struct RawSystemTable {
     ///
     /// Firmware vendor specific version value
     pub firmware_revision: u32,
+
+    /// Padding inherent in the layout.
+    /// We rely on initialized data here for safety.
+    ///
+    /// This padding is only? on 64-bit because `EfiHandle` is a a pointer
+    pub _pad1: [u8; 4],
 
     /// Console input handle
     pub console_in_handle: EfiHandle,
@@ -300,7 +305,7 @@ Header:
             // Init it hackily.
             #[cfg(miri)]
             {
-                b[36..][..4].copy_from_slice(&[MaybeUninit::new(0u8); 4]);
+                // b[36..][..4].copy_from_slice(&[MaybeUninit::new(0u8); 4]);
             };
             // b
             transmute(b)
@@ -323,7 +328,7 @@ Header:
             boot_services: null_mut(),
             number_of_table_entries: 0,
             configuration_table: null_mut(),
-            // _pad1: [0u8; 4],
+            _pad1: [0u8; 4],
             // _pad2: [0u8; 2],
         }
     }
