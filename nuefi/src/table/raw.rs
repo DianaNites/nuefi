@@ -71,6 +71,7 @@ impl Header {
     // `376` is the biggest table size we know about.
     // `352` is that minus `24`, the Header size
     fn to_rem_bytes(&self, ptr: *const u8, len: usize) -> ([u8; 352], usize) {
+        #[repr(C)]
         union Buf {
             h: ManuallyDrop<Header>,
             // 120 is the size of RawSystemTable, the one giving us issues.
@@ -95,6 +96,7 @@ impl Header {
                 // Init it hackily.
                 #[cfg(miri)]
                 {
+                    // panic!("{:#?}", &transmute::<_, [u8; 96]>(b)[12..][..4]);
                     b[12..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
                 };
                 let mut newb = [MaybeUninit::new(0u8); 352];
