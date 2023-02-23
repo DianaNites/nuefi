@@ -68,64 +68,6 @@ pub struct Header {
 }
 
 impl Header {
-    // `376` is the biggest table size we know about.
-    // `352` is that minus `24`, the Header size
-    // FIXME: This
-    fn to_rem_bytes(&self, ptr: *const u8, len: usize) -> ([u8; 352], usize) {
-        #[repr(C)]
-        union Buf {
-            h: ManuallyDrop<Header>,
-            // 120 is the size of RawSystemTable, the one giving us issues.
-            // 96, that minus the header size, 24.
-            buf: [MaybeUninit<u8>; 96],
-        }
-
-        let buf = [0u8; 352];
-        let len = len.saturating_sub(size_of::<Header>());
-
-        // #[cfg(no)]
-        // Safety:
-        unsafe {
-            let ptr = ptr.add(size_of::<Header>()) as *const Buf;
-            if self.signature == RawSystemTable::SIGNATURE {
-                #[allow(unused_mut)]
-                let mut b = (&*ptr).buf;
-
-                // FIXME: Theres padding here but we *need* to read it.
-                // Init it hackily.
-                #[cfg(miri)]
-                {
-                    // panic!("{:#?}", &transmute::<_, [u8; 96]>(b)[12..][..4]);
-                    // b[12..][..4].copy_from_slice(&[MaybeUninit::new(0); 4]);
-                };
-                let mut newb = [MaybeUninit::new(0u8); 352];
-                newb[..96].copy_from_slice(&b);
-                return (transmute(newb), len);
-            }
-        }
-
-        // #[cfg(no)]
-        // Safety:
-        unsafe {
-            let mut buf = buf;
-            ptr.add(size_of::<Header>()).copy_to(buf.as_mut_ptr(), len);
-            return (buf, len);
-            // let ptr
-            let bytes = core::slice::from_raw_parts(
-                ptr.add(size_of::<Header>()),
-                len.saturating_sub(size_of::<Header>()),
-            );
-            // FIXME: Alignment? Uninit Padding? Causes various hard to detect UB?
-            // Miri is reporting problems here but only for RawSystemHeader?
-            // It has uninit padding
-            // The standard requires we read for `size` *bytes* though, not
-            // fields, so we need a solution. fucking C.
-            // Maybe its a stacked borrows/miri bug and not UB?
-            // bytes
-            (bytes.try_into().unwrap(), len)
-        }
-    }
-
     /// Validate the header
     ///
     /// # Safety
@@ -154,11 +96,32 @@ impl Header {
         digest.update(&header.size.to_ne_bytes());
         digest.update(&0u32.to_ne_bytes());
         digest.update(&header.reserved.to_ne_bytes());
-        // Calculate the remaining table, header digested above.
-        let (bytes, len) = header.to_rem_bytes(table, len as usize);
-        let bytes = &bytes[..len];
 
+        // Safety: `table` is subject to caller.
+        // Slice lifetime is limited.
+        //
+        // In miri, this relies on all our table definitions having
+        // defined padding fields, or else we get UB with uninit padding.
+        // Whether this is or can be a problem in practice, I dont know.
+        //
+        // The problem is the CRC is defined over `header.size` bytes,
+        // in memory, where in memory and the (current) size is a UEFI Table structure,
+        // but some of these structures have padding between fields.
+        // Can this be uninit? Do we have to worry?
+        // Can it be UB/cause bugs/exploits in our library if firmware gives
+        // out a pointer to such a struct?
+        //
+        // TODO: Should we validate padding as zero, denying it as UB/broken otherwise,
+        // or silently accept it if the CRC validates?
+        let bytes = unsafe {
+            let len = (header.size as usize).saturating_sub(size_of::<Header>());
+            let ptr = table.add(size_of::<Header>());
+            core::slice::from_raw_parts(ptr, len)
+        };
+
+        // Calculate the remaining table, header digested above.
         digest.update(bytes);
+
         if expected != digest.finalize() {
             return EfiStatus::CRC_ERROR.into();
         }
@@ -261,56 +224,10 @@ impl RawSystemTable {
         Ok(())
     }
 
-    // FIXME: This
-    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
-        #[cfg(no)]
-        panic!(
-            "\n\n\n\n\n\
-RawSystemTable:
-    align {} // 8
-    size {} // 120
-
-RawBootServices:
-    align {} // 8
-    size {} // 376
-
-RawRuntimeServices:
-    align {} // 8
-    size {} // 24
-
-Header:
-    align {} // 8
-    size {} // 24
-        \n\n\n\n\n",
-            core::mem::align_of::<Self>(),
-            core::mem::size_of::<Self>(),
-            core::mem::align_of::<RawBootServices>(),
-            core::mem::size_of::<RawBootServices>(),
-            core::mem::align_of::<RawRuntimeServices>(),
-            core::mem::size_of::<RawRuntimeServices>(),
-            core::mem::align_of::<Header>(),
-            core::mem::size_of::<Header>(),
-        );
-        // #[cfg(no)]
-        #[allow(unused_mut)]
+    fn to_bytes(&self) -> &[u8] {
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        unsafe {
-            let ptr = self as *const _ as *const MaybeUninit<u8>;
-
-            let mut b: [MaybeUninit<u8>; size_of::<Self>()] =
-                from_raw_parts(ptr, size_of::<Self>()).try_into().unwrap();
-
-            // FIXME: Theres padding here but we *need* to read it.
-            // Init it hackily.
-            #[cfg(miri)]
-            {
-                // b[36..][..4].copy_from_slice(&[MaybeUninit::new(0u8); 4]);
-            };
-            // b
-            transmute(b)
-            // [0u8; size_of::<Self>()]
-        }
+        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
     }
 
     const fn new_mock(header: Header) -> Self {
@@ -329,7 +246,6 @@ Header:
             number_of_table_entries: 0,
             configuration_table: null_mut(),
             _pad1: [0u8; 4],
-            // _pad2: [0u8; 2],
         }
     }
 
@@ -397,19 +313,19 @@ Header:
 
             MOCK_BOOT.0.header.crc32 = {
                 let mut digest = CRC.digest();
-                digest.update(&MOCK_BOOT.0.to_bytes());
+                digest.update(MOCK_BOOT.0.to_bytes());
                 digest.finalize()
             };
 
             MOCK_RUN.0.header.crc32 = {
                 let mut digest = CRC.digest();
-                digest.update(&MOCK_RUN.0.to_bytes());
+                digest.update(MOCK_RUN.0.to_bytes());
                 digest.finalize()
             };
 
             s.header.crc32 = {
                 let mut digest = CRC.digest();
-                digest.update(&s.to_bytes());
+                digest.update(s.to_bytes());
                 digest.finalize()
             };
         }
@@ -600,15 +516,10 @@ pub struct RawBootServices {
 impl RawBootServices {
     const SIGNATURE: u64 = 0x56524553544f4f42;
 
-    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
+    fn to_bytes(&self) -> &[u8] {
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        unsafe {
-            //
-            core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
-                .try_into()
-                .unwrap()
-        }
+        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
     }
 
     const fn mock() -> Self {
@@ -637,15 +548,10 @@ pub struct RawRuntimeServices {
 impl RawRuntimeServices {
     const SIGNATURE: u64 = 0x56524553544e5552;
 
-    fn to_bytes(&self) -> [u8; size_of::<Self>()] {
+    fn to_bytes(&self) -> &[u8] {
         // Safety: `self` is valid by definition
         // Lifetime is bound to self
-        unsafe {
-            //
-            core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>())
-                .try_into()
-                .unwrap()
-        }
+        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
     }
 
     const fn mock() -> Self {
