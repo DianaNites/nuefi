@@ -391,7 +391,7 @@ impl SystemTable<Boot> {
 
     /// Output on stderr
     pub fn stderr(&self) -> SimpleTextOutput<'_> {
-        let ptr = self.table().std_err;
+        let ptr = self.table().con_err;
         assert!(!ptr.is_null(), "std_err handle was null");
         // Safety: Construction ensures safety.
         unsafe { SimpleTextOutput::new(ptr) }

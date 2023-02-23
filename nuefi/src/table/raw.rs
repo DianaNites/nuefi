@@ -205,10 +205,10 @@ pub struct RawSystemTable {
     pub con_out: *mut RawSimpleTextOutput,
 
     /// Console error handle
-    pub standard_error_handle: EfiHandle,
+    pub console_err_handle: EfiHandle,
 
     /// Console error output
-    pub std_err: *mut RawSimpleTextOutput,
+    pub con_err: *mut RawSimpleTextOutput,
 
     /// Runtime services table, always valid
     pub runtime_services: *mut RawRuntimeServices,
@@ -317,8 +317,8 @@ Header:
             con_in: null_mut(),
             console_out_handle: EfiHandle(null_mut()),
             con_out: null_mut(),
-            standard_error_handle: EfiHandle(null_mut()),
-            std_err: null_mut(),
+            console_err_handle: EfiHandle(null_mut()),
+            con_err: null_mut(),
             runtime_services: null_mut(),
             boot_services: null_mut(),
             number_of_table_entries: 0,
