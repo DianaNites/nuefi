@@ -137,7 +137,10 @@ impl Header {
     ///     - Broken/buggy UEFI implementations will be able to cause the
     ///       following UB:
     ///         - Uninitialized padding readings from system tables
-    ///         - // TODO: List UB
+    ///         - Arbitrary pointer reads
+    ///             - Through `table`, `boot_services`, and `runtime_services`.
+    ///             - The size reported in the headers is blindly trusted and we
+    ///               will try to read and crc that many bytes.
     unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
 
@@ -189,28 +192,22 @@ pub struct RawSystemTable {
     /// Firmware vendor specific version value
     pub firmware_revision: u32,
 
-    /// Padding inherent in the layout.
-    /// We rely on initialized data here for safety.
-    ///
-    /// This padding is only? on 64-bit because `EfiHandle` is a a pointer
-    // pub _pad1: [u8; 4],
-
-    ///
+    /// Console input handle
     pub console_in_handle: EfiHandle,
 
-    ///
+    /// Console input protocol
     pub con_in: *mut RawSimpleTextInput,
 
-    ///
+    /// Console output handle
     pub console_out_handle: EfiHandle,
 
-    ///
+    /// Console output protocol
     pub con_out: *mut RawSimpleTextOutput,
 
-    ///
+    /// Console error handle
     pub standard_error_handle: EfiHandle,
 
-    ///
+    /// Console error output
     pub std_err: *mut RawSimpleTextOutput,
 
     /// Runtime services table, always valid
