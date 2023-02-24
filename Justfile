@@ -18,11 +18,14 @@ initrd := "/boot/initramfs-linux.img"
 
 target := "/boot/vmlinuz-linux"
 
+# We need to ignore leaks because miri hates us
 export MIRIFLAGS := "\
 -Zmiri-strict-provenance \
 -Zmiri-symbolic-alignment-check \
 -Zmiri-isolation-error=warn-nobacktrace \
+-Zmiri-ignore-leaks \
 "
+
 # -Zmiri-disable-stacked-borrows \
 # -Zmiri-disable-isolation \
 # -Zmiri-retag-fields \

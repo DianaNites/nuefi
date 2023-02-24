@@ -174,15 +174,18 @@ pub mod handlers;
 #[cfg(test)]
 mod tests {
     #![allow(unreachable_code, unused_mut)]
+    use alloc::{boxed::Box, vec::Vec};
+    use core::mem::forget;
+
+    use mock::{mock, MOCK_VENDOR};
+
     use super::*;
     use crate::{entry, error::Result, proto::graphics::GraphicsOutput};
 
-    // TODO: Write more library/infrastructure for writing a mock library
-    // slash actual UEFI implementation in software to test against,
-    // or even use in hardware. lol.
-
     mod mock {
+        use alloc::{boxed::Box, vec, vec::Vec};
         use core::{
+            any::Any,
             mem::size_of,
             ptr::{addr_of, addr_of_mut, null_mut},
         };
@@ -209,7 +212,7 @@ mod tests {
 
         const MOCK_REVISION: Revision = Revision::new(2, 70);
         const MOCK_FW_REVISION: u32 = 69420;
-        const MOCK_VENDOR: &str = "Mock Vendor";
+        pub const MOCK_VENDOR: &str = "Mock Vendor";
 
         const fn mock_boot() -> RawBootServices {
             const MOCK_HEADER: Header = Header {
@@ -292,7 +295,7 @@ mod tests {
             }
         }
 
-        const fn mock_system_() -> RawSystemTable {
+        const fn mock_system() -> RawSystemTable {
             const MOCK_HEADER: Header = Header {
                 signature: RawSystemTable::SIGNATURE,
                 revision: MOCK_REVISION,
@@ -318,86 +321,87 @@ mod tests {
             }
         }
 
-        const fn to_bytes<T>(this: &T) -> &[u8] {
+        /// # Safety:
+        ///
+        /// `T` must not have uninit padding.
+        const unsafe fn to_bytes<T>(this: &T) -> &[u8] {
             // Safety: `this` is valid by definition
             // Lifetime is bound to `this`
             unsafe { core::slice::from_raw_parts(this as *const T as *const u8, size_of::<T>()) }
         }
 
-        pub unsafe fn mock_system() -> *mut RawSystemTable {
-            static mut MOCK_SYSTEM: RawSystemTable = mock_system_();
-            static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(mock_boot());
-            static mut MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(mock_run());
-            static mut MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(mock_out());
-            static mut MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(mock_gop());
-            static mut BUF: [u16; MOCK_VENDOR.len() + 1] = [0u16; MOCK_VENDOR.len() + 1];
-            MOCK_VENDOR
+        pub fn mock() -> (Box<RawSystemTable>, Vec<Box<dyn Any>>) {
+            let mut vendor = MOCK_VENDOR
                 .encode_utf16()
-                .enumerate()
-                .for_each(|(i, f)| BUF[i] = f);
+                .chain([0])
+                .collect::<Vec<u16>>()
+                .into_boxed_slice();
+            let mut system = Box::new(mock_system());
+            let mut boot = Box::new(mock_boot());
+            let mut run = Box::new(mock_run());
+            let mut out = Box::new(mock_out());
 
-            // Safety: We only mock once, single threaded
-            if MOCK_SYSTEM.header.crc32 == 0 {
-                let mut s = &mut MOCK_SYSTEM;
+            boot.locate_protocol = Some(locate_protocol);
 
-                // Safety:
-                // It is important for safety/miri that references not be created
-                // slash that these pointers not be derived from them.
-                s.boot_services = addr_of!(MOCK_BOOT.0) as *mut _;
-                s.runtime_services = addr_of!(MOCK_RUN.0) as *mut _;
-                s.con_out = addr_of!(MOCK_OUT.0) as *mut _;
-                s.firmware_vendor = BUF.as_ptr();
+            boot.header.crc32 = {
+                let mut digest = CRC.digest();
+                // Safety: We ensure in the definition that there is no uninit padding.
+                unsafe { digest.update(to_bytes(&*boot)) };
+                digest.finalize()
+            };
 
-                unsafe extern "efiapi" fn locate_protocol(
-                    guid: *mut proto::Guid,
-                    key: *mut u8,
-                    out: *mut *mut u8,
-                ) -> EfiStatus {
-                    let guid = *guid;
-                    if guid == GraphicsOutput::GUID {
-                        out.write(addr_of!(MOCK_GOP) as *mut _);
-                        EfiStatus::SUCCESS
-                    } else {
-                        out.write(null_mut());
-                        EfiStatus::NOT_FOUND
-                    }
-                }
+            run.header.crc32 = {
+                let mut digest = CRC.digest();
+                // Safety: We ensure in the definition that there is no uninit padding.
+                unsafe { digest.update(to_bytes(&*run)) };
+                digest.finalize()
+            };
 
-                MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
+            system.boot_services = addr_of_mut!(*boot);
+            system.runtime_services = addr_of_mut!(*run);
+            system.con_out = addr_of_mut!(*out);
+            system.firmware_vendor = addr_of!(vendor[0]);
 
-                MOCK_BOOT.0.header.crc32 = {
-                    let mut digest = CRC.digest();
-                    digest.update(to_bytes(&MOCK_BOOT.0));
-                    digest.finalize()
-                };
+            system.header.crc32 = {
+                let mut digest = CRC.digest();
+                // Safety: We ensure in the definition that there is no uninit padding.
+                unsafe { digest.update(to_bytes(&*system)) };
+                digest.finalize()
+            };
 
-                MOCK_RUN.0.header.crc32 = {
-                    let mut digest = CRC.digest();
-                    digest.update(to_bytes(&MOCK_RUN.0));
-                    digest.finalize()
-                };
-
-                s.header.crc32 = {
-                    let mut digest = CRC.digest();
-                    digest.update(to_bytes(s));
-                    digest.finalize()
-                };
-            }
-
-            addr_of_mut!(MOCK_SYSTEM)
+            (
+                system,
+                vec![
+                    Box::new(boot),
+                    Box::new(out),
+                    Box::new(run),
+                    Box::new(vendor),
+                ],
+            )
         }
 
-        #[repr(transparent)]
-        struct YesSync<T>(T);
-        /// Safety: yeah trust me. no
-        unsafe impl<T> Sync for YesSync<T> {}
+        use imps::*;
+        mod imps {
+            use super::*;
 
-        pub fn mock() -> *mut RawSystemTable {
-            todo!();
-            null_mut()
+            pub static mut MOCK_GOP: RawGraphicsOutput = mock_gop();
+
+            pub unsafe extern "efiapi" fn locate_protocol(
+                guid: *mut proto::Guid,
+                key: *mut u8,
+                out: *mut *mut u8,
+            ) -> EfiStatus {
+                let guid = *guid;
+                if guid == GraphicsOutput::GUID {
+                    out.write(addr_of_mut!(MOCK_GOP) as *mut _);
+                    EfiStatus::SUCCESS
+                } else {
+                    out.write(null_mut());
+                    EfiStatus::NOT_FOUND
+                }
+            }
         }
     }
-    use mock::mock_system;
 
     #[entry(crate = "self")]
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
@@ -413,19 +417,29 @@ mod tests {
         Ok(())
     }
 
+    const IMAGE: EfiHandle = EfiHandle(69420 as *mut _);
+
     #[test]
     fn miri() -> Result<()> {
         // setup();
-        let id = 69420;
-        // Safety: yes
-        let st = unsafe { mock_system() };
-        let image = EfiHandle(&id as *const _ as *mut _);
-        // info!("{st:?}");
-        let ret = efi_main(image, st);
-        // info!("{ret:?}");
-        //
-        if !ret.is_success() {
-            panic!("{:#?}", ret);
+        let (mut st, _box) = { mock() };
+        {
+            let st = (&mut *st) as *mut RawSystemTable;
+            // info!("{st:?}");
+            let ret = efi_main(IMAGE, st);
+            // info!("{ret:?}");
+
+            if !ret.is_success() {
+                panic!("{:#?}", ret);
+            }
+
+            // drop(_box);
+            // Miri stack borrows complains because when header validation
+            // makes the byte slice, for some reason that invalidates
+            // `Box` from dropping itself. This has got to be a bug.
+            //
+            // TODO: Try and come up with a minimal repro.
+            forget(_box);
         }
         Ok(())
     }
