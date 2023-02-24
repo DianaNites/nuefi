@@ -181,6 +181,224 @@ mod tests {
     // slash actual UEFI implementation in software to test against,
     // or even use in hardware. lol.
 
+    mod mock {
+        use core::{
+            mem::size_of,
+            ptr::{addr_of, addr_of_mut, null_mut},
+        };
+
+        use crate::{
+            error::EfiStatus,
+            proto::{
+                self,
+                console::raw::RawSimpleTextOutput,
+                graphics::{raw::RawGraphicsOutput, GraphicsOutput},
+                Protocol,
+                Str16,
+            },
+            table::raw::{
+                Header,
+                RawBootServices,
+                RawRuntimeServices,
+                RawSystemTable,
+                Revision,
+                CRC,
+            },
+            EfiHandle,
+        };
+
+        const MOCK_REVISION: Revision = Revision::new(2, 70);
+        const MOCK_FW_REVISION: u32 = 69420;
+        const MOCK_VENDOR: &str = "Mock Vendor";
+
+        const fn mock_boot() -> RawBootServices {
+            const MOCK_HEADER: Header = Header {
+                signature: RawBootServices::SIGNATURE,
+                revision: MOCK_REVISION,
+                size: size_of::<RawBootServices>() as u32,
+                crc32: 0,
+                reserved: 0,
+            };
+            let b = [0u8; size_of::<RawBootServices>()];
+            // Safety:
+            // - All fields of `RawBootServices` are safely nullable/zero
+            let mut t: RawBootServices = unsafe { core::mem::transmute::<_, _>(b) };
+            t.header = MOCK_HEADER;
+            t
+        }
+
+        const fn mock_run() -> RawRuntimeServices {
+            const MOCK_HEADER: Header = Header {
+                signature: RawRuntimeServices::SIGNATURE,
+                revision: MOCK_REVISION,
+                size: size_of::<RawRuntimeServices>() as u32,
+                crc32: 0,
+                reserved: 0,
+            };
+            let b = [0u8; size_of::<RawRuntimeServices>()];
+            // Safety:
+            // - All fields of `RawRuntimeServices` are safely nullable/zero
+            let mut t: RawRuntimeServices = unsafe { core::mem::transmute::<_, _>(b) };
+            t.header = MOCK_HEADER;
+            t
+        }
+
+        const fn mock_out() -> RawSimpleTextOutput {
+            unsafe extern "efiapi" fn reset(
+                this: *mut RawSimpleTextOutput,
+                extended: bool,
+            ) -> EfiStatus {
+                EfiStatus::SUCCESS
+            }
+
+            unsafe extern "efiapi" fn output_string(
+                this: *mut RawSimpleTextOutput,
+                string: Str16,
+            ) -> EfiStatus {
+                EfiStatus::SUCCESS
+            }
+
+            unsafe extern "efiapi" fn clear_screen(this: *mut RawSimpleTextOutput) -> EfiStatus {
+                EfiStatus::SUCCESS
+            }
+
+            RawSimpleTextOutput {
+                reset: Some(reset),
+                output_string: Some(output_string),
+                test_string: None,
+                query_mode: None,
+                set_mode: None,
+                set_attribute: None,
+                clear_screen: Some(clear_screen),
+                set_cursor_position: None,
+                enable_cursor: None,
+                mode: null_mut(),
+            }
+        }
+
+        const fn mock_gop() -> RawGraphicsOutput {
+            unsafe extern "efiapi" fn set_mode(
+                this: *mut RawGraphicsOutput,
+                mode: u32,
+            ) -> EfiStatus {
+                EfiStatus::DEVICE_ERROR
+            }
+
+            RawGraphicsOutput {
+                query_mode: None,
+                set_mode: Some(set_mode),
+                blt: None,
+                mode: null_mut(),
+            }
+        }
+
+        const fn mock_system_() -> RawSystemTable {
+            const MOCK_HEADER: Header = Header {
+                signature: RawSystemTable::SIGNATURE,
+                revision: MOCK_REVISION,
+                size: size_of::<RawSystemTable>() as u32,
+                crc32: 0,
+                reserved: 0,
+            };
+            RawSystemTable {
+                header: MOCK_HEADER,
+                firmware_vendor: null_mut(),
+                firmware_revision: MOCK_FW_REVISION,
+                console_in_handle: EfiHandle(null_mut()),
+                con_in: null_mut(),
+                console_out_handle: EfiHandle(null_mut()),
+                con_out: null_mut(),
+                console_err_handle: EfiHandle(null_mut()),
+                con_err: null_mut(),
+                runtime_services: null_mut(),
+                boot_services: null_mut(),
+                number_of_table_entries: 0,
+                configuration_table: null_mut(),
+                _pad1: [0u8; 4],
+            }
+        }
+
+        const fn to_bytes<T>(this: &T) -> &[u8] {
+            // Safety: `this` is valid by definition
+            // Lifetime is bound to `this`
+            unsafe { core::slice::from_raw_parts(this as *const T as *const u8, size_of::<T>()) }
+        }
+
+        pub unsafe fn mock_system() -> *mut RawSystemTable {
+            static mut MOCK_SYSTEM: RawSystemTable = mock_system_();
+            static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(mock_boot());
+            static mut MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(mock_run());
+            static mut MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(mock_out());
+            static mut MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(mock_gop());
+            static mut BUF: [u16; MOCK_VENDOR.len() + 1] = [0u16; MOCK_VENDOR.len() + 1];
+            MOCK_VENDOR
+                .encode_utf16()
+                .enumerate()
+                .for_each(|(i, f)| BUF[i] = f);
+
+            // Safety: We only mock once, single threaded
+            if MOCK_SYSTEM.header.crc32 == 0 {
+                let mut s = &mut MOCK_SYSTEM;
+
+                // Safety:
+                // It is important for safety/miri that references not be created
+                // slash that these pointers not be derived from them.
+                s.boot_services = addr_of!(MOCK_BOOT.0) as *mut _;
+                s.runtime_services = addr_of!(MOCK_RUN.0) as *mut _;
+                s.con_out = addr_of!(MOCK_OUT.0) as *mut _;
+                s.firmware_vendor = BUF.as_ptr();
+
+                unsafe extern "efiapi" fn locate_protocol(
+                    guid: *mut proto::Guid,
+                    key: *mut u8,
+                    out: *mut *mut u8,
+                ) -> EfiStatus {
+                    let guid = *guid;
+                    if guid == GraphicsOutput::GUID {
+                        out.write(addr_of!(MOCK_GOP) as *mut _);
+                        EfiStatus::SUCCESS
+                    } else {
+                        out.write(null_mut());
+                        EfiStatus::NOT_FOUND
+                    }
+                }
+
+                MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
+
+                MOCK_BOOT.0.header.crc32 = {
+                    let mut digest = CRC.digest();
+                    digest.update(to_bytes(&MOCK_BOOT.0));
+                    digest.finalize()
+                };
+
+                MOCK_RUN.0.header.crc32 = {
+                    let mut digest = CRC.digest();
+                    digest.update(to_bytes(&MOCK_RUN.0));
+                    digest.finalize()
+                };
+
+                s.header.crc32 = {
+                    let mut digest = CRC.digest();
+                    digest.update(to_bytes(s));
+                    digest.finalize()
+                };
+            }
+
+            addr_of_mut!(MOCK_SYSTEM)
+        }
+
+        #[repr(transparent)]
+        struct YesSync<T>(T);
+        /// Safety: yeah trust me. no
+        unsafe impl<T> Sync for YesSync<T> {}
+
+        pub fn mock() -> *mut RawSystemTable {
+            todo!();
+            null_mut()
+        }
+    }
+    use mock::mock_system;
+
     #[entry(crate = "self")]
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         let stdout = table.stdout();
@@ -200,7 +418,7 @@ mod tests {
         // setup();
         let id = 69420;
         // Safety: yes
-        let st = unsafe { RawSystemTable::mock() };
+        let st = unsafe { mock_system() };
         let image = EfiHandle(&id as *const _ as *mut _);
         // info!("{st:?}");
         let ret = efi_main(image, st);

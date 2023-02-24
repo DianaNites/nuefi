@@ -226,122 +226,11 @@ impl RawSystemTable {
         }
         Ok(())
     }
-
-    fn to_bytes(&self) -> &[u8] {
-        // Safety: `self` is valid by definition
-        // Lifetime is bound to self
-        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
-    }
-
-    const fn new_mock(header: Header) -> Self {
-        RawSystemTable {
-            header,
-            firmware_vendor: null_mut(),
-            firmware_revision: 69420,
-            console_in_handle: EfiHandle(null_mut()),
-            con_in: null_mut(),
-            console_out_handle: EfiHandle(null_mut()),
-            con_out: null_mut(),
-            console_err_handle: EfiHandle(null_mut()),
-            con_err: null_mut(),
-            runtime_services: null_mut(),
-            boot_services: null_mut(),
-            number_of_table_entries: 0,
-            configuration_table: null_mut(),
-            _pad1: [0u8; 4],
-        }
-    }
-
-    /// Mock instance of [`RawSystemTable`]
-    #[doc(hidden)]
-    pub unsafe fn mock() -> *mut Self {
-        const MOCK_VENDOR: &str = "Mock Vendor";
-        static mut BUF: &mut [u16] = &mut [0u16; MOCK_VENDOR.len() + 1];
-        MOCK_VENDOR
-            .encode_utf16()
-            .enumerate()
-            .for_each(|(i, f)| BUF[i] = f);
-
-        const MOCK_HEADER: Header = Header {
-            signature: RawSystemTable::SIGNATURE,
-            revision: Revision::new(2, 70),
-            size: size_of::<RawSystemTable>() as u32,
-            crc32: 0,
-            reserved: 0,
-        };
-        static mut MOCK_SYSTEM: RawSystemTable = RawSystemTable::new_mock(MOCK_HEADER);
-
-        static mut MOCK_BOOT: YesSync<RawBootServices> = YesSync(RawBootServices::mock());
-        static mut MOCK_RUN: YesSync<RawRuntimeServices> = YesSync(RawRuntimeServices::mock());
-        static mut MOCK_OUT: YesSync<RawSimpleTextOutput> = YesSync(RawSimpleTextOutput::mock());
-        static mut MOCK_GOP: YesSync<RawGraphicsOutput> = YesSync(RawGraphicsOutput::mock());
-
-        // Safety: We only mock once, single threaded
-        if MOCK_SYSTEM.header.crc32 == 0 {
-            let mut s = &mut MOCK_SYSTEM;
-
-            // Safety:
-            // It is important for safety/miri that references not be created
-            // slash that these pointers not be derived from them.
-            s.boot_services = core::ptr::addr_of!(MOCK_BOOT.0) as *mut _;
-            s.runtime_services = core::ptr::addr_of!(MOCK_RUN.0) as *mut _;
-            s.con_out = core::ptr::addr_of!(MOCK_OUT.0) as *mut _;
-            s.firmware_vendor = BUF.as_ptr();
-
-            unsafe extern "efiapi" fn locate_protocol(
-                guid: *mut proto::Guid,
-                key: *mut u8,
-                out: *mut *mut u8,
-            ) -> EfiStatus {
-                let guid = *guid;
-                if guid == GraphicsOutput::GUID {
-                    out.write(core::ptr::addr_of!(MOCK_GOP) as *mut _);
-                    EfiStatus::SUCCESS
-                } else {
-                    out.write(null_mut());
-                    EfiStatus::NOT_FOUND
-                }
-            }
-
-            // To update pre-generated CRCs
-            #[cfg(no)]
-            {
-                let mut digest = CRC.digest();
-                digest.update(&MOCK_BOOT.0.to_bytes());
-                let crc = digest.finalize();
-                panic!("crc = {crc:#X}");
-            }
-
-            MOCK_BOOT.0.locate_protocol = Some(locate_protocol);
-
-            MOCK_BOOT.0.header.crc32 = {
-                let mut digest = CRC.digest();
-                digest.update(MOCK_BOOT.0.to_bytes());
-                digest.finalize()
-            };
-
-            MOCK_RUN.0.header.crc32 = {
-                let mut digest = CRC.digest();
-                digest.update(MOCK_RUN.0.to_bytes());
-                digest.finalize()
-            };
-
-            s.header.crc32 = {
-                let mut digest = CRC.digest();
-                digest.update(s.to_bytes());
-                digest.finalize()
-            };
-        }
-
-        core::ptr::addr_of_mut!(MOCK_SYSTEM)
-    }
 }
 
-#[repr(transparent)]
-struct YesSync<T>(T);
-/// Safety: yeah trust me. no
-unsafe impl<T> Sync for YesSync<T> {}
-
+/// Raw structure of the UEFI Boot Services table
+/// NOTE: It is important for safety that all fields be nullable.
+/// In particular, this means fn pointers MUST be wrapped in [`Option`].
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawBootServices {
@@ -518,27 +407,6 @@ pub struct RawBootServices {
 
 impl RawBootServices {
     pub const SIGNATURE: u64 = 0x56524553544f4f42;
-
-    fn to_bytes(&self) -> &[u8] {
-        // Safety: `self` is valid by definition
-        // Lifetime is bound to self
-        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
-    }
-
-    const fn mock() -> Self {
-        const MOCK_HEADER: Header = Header {
-            signature: RawBootServices::SIGNATURE,
-            revision: Revision::new(2, 70),
-            size: size_of::<RawBootServices>() as u32,
-            crc32: 0,
-            reserved: 0,
-        };
-        let b = [0u8; size_of::<Self>()];
-        // Safety:
-        let mut t: RawBootServices = unsafe { core::mem::transmute::<_, _>(b) };
-        t.header = MOCK_HEADER;
-        t
-    }
 }
 
 #[derive(Debug)]
@@ -550,27 +418,6 @@ pub struct RawRuntimeServices {
 
 impl RawRuntimeServices {
     pub const SIGNATURE: u64 = 0x56524553544e5552;
-
-    fn to_bytes(&self) -> &[u8] {
-        // Safety: `self` is valid by definition
-        // Lifetime is bound to self
-        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
-    }
-
-    const fn mock() -> Self {
-        const MOCK_HEADER: Header = Header {
-            signature: RawRuntimeServices::SIGNATURE,
-            revision: Revision::new(2, 70),
-            size: size_of::<RawRuntimeServices>() as u32,
-            crc32: 0,
-            reserved: 0,
-        };
-        let b = [0u8; size_of::<Self>()];
-        // Safety:
-        let mut t: RawRuntimeServices = unsafe { core::mem::transmute::<_, _>(b) };
-        t.header = MOCK_HEADER;
-        t
-    }
 }
 
 #[cfg(test)]

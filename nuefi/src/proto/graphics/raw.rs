@@ -140,21 +140,6 @@ pub struct RawGraphicsOutput {
     pub mode: *mut RawGraphicsMode,
 }
 
-impl RawGraphicsOutput {
-    pub(crate) const fn mock() -> Self {
-        unsafe extern "efiapi" fn set_mode(this: *mut RawGraphicsOutput, mode: u32) -> EfiStatus {
-            EfiStatus::DEVICE_ERROR
-        }
-
-        Self {
-            query_mode: None,
-            set_mode: Some(set_mode),
-            blt: None,
-            mode: null_mut(),
-        }
-    }
-}
-
 impl fmt::Debug for RawGraphicsOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RawGraphicsOutput")

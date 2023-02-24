@@ -55,38 +55,3 @@ pub struct RawSimpleTextOutput {
         Option<unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus>,
     pub mode: *mut RawTextMode,
 }
-
-impl RawSimpleTextOutput {
-    pub(crate) const fn mock() -> Self {
-        unsafe extern "efiapi" fn reset(
-            this: *mut RawSimpleTextOutput,
-            extended: bool,
-        ) -> EfiStatus {
-            EfiStatus::SUCCESS
-        }
-
-        unsafe extern "efiapi" fn output_string(
-            this: *mut RawSimpleTextOutput,
-            string: Str16,
-        ) -> EfiStatus {
-            EfiStatus::SUCCESS
-        }
-
-        unsafe extern "efiapi" fn clear_screen(this: *mut RawSimpleTextOutput) -> EfiStatus {
-            EfiStatus::SUCCESS
-        }
-
-        Self {
-            reset: Some(reset),
-            output_string: Some(output_string),
-            test_string: None,
-            query_mode: None,
-            set_mode: None,
-            set_attribute: None,
-            clear_screen: Some(clear_screen),
-            set_cursor_position: None,
-            enable_cursor: None,
-            mode: null_mut(),
-        }
-    }
-}
