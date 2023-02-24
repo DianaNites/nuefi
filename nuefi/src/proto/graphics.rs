@@ -64,6 +64,7 @@ impl<'table> GraphicsOutput<'table> {
     pub fn modes(&self) -> impl Iterator<Item = Result<GraphicsMode>> + '_ {
         let mut mode = 0;
         core::iter::from_fn(move || {
+            // FIXME: Is this right? should it be `- 1`?
             if mode >= self.max_mode() {
                 return None;
             }
