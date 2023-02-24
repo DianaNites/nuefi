@@ -1,17 +1,17 @@
 error: Duplicate attribute `exit_prompt`
- --> tests/sig7-fail.rs:9:5
+ --> tests/entry/fail/duplicate.rs:4:27
   |
-9 |     exit_prompt,
-  |     ^^^^^^^^^^^
+4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420))]
+  |                           ^^^^^^^^^^^
 
 error: Duplicate attribute `log`
-  --> tests/sig7-fail.rs:10:5
-   |
-10 |     log,
-   |     ^^^
+ --> tests/entry/fail/duplicate.rs:4:40
+  |
+4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420))]
+  |                                        ^^^
 
 error: Duplicate attribute `delay`
-  --> tests/sig7-fail.rs:12:5
-   |
-12 |     delay(420)
-   |     ^^^^^^^^^^
+ --> tests/entry/fail/duplicate.rs:4:56
+  |
+4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420))]
+  |                                                        ^^^^^^^^^^

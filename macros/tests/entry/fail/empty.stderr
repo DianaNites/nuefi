@@ -1,12 +1,12 @@
 error: Incorrect function signature, expected `fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
        Try `fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
- --> tests/sig1-fail.rs:5:1
+ --> tests/entry/fail/empty.rs:5:1
   |
 5 | fn e_main() {}
   | ^^^^^^^^^^^
 
 error[E0308]: mismatched types
- --> tests/sig1-fail.rs:5:4
+ --> tests/entry/fail/empty.rs:5:4
   |
 5 | fn e_main() {}
   |    ^^^^^^ incorrect number of function parameters
@@ -16,7 +16,7 @@ error[E0308]: mismatched types
   = note: when the arguments and return types match, functions can be coerced to function pointers
 
 error[E0061]: this function takes 0 arguments but 2 arguments were supplied
- --> tests/sig1-fail.rs:5:4
+ --> tests/entry/fail/empty.rs:5:4
   |
 4 | #[entry]
   | --------
@@ -27,13 +27,13 @@ error[E0061]: this function takes 0 arguments but 2 arguments were supplied
   |    ^^^^^^
   |
 note: function defined here
- --> tests/sig1-fail.rs:5:4
+ --> tests/entry/fail/empty.rs:5:4
   |
 5 | fn e_main() {}
   |    ^^^^^^
 
 error[E0308]: mismatched types
- --> tests/sig1-fail.rs:4:1
+ --> tests/entry/fail/empty.rs:4:1
   |
 4 | #[entry]
   | ^^^^^^^^

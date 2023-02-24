@@ -1,11 +1,11 @@
 error: Cannot be a method
-  --> tests/sig4-fail.rs:10:15
+  --> tests/entry/fail/method.rs:10:15
    |
 10 |     fn e_main(&self, table: ()) {}
    |               ^^^^^
 
 error: `const` items in this context need a name
- --> tests/sig4-fail.rs:9:5
+ --> tests/entry/fail/method.rs:9:5
   |
 9 |     #[entry]
   |     ^^^^^^^^ `_` is not a valid name for this `const` item
@@ -13,7 +13,7 @@ error: `const` items in this context need a name
   = note: this error originates in the attribute macro `entry` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0425]: cannot find value `e_main` in this scope
-  --> tests/sig4-fail.rs:10:8
+  --> tests/entry/fail/method.rs:10:8
    |
 10 |     fn e_main(&self, table: ()) {}
    |        ^^^^^^ help: a function with a similar name exists: `main`
@@ -22,7 +22,7 @@ error[E0425]: cannot find value `e_main` in this scope
    | --------- similarly named function `main` defined here
 
 error[E0425]: cannot find function `e_main` in this scope
-  --> tests/sig4-fail.rs:10:8
+  --> tests/entry/fail/method.rs:10:8
    |
 10 |     fn e_main(&self, table: ()) {}
    |        ^^^^^^ help: a function with a similar name exists: `main`
