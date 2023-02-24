@@ -17,6 +17,7 @@ use crate::{
     EfiHandle,
 };
 
+/// The CRC used by the UEFI tables
 pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 
 /// UEFI Header Revision
@@ -61,6 +62,8 @@ pub struct Header {
 
     /// 32-bit CRC for the table.
     /// This is set to 0 and computed for `size` bytes.
+    ///
+    /// See [`CRC`]
     pub crc32: u32,
 
     /// Reserved field. 0.
