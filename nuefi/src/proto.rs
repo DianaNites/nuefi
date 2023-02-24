@@ -71,6 +71,10 @@ impl core::fmt::Debug for Guid {
 }
 
 impl Guid {
+    pub(crate) const fn to_uuid(self) -> Uuid {
+        Uuid::from_bytes_me(self.0)
+    }
+
     /// # Safety
     ///
     /// - MUST be a valid protocol GUID

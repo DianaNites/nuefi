@@ -111,7 +111,16 @@ impl<'table> BootServices<'table> {
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (lp)(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
-            // Safety: Success means out is valid
+            assert!(
+                !out.is_null(),
+                "UEFI locate_protocol returned success, but the protocol was null. \
+                The Protocol was \"{}\" with GUID `{}`",
+                T::NAME,
+                T::GUID.to_uuid()
+            );
+            // Safety:
+            // - Success means `out` is valid
+            // - We assert its not null just in case.
             unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
         } else if ret == EfiStatus::NOT_FOUND {
             Ok(None)
