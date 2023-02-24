@@ -33,6 +33,9 @@ pub unsafe trait Protocol<'table> {
     /// Protocol GUID
     const GUID: Guid;
 
+    /// Protocol Name
+    const NAME: &'static str;
+
     /// Raw type of this Protocol
     type Raw;
 

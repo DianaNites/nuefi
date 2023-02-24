@@ -2,6 +2,7 @@ use nuuid::Uuid;
 use proc_macro::TokenStream;
 use quote::{__private::Span, format_ident, quote};
 use syn::{
+    ext::IdentExt,
     parse_macro_input,
     spanned::Spanned,
     AttributeArgs,
@@ -209,12 +210,16 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         error_def
     };
 
+    let name = imp_struct.unraw().to_string();
+
     let expanded = quote! {
         #input
 
         // #[cfg(no)]
         unsafe impl<'table> #krate::proto::Protocol<'table> for #imp_struct #imp_generics {
             const GUID: #krate::proto::Guid = #guid_bytes;
+
+            const NAME: &'static str = #name;
 
             type Raw = #imp_raw_ty_ident;
 

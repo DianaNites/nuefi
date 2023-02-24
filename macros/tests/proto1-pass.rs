@@ -49,6 +49,11 @@ fn main() {
     let s = Uuid::from_bytes_me(unsafe { p.guid().to_bytes() }).to_str(&mut buf);
     assert_eq!(s, GUID, "Protocol macro didn't do GUID correctly");
 
+    let name = "Proto";
+
+    // assert_eq!(Proto::NAME, name, "Protocol macro didn't do NAME correctly");
+    assert_eq!(Proto::NAME, name, "Protocol macro didn't do NAME correctly");
+
     // println!("{:?}", p.guid());
 
     // let x: Guid = unsafe {
