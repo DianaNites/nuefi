@@ -192,7 +192,7 @@ pub struct RawSystemTable {
 }
 
 impl RawSystemTable {
-    const SIGNATURE: u64 = 0x5453595320494249;
+    pub const SIGNATURE: u64 = 0x5453595320494249;
 
     /// Validate the table
     ///
@@ -514,7 +514,7 @@ pub struct RawBootServices {
 }
 
 impl RawBootServices {
-    const SIGNATURE: u64 = 0x56524553544f4f42;
+    pub const SIGNATURE: u64 = 0x56524553544f4f42;
 
     fn to_bytes(&self) -> &[u8] {
         // Safety: `self` is valid by definition
@@ -546,7 +546,7 @@ pub struct RawRuntimeServices {
 }
 
 impl RawRuntimeServices {
-    const SIGNATURE: u64 = 0x56524553544e5552;
+    pub const SIGNATURE: u64 = 0x56524553544e5552;
 
     fn to_bytes(&self) -> &[u8] {
         // Safety: `self` is valid by definition
