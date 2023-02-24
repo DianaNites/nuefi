@@ -1,4 +1,4 @@
-//! Test that the Protocol macro works correctly
+//! Test that the Protocol macro basic features works correctly
 use core::ptr::null_mut;
 
 use nuefi::{
