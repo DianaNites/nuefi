@@ -219,7 +219,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
             type Raw = #imp_raw_ty_ident;
 
             unsafe fn from_raw(this: #imp_first_field) -> Self {
-                #imp_struct::new(this)
+                <#imp_struct>::new(this)
             }
         }
     };
