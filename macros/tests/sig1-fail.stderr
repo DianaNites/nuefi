@@ -31,10 +31,6 @@ note: function defined here
   |
 5 | fn e_main() {}
   |    ^^^^^^
-help: remove the extra arguments
-  |
-4 | #[entry]
-  |
 
 error[E0308]: mismatched types
  --> tests/sig1-fail.rs:4:1
