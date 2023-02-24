@@ -28,7 +28,7 @@ extern "Rust" {
 fn main() {
     let x = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
     assert!(
-        !matches!(__INTERNAL_NUEFI_YOU_MUST_USE_MACRO, Some(false)),
-        "Protocol Macro incorrectly handled __INTERNAL_NUEFI_YOU_MUST_USE_MACRO"
+        matches!(x, Some(false)),
+        "Protocol Macro incorrectly handled `__INTERNAL_NUEFI_YOU_MUST_USE_MACRO`. Value was {x:?}"
     );
 }
