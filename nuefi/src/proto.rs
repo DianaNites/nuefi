@@ -22,6 +22,9 @@ pub type Str16 = *const u16;
 
 /// Defines a UEFI Protocol
 ///
+/// See [`crate::Protocol`] for how to implement this.
+/// This is the only safe way to implement this trait.
+///
 /// # Safety
 ///
 /// This trait is unsafe because an incorrect GUID will
