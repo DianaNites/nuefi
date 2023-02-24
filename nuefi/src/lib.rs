@@ -44,8 +44,6 @@ static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
 
-pub type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
-
 /// Get the global [`SystemTable<Boot>`], if available
 fn get_boot_table() -> Option<SystemTable<Boot>> {
     let table = TABLE.load(Ordering::Acquire);
