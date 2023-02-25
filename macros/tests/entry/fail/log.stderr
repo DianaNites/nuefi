@@ -1,0 +1,53 @@
+error: Unexpected argument `fake`
+ --> tests/entry/fail/log.rs:8:22
+  |
+8 |     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+  |                      ^^^^
+
+error: Unexpected argument `faker`
+ --> tests/entry/fail/log.rs:8:28
+  |
+8 |     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+  |                            ^^^^^
+
+error: Unexpected argument `fakest`
+ --> tests/entry/fail/log.rs:8:37
+  |
+8 |     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+  |                                     ^^^^^^^^^^^
+
+error: Duplicate attribute `exclude`
+ --> tests/entry/fail/log.rs:8:63
+  |
+8 |     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+  |                                                               ^^^^^^^
+
+error: Unexpected argument `exclude`
+ --> tests/entry/fail/log.rs:8:76
+  |
+8 |     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+  |                                                                            ^^^^^^^^^^^^
+
+error: Duplicate attribute `log`
+ --> tests/entry/fail/log.rs:9:5
+  |
+9 |     log(color,  all),
+  |     ^^^
+
+error: Duplicate attribute `log`
+  --> tests/entry/fail/log.rs:10:5
+   |
+10 |     log(color,),
+   |     ^^^
+
+error: Duplicate attribute `log`
+  --> tests/entry/fail/log.rs:11:5
+   |
+11 |     log, log
+   |     ^^^
+
+error: Duplicate attribute `log`
+  --> tests/entry/fail/log.rs:11:10
+   |
+11 |     log, log
+   |          ^^^

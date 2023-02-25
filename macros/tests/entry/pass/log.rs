@@ -8,7 +8,7 @@ use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 #[entry(
     // Test that the full syntax works as documented
     // TODO: fail-test for `log()`? or pass test for it?
-    log(color,  all, exclude("", "")),
+    log(color, all, exclude("", "")),
 )]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())

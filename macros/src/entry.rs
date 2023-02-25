@@ -69,6 +69,19 @@ impl Config {
 struct Log {
     /// Whether logging is colorful or not
     color: bool,
+
+    /// Whether all targets are enabled
+    ///
+    /// Mutually exclusive with `targets`
+    all: bool,
+
+    /// Enable just these targets
+    ///
+    /// Mutually exclusive with `all`
+    targets: Option<Vec<String>>,
+
+    /// Exclude these targets
+    exclude: Option<Vec<String>>,
 }
 
 impl Log {
@@ -76,6 +89,9 @@ impl Log {
         Self {
             //
             color: false,
+            all: false,
+            targets: None,
+            exclude: None,
         }
     }
 }
@@ -136,26 +152,69 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
 fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
     #[allow(unreachable_code)]
     if i == "log" {
-        if opts.log.is_some() {
-            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
-            errors.push(Error::new(list.span(), "Mixed `log` and `log(OPTIONS)`"));
-        }
+        let mut log = Log::new();
+        let mut exclude: Vec<String> = Vec::new();
+
         for a in &list.nested {
             match a {
-                NestedMeta::Meta(_) => todo!(),
-                NestedMeta::Lit(_) => todo!(),
-            }
-        }
-        // todo!("Log opts");
-        #[cfg(no)]
-        {
-            if i == "color" {
-                if handle_color {
-                    errors.push(Error::new(p.span(), "Duplicate attribute `color`"));
+                NestedMeta::Meta(Meta::Path(p)) => {
+                    if let Some(i) = p.get_ident() {
+                        if i == "color" {
+                            if log.color {
+                                errors.push(Error::new(p.span(), "Duplicate attribute `color`"));
+                            }
+                            log.color = true;
+                        } else if i == "all" {
+                        } else {
+                            errors
+                                .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
+                        }
+                    }
                 }
-                handle_color = true;
+                NestedMeta::Meta(Meta::List(li)) => {
+                    if let Some(i) = li.path.get_ident() {
+                        if i == "exclude" {
+                            if log.exclude.is_some() {
+                                errors.push(Error::new(
+                                    li.path.span(),
+                                    "Duplicate attribute `exclude`",
+                                ));
+                            } else {
+                                log.exclude.insert(exclude.clone()).push(String::new());
+                            }
+                        } else {
+                            errors
+                                .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
+                        }
+                    }
+                    // panic!("{a:#?}");
+                }
+                // NestedMeta::Lit(_) => {}
+                NestedMeta::Meta(m) => {
+                    let path = m.path();
+                    let span = path.span();
+                    if let Some(i) = path.get_ident() {
+                        errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
+                    } else {
+                        errors.push(Error::new(
+                            m.span(),
+                            format!("Unexpected argument `{:?}`", path),
+                        ));
+                    }
+                }
+                e => {
+                    errors.push(Error::new(
+                        e.span(),
+                        format!("Unexpected argument `{:?}`", e),
+                    ));
+                }
             }
         }
+
+        if opts.log.replace(log).is_some() {
+            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
+        }
+
         true
     } else {
         false
@@ -164,7 +223,6 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
 
 fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     let mut exit_prompt = false;
-    let mut handle_log = false;
 
     for arg in args {
         #[allow(clippy::if_same_then_else)]
@@ -212,10 +270,10 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                         }
                         exit_prompt = true;
                     } else if i == "log" {
-                        if handle_log {
+                        let log = Log::new();
+                        if opts.log.replace(log).is_some() {
                             errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
                         }
-                        handle_log = true;
                     } else if i == "alloc" {
                         if opts.alloc {
                             errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));

@@ -5,8 +5,10 @@ use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
 #[entry(
     // Test duplicates of the same, but different forms
-    log(color,  all,),
-    log,
+    log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
+    log(color,  all),
+    log(color,),
+    log, log
 )]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())
