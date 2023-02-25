@@ -161,6 +161,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
     if i == "log" {
         let mut log = Log::new();
         let mut exclude: Vec<String> = Vec::new();
+        let mut targets: Vec<String> = Vec::new();
 
         // TODO: Rest of log opts
         for a in &list.nested {
@@ -188,7 +189,60 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                     "Duplicate attribute `exclude`",
                                 ));
                             } else {
-                                log.exclude.insert(exclude.clone()).push(String::new());
+                                for f in &li.nested {
+                                    match f {
+                                        syn::NestedMeta::Meta(m) => {
+                                            errors.push(Error::new(
+                                                li.span(),
+                                                format!("Expected value: {:?}", li.nested),
+                                            ));
+                                        }
+                                        syn::NestedMeta::Lit(lit) => match lit {
+                                            Lit::Str(lit) => {
+                                                log.exclude
+                                                    .insert(exclude.clone())
+                                                    .push(lit.value());
+                                            }
+                                            v => {
+                                                errors.push(Error::new(
+                                                    lit.span(),
+                                                    format!("Expected string, got: {:?}", f),
+                                                ));
+                                            }
+                                        },
+                                    }
+                                }
+                            }
+                        } else if i == "targets" {
+                            if log.targets.is_some() {
+                                errors.push(Error::new(
+                                    li.path.span(),
+                                    "Duplicate attribute `targets`",
+                                ));
+                            } else {
+                                for f in &li.nested {
+                                    match f {
+                                        syn::NestedMeta::Meta(m) => {
+                                            errors.push(Error::new(
+                                                li.span(),
+                                                format!("Expected value: {:?}", li.nested),
+                                            ));
+                                        }
+                                        syn::NestedMeta::Lit(lit) => match lit {
+                                            Lit::Str(lit) => {
+                                                log.targets
+                                                    .insert(targets.clone())
+                                                    .push(lit.value());
+                                            }
+                                            v => {
+                                                errors.push(Error::new(
+                                                    lit.span(),
+                                                    format!("Expected string, got: {:?}", f),
+                                                ));
+                                            }
+                                        },
+                                    }
+                                }
                             }
                         } else {
                             errors
