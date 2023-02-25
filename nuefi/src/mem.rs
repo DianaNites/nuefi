@@ -103,7 +103,13 @@ impl MemoryDescriptor {
 
 /// A UEFI memory allocator
 ///
+/// Relies on [`BootServices::allocate_pool`][allocate_pool]
+/// and [`BootServices::free_pool`][free_pool]
+///
 /// After ExitBootServices is called, all allocations will fail.
+///
+/// [allocate_pool]: crate::table::BootServices::allocate_pool
+/// [free_pool]: crate::table::BootServices::free_pool
 pub struct UefiAlloc {
     _priv: (),
 }
