@@ -393,16 +393,6 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     ));
                 }
             }
-            #[cfg(no)]
-            syn::NestedMeta::Meta(m) => {
-                let name = m.path().get_ident();
-                let span = m.span();
-                if let Some(name) = name {
-                    errors.push(Error::new(span, format!("Unexpected argument `{}`", name)));
-                } else {
-                    errors.push(Error::new(span, format!("Unexpected argument `{:?}`", m)));
-                }
-            }
             syn::NestedMeta::Lit(l) => {
                 errors.push(Error::new(l.span(), format!("Unknown literal: `{:?}`", l)));
             }
