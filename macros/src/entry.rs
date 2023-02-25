@@ -49,6 +49,10 @@ struct Config {
     /// `entry(alloc_error)`
     alloc_error: bool,
 
+    /// Whether to generate and register a default `UefiLogger`
+    ///
+    /// - `entry(log)`
+    /// - `entry(log(..))`
     log: Option<Log>,
 }
 
