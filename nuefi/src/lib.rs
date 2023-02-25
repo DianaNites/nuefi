@@ -99,14 +99,12 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         ) -> error::Result<()>;
         static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool>;
         static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64>;
-        static __INTERNAL_NUEFI_LOG: Option<bool>;
     }
     #[cfg(miri)]
-    let (ext, dur, log) = {
+    let (ext, dur) = {
         (
             Some(false), //
             Some(30),    //
-            Some(true),
         )
     };
 
@@ -118,16 +116,6 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     // Safety: Unsure how it can be unsafe tbh.
     let dur = unsafe { __INTERNAL_NUEFI_EXIT_DURATION };
 
-    #[cfg(not(miri))]
-    // Safety: Unsure how it can be unsafe tbh.
-    // let log = unsafe { __INTERNAL_NUEFI_LOG };
-    let log = Some(true);
-
-    let log = if let Some(log) = log {
-        log
-    } else {
-        return EfiStatus::INVALID_PARAMETER;
-    };
     if image.0.is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
     }
@@ -145,20 +133,14 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     // `system_table` is non-null, we trust it from firmware.
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
 
-    if log {
-        info!("Returned from user main with status {ret:?}");
-    }
+    info!("Returned from user main with status {ret:?}");
     match ret {
         Ok(()) => EfiStatus::SUCCESS,
         Err(e) => {
             if let Some(table) = get_boot_table() {
-                if log {
-                    error!("UEFI User main exited with error: {}", e);
-                }
+                error!("UEFI User main exited with error: {}", e);
                 if let Some(dur) = dur {
-                    if log {
-                        error!("Waiting {dur} seconds");
-                    }
+                    error!("Waiting {dur} seconds");
                     let _ = table.boot().stall(Duration::from_secs(dur));
                 }
                 // TODO: Exit prompt
