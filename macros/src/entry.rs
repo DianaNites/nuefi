@@ -432,13 +432,19 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let ident = &sig.ident;
     let attrs = &input.attrs;
     let params = &sig.inputs;
+    // TODO: sig.output
     if params.is_empty() {
         errors.push(Error::new(
             sig.span(),
-            format!("Incorrect function signature, expected `fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`\
+            // TODO: Only include return if its actually incorrect?
+            format!(
+                "Incorrect function signature, \
+            expected two arguments of types `EfiHandle` and `SystemTable<Boot>`\
 \n\
 Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
-",ident),
+",
+                ident
+            ),
         ));
     }
     if params.len() == 1 {
@@ -478,14 +484,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             }
         };
     }
-
-    // NOTE: Keep `MainCheck` up with actual definition.
-    // This is breaking to change.
-    let chk = quote! {
-        type MainCheck = fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>;
-
-        const _chk: MainCheck = #ident;
-    };
 
     let exit_dur = if let Some(d) = opts.delay {
         quote! {
@@ -587,8 +585,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 table::Boot,
                 error,
             };
-
-            #chk
 
             #[no_mangle]
             pub static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool> = Some(false);

@@ -1,19 +1,9 @@
-error: Incorrect function signature, expected `fn(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
+error: Incorrect function signature, expected two arguments of types `EfiHandle` and `SystemTable<Boot>`
        Try `fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
  --> tests/entry/fail/empty.rs:5:1
   |
 5 | fn e_main() {}
   | ^^^^^^^^^^^
-
-error[E0308]: mismatched types
- --> tests/entry/fail/empty.rs:5:4
-  |
-5 | fn e_main() {}
-  |    ^^^^^^ incorrect number of function parameters
-  |
-  = note: expected fn pointer `fn(EfiHandle, SystemTable<Boot>) -> Result<(), UefiError>`
-                found fn item `fn() {e_main}`
-  = note: when the arguments and return types match, functions can be coerced to function pointers
 
 error[E0061]: this function takes 0 arguments but 2 arguments were supplied
  --> tests/entry/fail/empty.rs:5:4

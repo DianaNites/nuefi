@@ -10,16 +10,6 @@ error: Unexpected argument: `extra2`
 5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
   |                                                                     ^^^^^^^^^^
 
-error[E0308]: mismatched types
- --> tests/entry/fail/extra.rs:5:4
-  |
-5 | fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>, extra: (), extra2: ()) -> Result<()> {
-  |    ^^^^^^ incorrect number of function parameters
-  |
-  = note: expected fn pointer `fn(EfiHandle, SystemTable<Boot>) -> Result<_, _>`
-                found fn item `fn(EfiHandle, SystemTable<Boot>, (), ()) -> Result<_, _> {e_main}`
-  = note: when the arguments and return types match, functions can be coerced to function pointers
-
 error[E0061]: this function takes 4 arguments but 2 arguments were supplied
  --> tests/entry/fail/extra.rs:5:4
   |
