@@ -5,7 +5,7 @@ use NotNuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
 
 #[entry(
     // Test that it can use our `NotNuefi` import
-    crate = "NotNuefi",
+    crate("NotNuefi"),
 
     // Test that the basic syntax works as documented
     log,

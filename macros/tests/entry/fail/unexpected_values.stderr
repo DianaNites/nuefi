@@ -1,15 +1,15 @@
 error[E0433]: failed to resolve: use of undeclared crate or module `bytes`
  --> tests/entry/fail/unexpected_values.rs:4:1
   |
-4 | #[entry(crate = "bytes")]
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^ use of undeclared crate or module `bytes`
+4 | #[entry(crate("bytes"))]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^ use of undeclared crate or module `bytes`
   |
   = note: this error originates in the attribute macro `entry` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0432]: unresolved import `bytes`
  --> tests/entry/fail/unexpected_values.rs:4:1
   |
-4 | #[entry(crate = "bytes")]
-  | ^^^^^^^^^^^^^^^^^^^^^^^^^ use of undeclared crate or module `bytes`
+4 | #[entry(crate("bytes"))]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^ use of undeclared crate or module `bytes`
   |
   = note: this error originates in the attribute macro `entry` (in Nightly builds, run with -Z macro-backtrace for more info)

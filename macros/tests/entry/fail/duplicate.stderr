@@ -1,17 +1,17 @@
 error: Duplicate attribute `log`
  --> tests/entry/fail/duplicate.rs:4:25
   |
-4 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "dup")]
+4 | #[entry(log, delay(69), log, delay(420), crate("nuefi"), crate("dup"))]
   |                         ^^^
 
 error: Duplicate attribute `delay`
  --> tests/entry/fail/duplicate.rs:4:30
   |
-4 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "dup")]
+4 | #[entry(log, delay(69), log, delay(420), crate("nuefi"), crate("dup"))]
   |                              ^^^^^^^^^^
 
 error: Duplicate attribute `crate`
- --> tests/entry/fail/duplicate.rs:4:59
+ --> tests/entry/fail/duplicate.rs:4:58
   |
-4 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "dup")]
-  |                                                           ^^^^^^^^^^^^^
+4 | #[entry(log, delay(69), log, delay(420), crate("nuefi"), crate("dup"))]
+  |                                                          ^^^^^^^^^^^^

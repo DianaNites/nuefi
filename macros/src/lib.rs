@@ -13,7 +13,7 @@ mod proto;
 ///
 /// # Options
 ///
-/// - `crate = "name"`.
+/// - `crate("name")`.
 ///     - Changes the root crate used to reference types.
 ///     Here you can see we changed `uefi` to `nuefi`, but the macro
 ///     would still use `uefi` and fail to compile.

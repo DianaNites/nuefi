@@ -101,17 +101,31 @@ impl Log {
     }
 }
 
-fn krate(i: &Ident, meta: &MetaNameValue, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn krate(i: &Ident, meta: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
     if i == "crate" {
-        if let Lit::Str(s) = &meta.lit {
-            match opts.krate {
-                Some(_) => errors.push(Error::new(meta.span(), "Duplicate attribute `crate`")),
-                None => {
-                    opts.krate.replace(format_ident!("{}", s.value()));
+        if let Some(f) = meta.nested.first() {
+            match f {
+                NestedMeta::Meta(m) => {
+                    errors.push(Error::new(
+                        meta.span(),
+                        format!("Expected value: {:?}", meta.nested),
+                    ));
                 }
+                NestedMeta::Lit(li) => match li {
+                    Lit::Str(lit) => match opts.krate {
+                        Some(_) => {
+                            errors.push(Error::new(meta.span(), "Duplicate attribute `crate`"))
+                        }
+                        None => {
+                            opts.krate.replace(format_ident!("{}", lit.value()));
+                        }
+                    },
+                    v => {
+                        errors.push(Error::new(meta.nested.span(), "Expected string literal"));
+                        errors.push(Error::new(li.span(), "Expected string literal"));
+                    }
+                },
             }
-        } else {
-            errors.push(Error::new(meta.lit.span(), "Expected string literal"));
         }
         true
     } else {
@@ -349,7 +363,11 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
         match &arg {
             NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
-                    if krate(i, m, errors, opts) {
+                    if i == "crate" {
+                        errors.push(Error::new(
+                            m.span(),
+                            r#"Attribute `crate` expected value. Try `crate("VALUE")`"#,
+                        ));
                     } else {
                         errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
                     }
@@ -363,8 +381,8 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
             NestedMeta::Meta(Meta::List(l)) => {
                 if let Some(i) = l.path.get_ident() {
                     if delay(i, l, errors, opts) {
-                        //
                     } else if log(i, l, errors, opts) {
+                    } else if krate(i, l, errors, opts) {
                     } else {
                         errors.push(Error::new(
                             l.span(),

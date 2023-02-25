@@ -1,11 +1,11 @@
 error: Expected string literal
- --> tests/entry/fail/unexpected_types.rs:4:17
+ --> tests/entry/fail/unexpected_types.rs:4:15
   |
-4 | #[entry(crate = b"bytes", fake = true)]
-  |                 ^^^^^^^^
+4 | #[entry(crate(b"bytes"), fake = true)]
+  |               ^^^^^^^^
 
 error: Unexpected argument `fake`
- --> tests/entry/fail/unexpected_types.rs:4:27
+ --> tests/entry/fail/unexpected_types.rs:4:26
   |
-4 | #[entry(crate = b"bytes", fake = true)]
-  |                           ^^^^^^^^^^^
+4 | #[entry(crate(b"bytes"), fake = true)]
+  |                          ^^^^^^^^^^^
