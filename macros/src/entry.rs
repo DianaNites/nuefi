@@ -13,6 +13,7 @@ use syn::{
     ItemFn,
     Lit,
     Meta,
+    MetaList,
     MetaNameValue,
     NestedMeta,
     Pat,
@@ -76,6 +77,44 @@ fn krate(i: &Ident, meta: &MetaNameValue, errors: &mut Vec<Error>, opts: &mut Co
     }
 }
 
+fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+    if i == "delay" {
+        if let Some(f) = list.nested.first() {
+            match f {
+                syn::NestedMeta::Meta(m) => {
+                    errors.push(Error::new(
+                        list.span(),
+                        format!("Expected value: {:?}", list.nested),
+                    ));
+                }
+                syn::NestedMeta::Lit(li) => match li {
+                    Lit::Int(lit) => {
+                        if let Ok(lit) = lit.base10_parse::<u64>() {
+                            if opts.delay.replace(lit).is_some() {
+                                errors.push(Error::new(list.span(), "Duplicate attribute `delay`"));
+                            }
+                        }
+                    }
+                    v => {
+                        errors.push(Error::new(
+                            li.span(),
+                            format!("Expected integer, got: {:?}", f),
+                        ));
+                    }
+                },
+            }
+        } else {
+            errors.push(Error::new(
+                list.span(),
+                format!("Expected value: {:?}", list.nested),
+            ));
+        }
+        true
+    } else {
+        false
+    }
+}
+
 fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     let mut exit_prompt = false;
     let mut handle_log = false;
@@ -98,40 +137,8 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
             }
             syn::NestedMeta::Meta(Meta::List(l)) => {
                 if let Some(i) = l.path.get_ident() {
-                    if i == "delay" {
-                        if let Some(f) = l.nested.first() {
-                            match f {
-                                syn::NestedMeta::Meta(m) => {
-                                    errors.push(Error::new(
-                                        l.span(),
-                                        format!("Expected value: {:?}", l.nested),
-                                    ));
-                                }
-                                syn::NestedMeta::Lit(li) => match li {
-                                    Lit::Int(lit) => {
-                                        if let Ok(lit) = lit.base10_parse::<u64>() {
-                                            if opts.delay.replace(lit).is_some() {
-                                                errors.push(Error::new(
-                                                    l.span(),
-                                                    "Duplicate attribute `delay`",
-                                                ));
-                                            }
-                                        }
-                                    }
-                                    v => {
-                                        errors.push(Error::new(
-                                            li.span(),
-                                            format!("Expected integer, got: {:?}", f),
-                                        ));
-                                    }
-                                },
-                            }
-                        } else {
-                            errors.push(Error::new(
-                                l.span(),
-                                format!("Expected value: {:?}", l.nested),
-                            ));
-                        }
+                    if delay(i, l, errors, opts) {
+                        //
                     } else if i == "log" {
                         if handle_log {
                             errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
