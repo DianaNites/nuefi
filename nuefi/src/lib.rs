@@ -21,9 +21,9 @@ use core::{
 use error::EfiStatus;
 use log::{error, info};
 pub use macros::{entry, Protocol};
-use table::{raw::RawSystemTable, Boot};
+use table::raw::RawSystemTable;
 
-pub use crate::table::SystemTable;
+pub use crate::table::{Boot, SystemTable};
 
 pub mod error;
 pub mod logger;
