@@ -7,19 +7,22 @@
 //! does nothing.
 //!
 //! ```rust
+//! // No standard library
+//! #![no_std]
+//!
+//! // No main function
+//! #![no_main]
 //! use nuefi::{entry, EfiHandle, SystemTable, Boot, error};
 //!
-//! // Will not compile on std due to duplicate panic implementations :(
-//! // Will not run with alloc because no UEFI to allocate memory from :(
-//! // #[entry(
-//! //     // Generates a panic handler implementation for you!
-//! //     panic,
-//! //
-//! //     // Generates a global allocator for you!
-//! //     alloc,
-//! // )]
-//! #[entry]
-//! fn efi_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+//! // Generate the UEFI entry point
+//! #[entry(
+//!     // Generates a panic handler implementation for you!
+//!     panic,
+//!
+//!     // Generates a global allocator for you!
+//!     alloc,
+//! )]
+//! fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
 //!     Ok(())
 //! }
 //! ```
