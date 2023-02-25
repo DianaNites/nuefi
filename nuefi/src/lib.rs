@@ -457,6 +457,8 @@ mod tests {
             // `Box` from dropping itself. This has got to be a bug.
             //
             // TODO: Try and come up with a minimal repro.
+            // Might be this bug?
+            // <https://github.com/rust-lang/miri/issues/2728>
             forget(_box);
         }
         Ok(())
