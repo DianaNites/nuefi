@@ -46,7 +46,7 @@ mod proto;
 ///     - Whether to generate an `alloc_error_handler` or leave it up to you.
 ///     This requires [`#![feature(alloc_error_handler)]`][alloc_err].
 /// - `delay(N)`
-///     - Enables a delay of `N` seconds before returning to firmware.
+///     - Enables a delay of `N` seconds before returning to firmware on errors.
 ///     If this is not specified, there is no delay.
 ///
 /// # Example
