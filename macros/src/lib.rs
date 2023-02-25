@@ -58,7 +58,7 @@ mod proto;
 /// // Or through the `package` key in `Cargo.toml`!
 /// use nuefi as uefi;
 ///
-/// #[entry(crate = "uefi", delay(69))]
+/// #[entry(crate("uefi"), delay(69))]
 /// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 ///     Ok(())
 /// }
