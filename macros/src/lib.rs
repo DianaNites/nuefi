@@ -26,10 +26,11 @@ mod proto;
 ///     - `all`
 ///         - Enable all logging without any filtering
 ///         - This is mutually exclusive with `targets`
-///     - `targets("buggy_crate", ...)`
-///         - Include *just* the logging targets identified by this list.
+///     - `targets("buggy_crate", "buggy::buggy_module", ...)`
+///         - Include the logging targets identified by this list, in addition
+///           to your own crate.
 ///         - This is mutually exclusive with `all`
-///     - `exclude("overly_verbose_crate", ...)`
+///     - `exclude("overly_verbose_crate", "verbose::module", ...)`
 ///         - Exclude the logging targets identified by this list.
 ///     - `color`
 ///         - Enable colorful logging
