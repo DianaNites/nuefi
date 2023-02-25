@@ -123,13 +123,13 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
     if i == "delay" {
         if let Some(f) = list.nested.first() {
             match f {
-                syn::NestedMeta::Meta(m) => {
+                NestedMeta::Meta(m) => {
                     errors.push(Error::new(
                         list.span(),
                         format!("Expected value: {:?}", list.nested),
                     ));
                 }
-                syn::NestedMeta::Lit(li) => match li {
+                NestedMeta::Lit(li) => match li {
                     Lit::Int(lit) => {
                         if let Ok(lit) = lit.base10_parse::<u64>() {
                             if opts.delay.replace(lit).is_some() {
@@ -201,13 +201,13 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                             } else {
                                 for f in &li.nested {
                                     match f {
-                                        syn::NestedMeta::Meta(m) => {
+                                        NestedMeta::Meta(m) => {
                                             errors.push(Error::new(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
                                             ));
                                         }
-                                        syn::NestedMeta::Lit(lit) => match lit {
+                                        NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
                                                 log.exclude
                                                     .insert(exclude.clone())
@@ -238,13 +238,13 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                             } else {
                                 for f in &li.nested {
                                     match f {
-                                        syn::NestedMeta::Meta(m) => {
+                                        NestedMeta::Meta(m) => {
                                             errors.push(Error::new(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
                                             ));
                                         }
-                                        syn::NestedMeta::Lit(lit) => match lit {
+                                        NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
                                                 log.targets
                                                     .insert(targets.clone())
@@ -346,7 +346,7 @@ fn simple_opts(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Confi
 fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     for arg in args {
         match &arg {
-            syn::NestedMeta::Meta(Meta::NameValue(m)) => {
+            NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
                     if krate(i, m, errors, opts) {
                     } else {
@@ -359,7 +359,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     ));
                 }
             }
-            syn::NestedMeta::Meta(Meta::List(l)) => {
+            NestedMeta::Meta(Meta::List(l)) => {
                 if let Some(i) = l.path.get_ident() {
                     if delay(i, l, errors, opts) {
                         //
@@ -379,7 +379,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     ));
                 }
             }
-            syn::NestedMeta::Meta(m @ Meta::Path(p)) => {
+            NestedMeta::Meta(m @ Meta::Path(p)) => {
                 if let Some(i) = p.get_ident() {
                     if simple_opts(i, p, errors, opts) {
                     } else if unexpected_as_path(i, p, errors, opts) {
@@ -393,7 +393,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     ));
                 }
             }
-            syn::NestedMeta::Lit(l) => {
+            NestedMeta::Lit(l) => {
                 errors.push(Error::new(l.span(), format!("Unknown literal: `{:?}`", l)));
             }
         }
