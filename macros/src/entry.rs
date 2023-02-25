@@ -13,6 +13,7 @@ use syn::{
     ItemFn,
     Lit,
     Meta,
+    MetaNameValue,
     NestedMeta,
     Pat,
     Token,
@@ -60,6 +61,21 @@ impl Config {
     }
 }
 
+fn krate(i: &Ident, meta: &MetaNameValue, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+    if i == "crate" {
+        if let Lit::Str(s) = &meta.lit {
+            if opts.krate.replace(format_ident!("{}", s.value())).is_some() {
+                errors.push(Error::new(meta.span(), "Duplicate attribute `crate`"));
+            }
+        } else {
+            errors.push(Error::new(meta.lit.span(), "Expected string literal"));
+        }
+        true
+    } else {
+        false
+    }
+}
+
 fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     let mut exit_prompt = false;
     let mut handle_log = false;
@@ -69,14 +85,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
         match &arg {
             syn::NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
-                    if i == "crate" {
-                        if let Lit::Str(s) = &m.lit {
-                            if opts.krate.replace(format_ident!("{}", s.value())).is_some() {
-                                errors.push(Error::new(m.span(), "Duplicate attribute `crate`"));
-                            }
-                        } else {
-                            errors.push(Error::new(m.lit.span(), "Expected string literal"));
-                        }
+                    if krate(i, m, errors, opts) {
                     } else {
                         errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
                     }
