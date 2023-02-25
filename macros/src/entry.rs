@@ -1,4 +1,4 @@
-#![allow(clippy::redundant_clone)]
+#![allow(clippy::redundant_clone, clippy::ptr_arg)]
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
@@ -20,18 +20,49 @@ use syn::{
 
 type Args = Punctuated<NestedMeta, Token![,]>;
 
-pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
-    let input = parse_macro_input!(input as ItemFn);
-    let mut errors = Vec::new();
+/// Options our macro accepts
+struct Config {
+    /// `nuefi` crate name
+    ///
+    /// `entry(crate = "name")`
+    krate: Option<Ident>,
 
-    let mut krate: Option<Ident> = None;
+    /// Exit to fw delay in seconds
+    ///
+    /// `entry(delay(30))`
+    delay: Option<u64>,
+
+    /// Register global alloc
+    ///
+    /// `entry(alloc)`
+    alloc: bool,
+
+    /// Default panic handler
+    ///
+    /// `entry(panic)`
+    panic: bool,
+
+    /// Default alloc error handler
+    ///
+    /// `entry(alloc_error)`
+    alloc_error: bool,
+}
+
+impl Config {
+    fn new() -> Self {
+        Self {
+            krate: None,
+            delay: None,
+            alloc: false,
+            panic: false,
+            alloc_error: false,
+        }
+    }
+}
+
+fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     let mut exit_prompt = false;
     let mut handle_log = false;
-    let mut delay: Option<u64> = None;
-    let mut handle_alloc_error = false;
-    let mut handle_alloc = false;
-    let mut handle_panic = false;
     let mut handle_color = false;
 
     for arg in args {
@@ -40,7 +71,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                 if let Some(i) = m.path.get_ident() {
                     if i == "crate" {
                         if let Lit::Str(s) = &m.lit {
-                            if krate.replace(format_ident!("{}", s.value())).is_some() {
+                            if opts.krate.replace(format_ident!("{}", s.value())).is_some() {
                                 errors.push(Error::new(m.span(), "Duplicate attribute `crate`"));
                             }
                         } else {
@@ -70,7 +101,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                                 syn::NestedMeta::Lit(li) => match li {
                                     Lit::Int(lit) => {
                                         if let Ok(lit) = lit.base10_parse::<u64>() {
-                                            if delay.replace(lit).is_some() {
+                                            if opts.delay.replace(lit).is_some() {
                                                 errors.push(Error::new(
                                                     l.span(),
                                                     "Duplicate attribute `delay`",
@@ -144,20 +175,20 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                         }
                         handle_log = true;
                     } else if i == "alloc" {
-                        if handle_alloc {
+                        if opts.alloc {
                             errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
                         }
-                        handle_alloc = true;
+                        opts.alloc = true;
                     } else if i == "alloc_error" {
-                        if handle_alloc_error {
+                        if opts.alloc_error {
                             errors.push(Error::new(p.span(), "Duplicate attribute `alloc_error`"));
                         }
-                        handle_alloc_error = true;
+                        opts.alloc_error = true;
                     } else if i == "panic" {
-                        if handle_panic {
+                        if opts.panic {
                             errors.push(Error::new(p.span(), "Duplicate attribute `panic`"));
                         }
-                        handle_panic = true;
+                        opts.panic = true;
                     } else if i == "delay" {
                         errors.push(Error::new(
                             p.span(),
@@ -193,6 +224,25 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
             }
         }
     }
+}
+
+pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as ItemFn);
+    let mut errors = Vec::new();
+
+    let mut cfg = Config::new();
+
+    parse_args(&args, &mut errors, &mut cfg);
+
+    let mut krate: Option<Ident> = cfg.krate;
+    let mut exit_prompt = false;
+    let mut handle_log = false;
+    let mut delay: Option<u64> = cfg.delay;
+    let mut handle_alloc_error = cfg.alloc_error;
+    let mut handle_alloc = cfg.alloc;
+    let mut handle_panic = cfg.panic;
+    let mut handle_color = false;
 
     let sig = &input.sig;
     let ident = &sig.ident;
