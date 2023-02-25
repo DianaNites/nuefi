@@ -17,6 +17,7 @@ use syn::{
     MetaNameValue,
     NestedMeta,
     Pat,
+    Path,
     Token,
 };
 
@@ -223,11 +224,53 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
     }
 }
 
-fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
-    let mut exit_prompt = false;
+// TODO: Do this but the other way around, got value when didn't expect,
+// try removing (args)
+fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+    if i == "delay" {
+        errors.push(Error::new(
+            path.span(),
+            "Attribute `delay` expected value. Try `delay(VALUE)`",
+        ));
+        true
+    } else {
+        false
+    }
+}
 
+fn simple_opts(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+    if i == "log" {
+        let log = Log::new();
+        if opts.log.replace(log).is_some() {
+            errors.push(Error::new(path.span(), "Duplicate attribute `log`"));
+        }
+        true
+    } else if i == "alloc" {
+        if opts.alloc {
+            errors.push(Error::new(path.span(), "Duplicate attribute `alloc`"));
+        }
+        opts.alloc = true;
+        true
+    } else if i == "alloc_error" {
+        if opts.alloc_error {
+            errors.push(Error::new(path.span(), "Duplicate attribute `alloc_error`"));
+        }
+        opts.alloc_error = true;
+        true
+    } else if i == "panic" {
+        if opts.panic {
+            errors.push(Error::new(path.span(), "Duplicate attribute `panic`"));
+        }
+        opts.panic = true;
+        true
+    } else {
+        false
+    }
+}
+
+#[allow(clippy::if_same_then_else)]
+fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     for arg in args {
-        #[allow(clippy::if_same_then_else)]
         match &arg {
             syn::NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
@@ -262,40 +305,10 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     ));
                 }
             }
-            syn::NestedMeta::Meta(m @ Meta::Path(p)) =>
-            {
-                #[allow(clippy::if_same_then_else)]
+            syn::NestedMeta::Meta(m @ Meta::Path(p)) => {
                 if let Some(i) = p.get_ident() {
-                    if i == "exit_prompt" {
-                        if exit_prompt {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `exit_prompt`"));
-                        }
-                        exit_prompt = true;
-                    } else if i == "log" {
-                        let log = Log::new();
-                        if opts.log.replace(log).is_some() {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
-                        }
-                    } else if i == "alloc" {
-                        if opts.alloc {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
-                        }
-                        opts.alloc = true;
-                    } else if i == "alloc_error" {
-                        if opts.alloc_error {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc_error`"));
-                        }
-                        opts.alloc_error = true;
-                    } else if i == "panic" {
-                        if opts.panic {
-                            errors.push(Error::new(p.span(), "Duplicate attribute `panic`"));
-                        }
-                        opts.panic = true;
-                    } else if i == "delay" {
-                        errors.push(Error::new(
-                            p.span(),
-                            "Attribute `delay` expected value. Try `delay(VALUE)`",
-                        ));
+                    if simple_opts(i, p, errors, opts) {
+                    } else if unexpected_as_path(i, p, errors, opts) {
                     } else {
                         errors.push(Error::new(p.span(), format!("Unexpected argument `{}`", i)));
                     }

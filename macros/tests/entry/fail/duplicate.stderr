@@ -1,23 +1,17 @@
-error: Duplicate attribute `exit_prompt`
- --> tests/entry/fail/duplicate.rs:4:27
-  |
-4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420), crate = "nuefi", crate = "nuefi")]
-  |                           ^^^^^^^^^^^
-
 error: Duplicate attribute `log`
- --> tests/entry/fail/duplicate.rs:4:40
+ --> tests/entry/fail/duplicate.rs:5:25
   |
-4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420), crate = "nuefi", crate = "nuefi")]
-  |                                        ^^^
+5 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "nuefi")]
+  |                         ^^^
 
 error: Duplicate attribute `delay`
- --> tests/entry/fail/duplicate.rs:4:56
+ --> tests/entry/fail/duplicate.rs:5:30
   |
-4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420), crate = "nuefi", crate = "nuefi")]
-  |                                                        ^^^^^^^^^^
+5 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "nuefi")]
+  |                              ^^^^^^^^^^
 
 error: Duplicate attribute `crate`
- --> tests/entry/fail/duplicate.rs:4:85
+ --> tests/entry/fail/duplicate.rs:5:59
   |
-4 | #[entry(exit_prompt, log, exit_prompt, log, delay(69), delay(420), crate = "nuefi", crate = "nuefi")]
-  |                                                                                     ^^^^^^^^^^^^^^^
+5 | #[entry(log, delay(69), log, delay(420), crate = "nuefi", crate = "nuefi")]
+  |                                                           ^^^^^^^^^^^^^^^
