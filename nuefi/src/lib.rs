@@ -1,3 +1,27 @@
+//! A safe Rust UEFI library that provides an environment to safely
+//! write applications and interact with firmware.
+//!
+//! # Quick Start
+//!
+//! Minimal quick start example, this will setup a UEFI entry point for you that
+//! does nothing.
+//!
+//! ```rust
+//! use nuefi::{entry, EfiHandle, SystemTable, Boot, error};
+//!
+//! // Will not compile on std due to duplicate panic implementations :(
+//! // #[entry(
+//! //     // Generates a panic handler implementation for you!
+//! //     panic,
+//! //
+//! //     // Generates a global allocator for you!
+//! //     alloc,
+//! // )]
+//! #[entry(alloc)]
+//! fn efi_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+//!     Ok(())
+//! }
+//! ```
 #![allow(
     unused_imports,
     unused_variables,
