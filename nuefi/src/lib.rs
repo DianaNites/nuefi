@@ -39,6 +39,7 @@ use core::{
     ffi::c_void,
     fmt::Write,
     panic::PanicInfo,
+    ptr::addr_of,
     sync::atomic::{AtomicPtr, Ordering},
     time::Duration,
 };
@@ -135,11 +136,17 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
 
     #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
-    let ext = unsafe { __INTERNAL_NUEFI_YOU_MUST_USE_MACRO };
-
-    #[cfg(not(miri))]
-    // Safety: Unsure how it can be unsafe tbh.
-    let dur = unsafe { __INTERNAL_NUEFI_EXIT_DURATION };
+    let (ext, dur) = unsafe {
+        if addr_of!(__INTERNAL_NUEFI_YOU_MUST_USE_MACRO).is_null()
+            || addr_of!(__INTERNAL_NUEFI_EXIT_DURATION).is_null()
+        {
+            return EfiStatus::INVALID_PARAMETER;
+        }
+        (
+            __INTERNAL_NUEFI_YOU_MUST_USE_MACRO,
+            __INTERNAL_NUEFI_EXIT_DURATION,
+        )
+    };
 
     if image.0.is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
