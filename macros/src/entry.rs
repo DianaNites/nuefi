@@ -292,13 +292,8 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                             p.span(),
                             "Attribute `delay` expected value. Try `delay(VALUE)`",
                         ));
-                    } else if let Some(i) = p.get_ident() {
-                        errors.push(Error::new(p.span(), format!("Unexpected argument `{}`", i)));
                     } else {
-                        errors.push(Error::new(
-                            p.span(),
-                            format!("Unexpected argument `{:?}`", p),
-                        ));
+                        errors.push(Error::new(p.span(), format!("Unexpected argument `{}`", i)));
                     }
                 } else {
                     errors.push(Error::new(
