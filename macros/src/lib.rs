@@ -8,10 +8,14 @@ mod proto;
 
 /// The UEFI Entry point
 ///
-/// A function with this attribute must appear once in the entire
-/// dependency tree or link errors will result.
+/// This attribute marks a function as the UEFI entry point.
+/// The function must have two arguments, [`EfiHandle`][EfiHandle] and
+/// [`SystemTable<Boot>`][SystemTable], and return [`Result<()>`][Result].
 ///
 /// # Options
+///
+/// This attribute accepts several options, in the form `entry(option)`,
+/// as listed below:
 ///
 /// - `crate("name")`.
 ///     - Changes the root crate used to reference types.
@@ -67,6 +71,9 @@ mod proto;
 /// [log]: <https://crates.io/crates/log>
 /// [alloc_err]: <https://doc.rust-lang.org/nightly/unstable-book/language-features/alloc-error-handler.html>
 /// [UefiLogger]: ./logger/struct.UefiLogger.html
+/// [SystemTable]: ./table/struct.SystemTable.html
+/// [EfiHandle]: ./struct.EfiHandle.html
+/// [Result]: ./error/type.Result.html
 // FIXME: Above links for docs.rs? is there a way to portably link?
 // ..just make proc macro depend on nuefi?
 // cyclic?
