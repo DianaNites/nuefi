@@ -300,6 +300,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
 
 // TODO: Do this but the other way around, got value when didn't expect,
 // try removing (args)
+// and for MetaNameValue
 fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
     if i == "delay" {
         errors.push(Error::new(
