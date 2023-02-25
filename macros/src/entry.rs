@@ -1,4 +1,4 @@
-#![allow(clippy::redundant_clone, clippy::ptr_arg)]
+#![allow(clippy::redundant_clone, clippy::ptr_arg, unreachable_code)]
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
