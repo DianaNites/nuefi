@@ -83,7 +83,7 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
 /// ///     - This implementation allows changing at runtime
 /// /// - `alloc` - Enables a default alloc error handler implementation
 /// ///     - This implementation allows changing at runtime
-/// #[entry(crate = "uefi2", log, delay(30))]
+/// #[entry(crate("uefi2"), log, delay(30))]
 /// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 ///     Ok(())
 /// }
