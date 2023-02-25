@@ -404,7 +404,7 @@ mod tests {
         }
     }
 
-    #[entry(crate = "self")]
+    #[entry(crate("self"))]
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         let stdout = table.stdout();
         stdout.reset()?;
