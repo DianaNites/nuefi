@@ -150,7 +150,6 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
 }
 
 fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
-    #[allow(unreachable_code)]
     if i == "log" {
         let mut log = Log::new();
         let mut exclude: Vec<String> = Vec::new();
@@ -187,7 +186,6 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                 .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
                         }
                     }
-                    // panic!("{a:#?}");
                 }
                 // NestedMeta::Lit(_) => {}
                 NestedMeta::Meta(m) => {
