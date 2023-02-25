@@ -120,7 +120,8 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
 
     #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
-    let log = unsafe { __INTERNAL_NUEFI_LOG };
+    // let log = unsafe { __INTERNAL_NUEFI_LOG };
+    let log = Some(true);
 
     let log = if let Some(log) = log {
         log
