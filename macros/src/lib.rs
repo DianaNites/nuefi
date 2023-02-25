@@ -39,7 +39,7 @@ mod proto;
 /// - `alloc`
 ///     - Whether to generate a `global_alloc` static or leave it up to you
 /// - `alloc_error`
-///     - Whether to generate a `alloc_error_handler` or leave it up to you.
+///     - Whether to generate an `alloc_error_handler` or leave it up to you.
 ///     This requires [`#![feature(alloc_error_handler)]`][alloc_err].
 /// - `delay(N)`
 ///     - Enables a delay of `N` seconds before returning to firmware.
