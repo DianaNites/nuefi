@@ -506,7 +506,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 use core::panic::PanicInfo;
 
                 // Helps with faulty rust-analyzer/linking errors
-                #[cfg_attr(not(test), panic_handler)]
+                #[cfg_attr(not(any(test, doctest)), panic_handler)]
                 fn handle_panic(info: &PanicInfo) -> ! {
                     panic(info);
                 }
@@ -523,7 +523,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 use core::alloc::Layout;
 
                 // Helps with faulty rust-analyzer/linking errors
-                #[cfg_attr(not(test), alloc_error_handler)]
+                #[cfg_attr(not(any(test, doctest)), alloc_error_handler)]
                 fn handle_alloc(layout: core::alloc::Layout) -> ! {
                     alloc_error(layout);
                 }
