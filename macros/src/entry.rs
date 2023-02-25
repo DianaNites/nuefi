@@ -104,8 +104,11 @@ impl Log {
 fn krate(i: &Ident, meta: &MetaNameValue, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
     if i == "crate" {
         if let Lit::Str(s) = &meta.lit {
-            if opts.krate.replace(format_ident!("{}", s.value())).is_some() {
-                errors.push(Error::new(meta.span(), "Duplicate attribute `crate`"));
+            match opts.krate {
+                Some(_) => errors.push(Error::new(meta.span(), "Duplicate attribute `crate`")),
+                None => {
+                    opts.krate.replace(format_ident!("{}", s.value()));
+                }
             }
         } else {
             errors.push(Error::new(meta.lit.span(), "Expected string literal"));
