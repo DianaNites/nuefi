@@ -8,7 +8,9 @@ use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
     log(color,  all, fake, faker(), fakest = "", exclude(""), exclude(""), exclude = ""),
     log(color,  all),
     log(color,),
-    log, log
+    log, log,
+    log(all, targets("")),
+    log(targets(""), all),
 )]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())

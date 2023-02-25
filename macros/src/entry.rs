@@ -174,6 +174,16 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                             }
                             log.color = true;
                         } else if i == "all" {
+                            if log.targets.is_some() {
+                                errors.push(Error::new(
+                                    p.span(),
+                                    "Cannot use `all` and `targets` together",
+                                ));
+                            }
+                            if log.all {
+                                errors.push(Error::new(p.span(), "Duplicate attribute `all`"));
+                            }
+                            log.all = true;
                         } else {
                             errors
                                 .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
@@ -214,6 +224,12 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                 }
                             }
                         } else if i == "targets" {
+                            if log.all {
+                                errors.push(Error::new(
+                                    li.path.span(),
+                                    "Cannot use `targets` and `all` together",
+                                ));
+                            }
                             if log.targets.is_some() {
                                 errors.push(Error::new(
                                     li.path.span(),

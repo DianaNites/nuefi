@@ -43,11 +43,35 @@ error: Duplicate attribute `log`
 error: Duplicate attribute `log`
   --> tests/entry/fail/log.rs:11:5
    |
-11 |     log, log
+11 |     log, log,
    |     ^^^
 
 error: Duplicate attribute `log`
   --> tests/entry/fail/log.rs:11:10
    |
-11 |     log, log
+11 |     log, log,
    |          ^^^
+
+error: Cannot use `targets` and `all` together
+  --> tests/entry/fail/log.rs:12:14
+   |
+12 |     log(all, targets("")),
+   |              ^^^^^^^
+
+error: Duplicate attribute `log`
+  --> tests/entry/fail/log.rs:12:5
+   |
+12 |     log(all, targets("")),
+   |     ^^^
+
+error: Cannot use `all` and `targets` together
+  --> tests/entry/fail/log.rs:13:22
+   |
+13 |     log(targets(""), all),
+   |                      ^^^
+
+error: Duplicate attribute `log`
+  --> tests/entry/fail/log.rs:13:5
+   |
+13 |     log(targets(""), all),
+   |     ^^^
