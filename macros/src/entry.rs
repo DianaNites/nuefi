@@ -48,6 +48,8 @@ struct Config {
     ///
     /// `entry(alloc_error)`
     alloc_error: bool,
+
+    log: Option<Log>,
 }
 
 impl Config {
@@ -58,6 +60,22 @@ impl Config {
             alloc: false,
             panic: false,
             alloc_error: false,
+            log: None,
+        }
+    }
+}
+
+/// `entry(log(..))` options
+struct Log {
+    /// Whether logging is colorful or not
+    color: bool,
+}
+
+impl Log {
+    fn new() -> Self {
+        Self {
+            //
+            color: false,
         }
     }
 }
@@ -115,12 +133,41 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
     }
 }
 
+fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+    #[allow(unreachable_code)]
+    if i == "log" {
+        if opts.log.is_some() {
+            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
+            errors.push(Error::new(list.span(), "Mixed `log` and `log(OPTIONS)`"));
+        }
+        for a in &list.nested {
+            match a {
+                NestedMeta::Meta(_) => todo!(),
+                NestedMeta::Lit(_) => todo!(),
+            }
+        }
+        // todo!("Log opts");
+        #[cfg(no)]
+        {
+            if i == "color" {
+                if handle_color {
+                    errors.push(Error::new(p.span(), "Duplicate attribute `color`"));
+                }
+                handle_color = true;
+            }
+        }
+        true
+    } else {
+        false
+    }
+}
+
 fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
     let mut exit_prompt = false;
     let mut handle_log = false;
-    let mut handle_color = false;
 
     for arg in args {
+        #[allow(clippy::if_same_then_else)]
         match &arg {
             syn::NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
@@ -139,28 +186,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                 if let Some(i) = l.path.get_ident() {
                     if delay(i, l, errors, opts) {
                         //
-                    } else if i == "log" {
-                        if handle_log {
-                            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
-                            errors.push(Error::new(l.span(), "Mixed `log` and `log(OPTIONS)`"));
-                        }
-                        for a in &l.nested {
-                            match a {
-                                NestedMeta::Meta(_) => todo!(),
-                                NestedMeta::Lit(_) => todo!(),
-                            }
-                        }
-                        todo!("Log opts");
-                        #[cfg(no)]
-                        {
-                            if i == "color" {
-                                if handle_color {
-                                    errors
-                                        .push(Error::new(p.span(), "Duplicate attribute `color`"));
-                                }
-                                handle_color = true;
-                            }
-                        }
+                    } else if log(i, l, errors, opts) {
                     } else {
                         errors.push(Error::new(
                             l.span(),
@@ -258,7 +284,6 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut handle_alloc_error = cfg.alloc_error;
     let mut handle_alloc = cfg.alloc;
     let mut handle_panic = cfg.panic;
-    let mut handle_color = false;
 
     let sig = &input.sig;
     let ident = &sig.ident;
