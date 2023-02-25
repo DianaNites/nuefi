@@ -399,24 +399,13 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemFn);
     let mut errors = Vec::new();
 
-    let mut cfg = Config::new();
+    let mut opts = Config::new();
 
-    parse_args(&args, &mut errors, &mut cfg);
-
-    let mut krate: Option<Ident> = cfg.krate;
-    let mut exit_prompt = false;
-    let mut handle_log = false;
-    let mut delay: Option<u64> = cfg.delay;
-    let mut handle_alloc_error = cfg.alloc_error;
-    let mut handle_alloc = cfg.alloc;
-    let mut handle_panic = cfg.panic;
+    parse_args(&args, &mut errors, &mut opts);
 
     let sig = &input.sig;
     let ident = &sig.ident;
     let attrs = &input.attrs;
-    if !attrs.is_empty() {
-        // panic!("Had {} attributes and expected zero", input.attrs.len());
-    }
     let params = &sig.inputs;
     if params.is_empty() {
         errors.push(Error::new(
@@ -473,7 +462,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         const _chk: MainCheck = #ident;
     };
 
-    let exit_dur = if let Some(d) = delay {
+    let exit_dur = if let Some(d) = opts.delay {
         quote! {
             Some(#d)
         }
@@ -483,9 +472,9 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         }
     };
 
-    let krate = krate.unwrap_or(format_ident!("nuefi"));
+    let krate = opts.krate.unwrap_or(format_ident!("nuefi"));
 
-    let panic = if handle_panic {
+    let panic = if opts.panic {
         quote! {
             const _: () = {
                 use #krate::handlers::panic;
@@ -502,7 +491,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         quote! {}
     };
 
-    let alloc_error = if handle_alloc_error {
+    let alloc_error = if opts.alloc_error {
         quote! {
             const _: () = {
                 use #krate::handlers::alloc_error;
@@ -519,7 +508,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         quote! {}
     };
 
-    let alloc = if handle_alloc {
+    let alloc = if opts.alloc {
         quote! {
             const _: () = {
                 use #krate::mem::UefiAlloc;
@@ -532,17 +521,30 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         quote! {}
     };
 
-    let log = if handle_log {
-        quote! {
-            const _: () = {
-                use #krate::logger::{UefiColorLogger, UefiLogger};
-                // use ::core::module_path;
+    let log = if let Some(log) = opts.log {
+        let exclude = log.exclude.unwrap_or_default();
+        let targets = log.targets.unwrap_or_default();
+        let color = if log.color {
+            quote! {.color();}
+        } else {
+            quote! {;}
+        };
+        let color_ty = if log.color {
+            quote! {UefiColorLogger}
+        } else {
+            quote! {UefiLogger}
+        };
+        quote! {{
+            #[allow(unused_imports)]
+            use #krate::logger::{UefiColorLogger, UefiLogger};
+            use ::core::module_path;
 
-                static NUEFI_LOGGER: UefiColorLogger = UefiLogger::new(&[module_path!(), "nuefi"])
-                    .exclude(&["nuefi::mem"])
-                    .color();
-            };
-        }
+            static NUEFI_LOGGER: #color_ty = UefiLogger::new(&[module_path!(), #(#targets),*])
+                .exclude(&[#(#exclude),*])
+                #color
+
+            UefiLogger::init(&NUEFI_LOGGER);
+        }}
     } else {
         quote! {}
     };
@@ -571,6 +573,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
 
             #[no_mangle]
             pub fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+                #log
                 #ident(handle, table)
             }
         };
