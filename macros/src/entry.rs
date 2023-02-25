@@ -9,6 +9,7 @@ use syn::{
     Attribute,
     AttributeArgs,
     Error,
+    Ident,
     ItemFn,
     Lit,
     Meta,
@@ -24,7 +25,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemFn);
     let mut errors = Vec::new();
 
-    let mut krate = format_ident!("nuefi");
+    let mut krate: Option<Ident> = None;
     let mut exit_prompt = false;
     let mut handle_log = false;
     let mut delay: Option<u64> = None;
@@ -39,7 +40,9 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                 if let Some(i) = m.path.get_ident() {
                     if i == "crate" {
                         if let Lit::Str(s) = &m.lit {
-                            krate = format_ident!("{}", s.value());
+                            if krate.replace(format_ident!("{}", s.value())).is_some() {
+                                errors.push(Error::new(m.span(), "Duplicate attribute `crate`"));
+                            }
                         } else {
                             errors.push(Error::new(m.lit.span(), "Expected string literal"));
                         }
@@ -262,6 +265,8 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             None
         }
     };
+
+    let krate = krate.unwrap_or(format_ident!("nuefi"));
 
     let panic = if handle_panic {
         quote! {
