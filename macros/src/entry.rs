@@ -1,6 +1,23 @@
+#![allow(clippy::redundant_clone)]
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, spanned::Spanned, AttributeArgs, Error, ItemFn, Lit, Meta, Pat};
+use syn::{
+    parse::{Parse, Parser},
+    parse_macro_input,
+    punctuated::Punctuated,
+    spanned::Spanned,
+    Attribute,
+    AttributeArgs,
+    Error,
+    ItemFn,
+    Lit,
+    Meta,
+    NestedMeta,
+    Pat,
+    Token,
+};
+
+type Args = Punctuated<NestedMeta, Token![,]>;
 
 pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -9,10 +26,12 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut krate = format_ident!("nuefi");
     let mut exit_prompt = false;
-    let mut should_log = false;
+    let mut handle_log = false;
     let mut delay: Option<u64> = None;
+    let mut handle_alloc_error = false;
     let mut handle_alloc = false;
     let mut handle_panic = false;
+    let mut handle_color = false;
 
     for arg in args {
         match &arg {
@@ -70,6 +89,28 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                                 format!("Expected value: {:?}", l.nested),
                             ));
                         }
+                    } else if i == "log" {
+                        if handle_log {
+                            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
+                            errors.push(Error::new(l.span(), "Mixed `log` and `log(OPTIONS)`"));
+                        }
+                        for a in &l.nested {
+                            match a {
+                                NestedMeta::Meta(_) => todo!(),
+                                NestedMeta::Lit(_) => todo!(),
+                            }
+                        }
+                        todo!("Log opts");
+                        #[cfg(no)]
+                        {
+                            if i == "color" {
+                                if handle_color {
+                                    errors
+                                        .push(Error::new(p.span(), "Duplicate attribute `color`"));
+                                }
+                                handle_color = true;
+                            }
+                        }
                     } else {
                         errors.push(Error::new(
                             l.span(),
@@ -85,7 +126,8 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                     ));
                 }
             }
-            syn::NestedMeta::Meta(m @ Meta::Path(p)) => {
+            syn::NestedMeta::Meta(m @ Meta::Path(p)) =>
+            {
                 #[allow(clippy::if_same_then_else)]
                 if let Some(i) = p.get_ident() {
                     if i == "exit_prompt" {
@@ -94,24 +136,23 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
                         }
                         exit_prompt = true;
                     } else if i == "log" {
-                        if should_log {
+                        if handle_log {
                             errors.push(Error::new(p.span(), "Duplicate attribute `log`"));
                         }
-                        should_log = true;
+                        handle_log = true;
                     } else if i == "alloc" {
-                        // TODO: Alloc
                         if handle_alloc {
                             errors.push(Error::new(p.span(), "Duplicate attribute `alloc`"));
                         }
                         handle_alloc = true;
+                    } else if i == "alloc_error" {
+                        if handle_alloc_error {
+                            errors.push(Error::new(p.span(), "Duplicate attribute `alloc_error`"));
+                        }
+                        handle_alloc_error = true;
                     } else if i == "panic" {
-                        // TODO: Panic
                         if handle_panic {
-                            errors.push(Error::new(
-                                p.span(),
-                                "Duplicate
-                         attribute `panic`",
-                            ));
+                            errors.push(Error::new(p.span(), "Duplicate attribute `panic`"));
                         }
                         handle_panic = true;
                     } else if i == "delay" {
@@ -222,16 +263,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         }
     };
 
-    let should_log = if should_log {
-        quote! {
-            Some(true)
-        }
-    } else {
-        quote! {
-            Some(false)
-        }
-    };
-
     let panic = if handle_panic {
         quote! {
             const _: () = {
@@ -249,7 +280,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         quote! {}
     };
 
-    let alloc = if handle_alloc {
+    let alloc_error = if handle_alloc_error {
         quote! {
             const _: () = {
                 use #krate::handlers::alloc_error;
@@ -260,6 +291,34 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
                 fn handle_alloc(layout: core::alloc::Layout) -> ! {
                     alloc_error(layout);
                 }
+            };
+        }
+    } else {
+        quote! {}
+    };
+
+    let alloc = if handle_alloc {
+        quote! {
+            const _: () = {
+                use #krate::mem::UefiAlloc;
+
+                #[global_allocator]
+                static NUEFI_ALLOC: UefiAlloc = UefiAlloc::new();
+            };
+        }
+    } else {
+        quote! {}
+    };
+
+    let log = if handle_log {
+        quote! {
+            const _: () = {
+                use #krate::logger::{UefiColorLogger, UefiLogger};
+                // use ::core::module_path;
+
+                static NUEFI_LOGGER: UefiColorLogger = UefiLogger::new(&[module_path!(), "nuefi"])
+                    .exclude(&["nuefi::mem"])
+                    .color();
             };
         }
     } else {
@@ -289,9 +348,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             pub static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64> = #exit_dur;
 
             #[no_mangle]
-            pub static __INTERNAL_NUEFI_LOG: Option<bool> = #should_log;
-
-            #[no_mangle]
             pub fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
                 #ident(handle, table)
             }
@@ -302,6 +358,8 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         #panic
 
         #alloc
+
+        #alloc_error
     };
 
     if let Some(e) = errors.into_iter().reduce(|mut acc, e| {

@@ -19,11 +19,25 @@ mod proto;
 ///     would still use `uefi` and fail to compile.
 ///     This option solves that problem.
 /// - `log`
-///     - This enables some [`log`][log] statements to be inserted
-///     by the library `efi_main` handler.
+///     - Whether to generate and register a default [`log`][log] global logger
+///       using [`UefiLogger`][UefiLogger].
+///         - By default this will only allow logs from your own crate to be
+///           logged.
+///     - `all`
+///         - Enable all logging without any filtering
+///         - This is mutually exclusive with `targets`
+///     - `targets("buggy_crate", ...)`
+///         - Include *just* the logging targets identified by this list.
+///         - This is mutually exclusive with `all`
+///     - `exclude("overly_verbose_crate", ...)`
+///         - Exclude the logging targets identified by this list.
+///     - `color`
+///         - Enable colorful logging
 /// - `panic`
 ///     - Whether to generate a `panic_impl` or leave it up to you
 /// - `alloc`
+///     - Whether to generate a `global_alloc` static or leave it up to you
+/// - `alloc_error`
 ///     - Whether to generate a `alloc_error_handler` or leave it up to you.
 ///     This requires [`#![feature(alloc_error_handler)]`][alloc_err].
 /// - `delay(N)`
@@ -51,6 +65,11 @@ mod proto;
 ///
 /// [log]: <https://crates.io/crates/log>
 /// [alloc_err]: <https://doc.rust-lang.org/nightly/unstable-book/language-features/alloc-error-handler.html>
+/// [UefiLogger]: ./logger/struct.UefiLogger.html
+// FIXME: Above links for docs.rs? is there a way to portably link?
+// ..just make proc macro depend on nuefi?
+// cyclic?
+// separate types crate?
 #[proc_macro_attribute]
 pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     entry::entry(args, input)

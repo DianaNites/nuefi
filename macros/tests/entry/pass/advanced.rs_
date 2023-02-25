@@ -1,0 +1,16 @@
+//! Test that the alloc, alloc_error, panic features works
+//!
+//! The test is disabled by default because trybuild is incapable of running it
+//! properly.
+//!
+//! The generated alloc conflicts with std, trybuild cant do no_std, and
+//! even if you do get it to compile, it fails to allocate 5 bytes early on and
+//! cant run, because `UefiAlloc` (safely) fails at runtime because no UEFI.
+use nuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
+
+#[entry(alloc, alloc_error)]
+fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
+    Ok(())
+}
+
+fn main() {}

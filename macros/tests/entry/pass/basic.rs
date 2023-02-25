@@ -7,15 +7,9 @@ use NotNuefi::{entry, error::Result, table::Boot, EfiHandle, SystemTable};
     // Test that it can use our `NotNuefi` import
     crate = "NotNuefi",
 
-    //
-    exit_prompt,
-
-    //
+    // Test that the basic syntax works as documented
     log,
-
-    //
-    delay(69))
-]
+)]
 fn e_main(_handle: EfiHandle, _table: SystemTable<Boot>) -> Result<()> {
     Ok(())
 }
