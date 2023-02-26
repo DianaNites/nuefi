@@ -223,9 +223,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                         }
                                         NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
-                                                log.exclude
-                                                    .insert(exclude.clone())
-                                                    .push(lit.value());
+                                                exclude.push(lit.value());
                                             }
                                             v => {
                                                 errors.push(Error::new(
@@ -236,6 +234,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                         },
                                     }
                                 }
+                                log.exclude = Some(exclude.clone());
                             }
                         } else if i == "targets" {
                             if log.all {
@@ -260,9 +259,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                         }
                                         NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
-                                                log.targets
-                                                    .insert(targets.clone())
-                                                    .push(lit.value());
+                                                targets.push(lit.value());
                                             }
                                             v => {
                                                 errors.push(Error::new(
@@ -273,6 +270,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                         },
                                     }
                                 }
+                                log.targets = Some(targets.clone());
                             }
                         } else {
                             errors
