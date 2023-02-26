@@ -109,6 +109,34 @@ impl<'table> File<'table> {
         todo!()
     }
 
+    fn read_impl(&self) -> Result<()> {
+        let mut size = 0;
+        let mut out: Vec<u8> = Vec::new();
+
+        // Safety:
+        let ret: Result<_> = unsafe {
+            let ptr = out.as_mut_ptr() as *mut u8;
+            (self.interface().read.unwrap())(self.interface, &mut size, ptr)
+        }
+        .into();
+
+        Ok(())
+    }
+
+    /// Read the contents of the directory referred to by our handle
+    pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<File>> + '_> {
+        let info = self.info()?;
+        if !info.directory() {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
+
+        let _ = self.read_impl()?;
+        Ok(core::iter::from_fn(move || {
+            //
+            todo!();
+        }))
+    }
+
     /// Information about this [`File`]. See [`FileInfo`]
     pub fn info(&self) -> Result<FileInfo> {
         // FIXME: GUID macro 09576E92-6D3F-11D2-8E39-00A0C969723B
