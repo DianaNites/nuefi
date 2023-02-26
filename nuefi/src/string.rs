@@ -10,6 +10,8 @@ use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     proto::device_path::{DevicePath, DevicePathToText},
+    Boot,
+    SystemTable,
 };
 
 /// An owned UEFI string, encoded as UTF-16/UCS-2/lies*
@@ -166,48 +168,49 @@ impl<'table> Path<'table> {
         Self { data }
     }
 
-    /// Convert this path to a UEFI String
-    pub fn to_text(&'table self) -> Result<UefiString<'table>> {
+    fn table() -> Result<SystemTable<Boot>> {
         if let Some(table) = get_boot_table() {
-            let boot = table.boot();
-            let text = boot
-                .locate_protocol::<DevicePathToText>()?
-                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
-
-            let s = text.convert_device_path_to_text(&self.data)?;
-            Ok(
-                // Safety: Evil lifetime hack, turn our local borrow
-                // into a `'table` borrow
-                // This should be safe because the only way to call to_text is
-                // by having a valid lifetime
-                unsafe { core::mem::transmute(s) },
-            )
+            Ok(table)
         } else {
-            error!("Tried to use DevicePath::to_text while not in Boot mode");
+            error!("Tried to use `Path` while not in `Boot` mode");
             Err(UefiError::new(EfiStatus::UNSUPPORTED))
         }
+    }
+
+    /// Convert this path to a UEFI String
+    pub fn to_text(&'table self) -> Result<UefiString<'table>> {
+        let table = Self::table()?;
+        let boot = table.boot();
+        let text = boot
+            .locate_protocol::<DevicePathToText>()?
+            .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+
+        let s = text.convert_device_path_to_text(&self.data)?;
+        Ok(
+            // Safety: Evil lifetime hack, turn our local borrow
+            // into a `'table` borrow
+            // This should be safe because the only way to call to_text is
+            // by having a valid lifetime
+            unsafe { core::mem::transmute(s) },
+        )
     }
 
     /// Convert this path to a Rust String
     ///
     /// Invalid characters are mapped to [`char::REPLACEMENT_CHARACTER`]
     pub fn to_string(&self) -> Result<String> {
-        if let Some(table) = get_boot_table() {
-            let boot = table.boot();
-            let text = boot
-                .locate_protocol::<DevicePathToText>()?
-                .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
+        let table = Self::table()?;
+        let boot = table.boot();
+        let text = boot
+            .locate_protocol::<DevicePathToText>()?
+            .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
 
-            let s = text.convert_device_path_to_text(&self.data)?;
-            let s = s.as_slice();
-            let s = char::decode_utf16(s.iter().cloned())
-                .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
-                .collect::<String>();
-            Ok(s)
-        } else {
-            error!("Tried to use DevicePath::to_string while not in Boot mode");
-            Err(UefiError::new(EfiStatus::UNSUPPORTED))
-        }
+        let s = text.convert_device_path_to_text(&self.data)?;
+        let s = s.as_slice();
+        let s = char::decode_utf16(s.iter().cloned())
+            .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+            .collect::<String>();
+        Ok(s)
     }
 
     /// Get this as a [DevicePath]
