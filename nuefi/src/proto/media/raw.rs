@@ -72,25 +72,26 @@ pub type Read = unsafe extern "efiapi" fn(
 pub struct RawFile {
     /// Currently `0x00020000`
     pub revision: u64,
+
     pub open: Option<Open>,
     pub close: Option<Close>,
-    pub delete: Option<*const u8>,
+    pub delete: *const u8,
     pub read: Option<Read>,
-    pub write: Option<*const u8>,
+    pub write: *const u8,
 
-    pub get_pos: Option<*const u8>,
-    pub set_pos: Option<*const u8>,
+    pub get_pos: *const u8,
+    pub set_pos: *const u8,
 
     pub get_info: Option<GetInfo>,
 
-    pub set_info: Option<*const u8>,
-    pub flush: Option<*const u8>,
+    pub set_info: *const u8,
+    pub flush: *const u8,
 
     // Below added in revision 2
-    pub open_ex: Option<*const u8>,
-    pub read_ex: Option<*const u8>,
-    pub write_ex: Option<*const u8>,
-    pub flush_ex: Option<*const u8>,
+    pub open_ex: *const u8,
+    pub read_ex: *const u8,
+    pub write_ex: *const u8,
+    pub flush_ex: *const u8,
 }
 
 /// UEFI [`RawFile`] information
