@@ -109,48 +109,72 @@ impl<'table> File<'table> {
         todo!()
     }
 
-    fn read_impl(&self, dir: bool) -> Result<Vec<u8>> {
+    /// Reads the buffer for [`File::read_impl`]
+    fn read_impl_size(&self) -> Result<usize> {
+        let rd = self.interface().read.unwrap();
         let mut size = 0;
-        let mut out: Vec<u8> = Vec::new();
 
+        // Calling to get buffer size
+
+        // `interface` and `size` are always valid
+        // ptr is null and thats okay
+        let ret = unsafe { (rd)(self.interface, &mut size, null_mut()) };
+
+        if size == 0 && ret.is_success() {
+            // End of Directories/File
+            Ok(size)
+        } else if ret == EfiStatus::BUFFER_TOO_SMALL {
+            let _ = return Ok(size);
+        } else {
+            // Anything other than `BUFFER_TOO_SMALL` here is an error
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Reads the buffer for [`File::read_impl`].
+    /// Returns how many bytes were written.
+    ///
+    /// # Safety
+    ///
+    /// - `out` must be valid for `size` bytes
+    unsafe fn read_impl_write(&self, size: usize, out: &mut [u8]) -> Result<usize> {
+        let mut size = size;
+        let rd = self.interface().read.unwrap();
+        let ptr = out.as_mut_ptr();
+
+        // `interface`, `size`, are valid
+        // `ptr` is valid for `size` bytes
+        let ret = (rd)(self.interface, &mut size, ptr);
+
+        if ret.is_success() {
+            Ok(size)
+        } else {
+            Err(ret.into())
+        }
+    }
+
+    /// Implementation of the `read` call. Returns how many bytes written
+    ///
+    /// takes `out` as input, expects it to be an empty vector, and will be
+    /// resized.
+    fn read_impl(&self, out: &mut Vec<u8>) -> Result<usize> {
         // Safety: Described within
         unsafe {
             let rd = self.interface().read.unwrap();
 
             // Calling to get buffer size
-
-            // `interface` and `size` are always valid
-            // ptr is null and thats okay
-            let ret = (rd)(self.interface, &mut size, null_mut());
-            if dir && size == 0 && ret.is_success() {
-                // End of directories
-                return Ok(Vec::new());
-            } else if ret != EfiStatus::BUFFER_TOO_SMALL {
-                // Anything other than `BUFFER_TOO_SMALL` here is an error
-                return Err(UefiError::new(ret));
-            }
+            let mut size = self.read_impl_size()?;
 
             // Here we reserve enough memory for `size`, initializing to `0`.
             out.resize(size, 0);
 
             // Assert just in case?
             assert!(out.capacity() >= size, "File read capacity bug");
-            let ptr = out.as_mut_ptr() as *mut u8;
 
             // Calling to fill the buffer
-
-            // `interface`, `size`, are valid
-            // `ptr` is valid for `size` bytes
-            let ret = (rd)(self.interface, &mut size, ptr);
-
-            if ret.is_success() {
-                // We only call this on success, and before returning.
-                // Out has been fully initialized, because we started initialized
-                out.set_len(size);
-
-                Ok(out)
-            } else {
-                Err(ret.into())
+            match self.read_impl_write(size, out) {
+                Ok(n) => Ok(size),
+                Err(e) => Err(e),
             }
         }
     }
@@ -169,46 +193,48 @@ impl<'table> File<'table> {
         // TODO: Clone impl?
         let me = self.open(".")?;
 
+        let mut out: Vec<u8> = Vec::new();
+
         Ok(from_fn(move || loop {
             if stop {
                 return None;
             }
-            let ret = match me.read_impl(true) {
-                Ok(v) => {
-                    // Signals EOF
-                    if v.is_empty() {
-                        stop = true;
-                        // Safety: We only call this once
-                        // This iterator will return `None` forever
-                        // now
-                        unsafe { me.close_ref().unwrap() };
-                        return None;
-                    }
-                    let info = FileInfo::from_bytes(v).unwrap();
-                    let name = info.name();
-                    if name == "." || name == ".." {
-                        continue;
-                    }
-                    Some(Ok(info))
-                }
-                Err(e) => Some(Err(e)),
+
+            let n = match me.read_impl(&mut out) {
+                Ok(s) => s,
+                Err(e) => return Some(Err(e)),
             };
-            break ret;
+            // Signals EOF
+            if n == 0 {
+                stop = true;
+                // Safety: We only call this once
+                // This iterator will return `None` forever
+                // now
+                unsafe { me.close_ref().unwrap() };
+                return None;
+            }
+
+            let info = FileInfo::from_bytes(out.clone()).unwrap();
+            let name = info.name();
+            if name == "." || name == ".." {
+                continue;
+            }
+            break Some(Ok(info));
         }))
     }
 
-    /// Read bytes into `buf`, returning how many were read.
+    /// Read bytes into `buf`, resizing to fit.
     ///
     /// The files current position increases by that amount.
     ///
     /// This will truncate the read if it would go beyond the end of the file.
-    pub fn read(&self, buf: &mut [u8]) -> Result<usize> {
+    pub fn read(&self, out: &mut [u8]) -> Result<usize> {
         let info = self.info()?;
         if info.directory() {
             return Err(EfiStatus::INVALID_PARAMETER.into());
         }
-        let ret = self.read_impl(false)?;
-        todo!()
+        let size = out.len();
+        unsafe { self.read_impl_write(size, out) }
     }
 
     /// Information about this [`File`]. See [`FileInfo`]
