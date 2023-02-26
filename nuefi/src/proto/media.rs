@@ -109,31 +109,87 @@ impl<'table> File<'table> {
         todo!()
     }
 
-    fn read_impl(&self) -> Result<()> {
+    fn read_impl(&self, dir: bool) -> Result<Vec<u8>> {
         let mut size = 0;
         let mut out: Vec<u8> = Vec::new();
 
-        // Safety:
-        let ret: Result<_> = unsafe {
-            let ptr = out.as_mut_ptr() as *mut u8;
-            (self.interface().read.unwrap())(self.interface, &mut size, ptr)
-        }
-        .into();
+        // Safety: See `info` method
+        // TODO: Figure out way to de-duplicate?
+        unsafe {
+            let ptr = null_mut();
+            let rd = self.interface().read.unwrap();
 
-        Ok(())
+            let ret = (rd)(self.interface, &mut size, ptr);
+            if dir && size == 0 && ret.is_success() {
+                // End of directories
+                return Ok(Vec::new());
+            } else if ret != EfiStatus::BUFFER_TOO_SMALL {
+                return Err(UefiError::new(ret));
+            }
+
+            out.reserve_exact(size);
+            assert!(out.capacity() >= size, "FileInfo read capacity bug");
+            let ptr = out.as_mut_ptr() as *mut u8;
+
+            let ret = (rd)(self.interface, &mut size, ptr);
+
+            if ret.is_success() {
+                out.set_len(size);
+
+                Ok(out)
+            } else {
+                Err(ret.into())
+            }
+        }
     }
 
     /// Read the contents of the directory referred to by our handle
-    pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<File>> + '_> {
+    pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<FileInfo>> + '_> {
         let info = self.info()?;
         if !info.directory() {
             return Err(EfiStatus::INVALID_PARAMETER.into());
         }
 
-        let _ = self.read_impl()?;
+        let mut stop = false;
+
         Ok(core::iter::from_fn(move || {
-            //
-            todo!();
+            if stop {
+                return None;
+            }
+            // TODO: Clone self to keep valid?
+            let rd = self.read_impl(true);
+            match rd {
+                Ok(v) => {
+                    if v.is_empty() {
+                        stop = true;
+                        return None;
+                    }
+                    let f_size = size_of::<RawFileInfo>();
+                    let (raw, name) = v.split_at(f_size);
+
+                    // Safety:
+                    let name = unsafe {
+                        //
+                        from_raw_parts(name.as_ptr() as *const u16, name.len() / 2)
+                    };
+                    let name = char::decode_utf16(name.iter().copied())
+                        .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                        .collect::<String>();
+                    let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
+
+                    // Safety: See `info` method
+                    // TODO: Figure out way to de-duplicate?
+                    unsafe {
+                        info.as_mut_ptr()
+                            .cast::<u8>()
+                            .copy_from_nonoverlapping(raw.as_ptr() as *const u8, f_size);
+                        let info = info.assume_init();
+
+                        Some(Ok(FileInfo::new(info, name)))
+                    }
+                }
+                Err(e) => Some(Err(e)),
+            }
         }))
     }
 
@@ -204,7 +260,7 @@ impl<'table> File<'table> {
 
                 assert_eq!(info.size, size as u64, "FileInfo size mismatch");
 
-                Ok(FileInfo::new(info, name)?)
+                Ok(FileInfo::new(info, name))
             } else {
                 Err(UefiError::new(info))
             }
@@ -231,8 +287,8 @@ pub struct FileInfo {
 impl FileInfo {
     const DIRECTORY: u64 = 0x10;
 
-    fn new(info: RawFileInfo, name: String) -> Result<Self> {
-        Ok(Self { info, name })
+    fn new(info: RawFileInfo, name: String) -> Self {
+        Self { info, name }
     }
 
     pub fn directory(&self) -> bool {
