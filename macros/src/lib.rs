@@ -68,6 +68,37 @@ mod proto;
 /// }
 /// ```
 ///
+/// # Logger
+///
+/// The `log` attribute generates code equivalent to the following,
+///
+/// ```rust
+/// # use nuefi::{error::Result, Boot, SystemTable, EfiHandle, entry};
+/// use nuefi::logger::{UefiColorLogger, UefiLogger};
+///
+/// // This
+/// #[entry(log(
+///     targets("targets", "..."),
+///     exclude("..."),
+///     color
+/// ))]
+/// fn uefi_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+///     Ok(())
+/// }
+///
+/// // Is the same as this
+/// static NUEFI_LOGGER: UefiColorLogger = UefiLogger::new(
+///         &[module_path!(), "targets", "..."],
+///     )
+///     .exclude(&["..."])
+///     .color();
+///
+/// fn main() {
+///     // Called before your code runs
+///     UefiLogger::init(&NUEFI_LOGGER);
+/// }
+/// ```
+///
 /// [log]: <https://crates.io/crates/log>
 /// [alloc_err]: <https://doc.rust-lang.org/nightly/unstable-book/language-features/alloc-error-handler.html>
 /// [UefiLogger]: ./logger/struct.UefiLogger.html
