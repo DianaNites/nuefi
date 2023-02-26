@@ -37,6 +37,7 @@
     unused_mut,
     dead_code,
     unreachable_code,
+    unused_unsafe,
     clippy::let_and_return,
     clippy::diverging_sub_expression,
     clippy::let_unit_value,
