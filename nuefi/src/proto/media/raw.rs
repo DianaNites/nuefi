@@ -59,6 +59,13 @@ pub type GetInfo = unsafe extern "efiapi" fn(
     buffer: *mut u8,
 ) -> EfiStatus;
 
+pub type SetInfo = unsafe extern "efiapi" fn(
+    this: *const RawFile,
+    info_type: *const Guid,
+    buffer_size: usize,
+    buffer: *const u8,
+) -> EfiStatus;
+
 pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
 
 pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
@@ -68,6 +75,9 @@ pub type Read = unsafe extern "efiapi" fn(
     buffer_size: *mut usize,
     buffer: *mut u8,
 ) -> EfiStatus;
+
+pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: *mut u64) -> EfiStatus;
+pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: u64) -> EfiStatus;
 
 /// UEFI File protocol
 #[repr(C)]
@@ -90,14 +100,19 @@ pub struct RawFile {
     ///
     pub write: *const u8,
 
-    pub get_pos: *const u8,
-    pub set_pos: *const u8,
+    /// Get current cursor position
+    pub get_pos: Option<GetPos>,
+
+    /// Set current cursor position
+    pub set_pos: Option<SetPos>,
 
     /// Get information about the File/filesystem
     pub get_info: Option<GetInfo>,
 
-    pub set_info: *const u8,
+    /// Set information about the File/filesystem
+    pub set_info: Option<SetInfo>,
 
+    /// Flush the handle
     pub flush: Option<Flush>,
 
     // Below added in revision 2
