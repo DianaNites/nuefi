@@ -104,9 +104,11 @@ impl<'table> BootServices<'table> {
     /// TODO: Section about finding handles for protocols
     ///
     /// If no protocol is found, [None] is returned.
-    pub fn locate_protocol<'boot, T: proto::Protocol<'boot>>(&'boot self) -> Result<Option<T>> {
+    pub fn locate_protocol<'boot, Protocol: proto::Protocol<'boot>>(
+        &'boot self,
+    ) -> Result<Option<Protocol>> {
         let mut out: *mut u8 = null_mut();
-        let mut guid = T::GUID;
+        let mut guid = Protocol::GUID;
         let lp = self.interface().locate_protocol.unwrap();
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (lp)(&mut guid, null_mut(), &mut out) };
@@ -115,13 +117,13 @@ impl<'table> BootServices<'table> {
                 !out.is_null(),
                 "UEFI locate_protocol returned success, but the protocol was null. \
                 The Protocol was \"{}\" with GUID `{}`",
-                T::NAME,
-                T::GUID.to_uuid()
+                Protocol::NAME,
+                Protocol::GUID.to_uuid()
             );
             // Safety:
             // - Success means `out` is valid
             // - We assert its not null just in case.
-            unsafe { Ok(Some(T::from_raw(out as *mut T::Raw))) }
+            unsafe { Ok(Some(Protocol::from_raw(out as *mut Protocol::Raw))) }
         } else if ret == EfiStatus::NOT_FOUND {
             Ok(None)
         } else {
