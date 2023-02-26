@@ -12,6 +12,7 @@ use crate::{
         console::raw::{RawSimpleTextInput, RawSimpleTextOutput},
         device_path::DevicePath,
         graphics::{raw::RawGraphicsOutput, GraphicsOutput},
+        Guid,
         Protocol,
     },
     EfiHandle,
@@ -298,7 +299,13 @@ pub struct RawBootServices {
     >,
     pub reinstall_protocol_interface: *mut u8,
     pub uninstall_protocol_interface: *mut u8,
-    pub handle_protocol: *mut u8,
+    pub handle_protocol: Option<
+        unsafe extern "efiapi" fn(
+            handle: EfiHandle,
+            guid: *const Guid,
+            interface: *mut *mut u8,
+        ) -> EfiStatus,
+    >,
     pub reserved: *mut u8,
     pub register_protocol_notify: *mut u8,
     pub locate_handle: *mut u8,

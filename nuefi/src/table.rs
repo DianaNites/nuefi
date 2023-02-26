@@ -268,6 +268,37 @@ impl<'table> BootServices<'table> {
         )
         .into()
     }
+
+    /// Query `handle` to determine if it supports `Protocol`
+    ///
+    /// If no protocol is found, [`Ok(None)`] is returned.
+    pub fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
+        &'boot self,
+        handle: EfiHandle,
+    ) -> Result<Option<Protocol>> {
+        let mut out: *mut u8 = null_mut();
+        let guid = Protocol::GUID;
+        let lp = self.interface().handle_protocol.unwrap();
+        // Safety: Construction ensures safety. Statically verified arguments.
+        let ret = unsafe { (lp)(handle, &guid, &mut out) };
+        if ret.is_success() {
+            assert!(
+                !out.is_null(),
+                "UEFI handle_protocol returned success, but the protocol was null. \
+                The Protocol was \"{}\" with GUID `{}`",
+                Protocol::NAME,
+                Protocol::GUID.to_uuid()
+            );
+            // Safety:
+            // - Success means `out` is valid
+            // - We assert its not null just in case.
+            unsafe { Ok(Some(Protocol::from_raw(out as *mut Protocol::Raw))) }
+        } else if ret == EfiStatus::UNSUPPORTED {
+            Ok(None)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
 }
 
 interface!(
