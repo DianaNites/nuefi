@@ -9,7 +9,7 @@ use log::{error, trace};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
-    proto::device_path::{DevicePath, DevicePathToText},
+    proto::device_path::{DevicePath, DevicePathToText, DevicePathUtil},
     Boot,
     SystemTable,
 };
@@ -18,7 +18,7 @@ fn table() -> Result<SystemTable<Boot>> {
     if let Some(table) = get_boot_table() {
         Ok(table)
     } else {
-        error!("Tried to use `Path` while not in `Boot` mode");
+        error!("Tried to use `SystemTable` while not in `Boot` mode");
         Err(UefiError::new(EfiStatus::UNSUPPORTED))
     }
 }
@@ -177,6 +177,26 @@ impl<'table> Path<'table> {
         Self { data }
     }
 
+    /// Convert [`Path`] to [`PathBuf`]
+    pub fn to_path_buf(&self) -> Result<PathBuf<'table>> {
+        let table = table()?;
+        let boot = table.boot();
+        let util = boot
+            .locate_protocol::<DevicePathUtil>()?
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+
+        let copy = util.duplicate(&self.data)?;
+        let v = PathBuf::new(copy);
+        Ok(
+            // FIXME: EVIL
+            // Safety: Evil lifetime hack, turn our local borrow
+            // into a `'table` borrow
+            // This should be safe because the only way to call to_text is
+            // by having a valid lifetime
+            unsafe { core::mem::transmute(v) },
+        )
+    }
+
     /// Convert this path to a UEFI String
     pub fn to_text(&'table self) -> Result<UefiString<'table>> {
         let table = table()?;
@@ -187,6 +207,7 @@ impl<'table> Path<'table> {
 
         let s = text.convert_device_path_to_text(&self.data)?;
         Ok(
+            // FIXME: EVIL
             // Safety: Evil lifetime hack, turn our local borrow
             // into a `'table` borrow
             // This should be safe because the only way to call to_text is
@@ -233,6 +254,51 @@ impl<'table> Display for Path<'table> {
 #[derive(Debug)]
 pub struct PathBuf<'table> {
     data: DevicePath<'table>,
+}
+
+impl<'table> PathBuf<'table> {
+    pub(crate) fn new(data: DevicePath<'table>) -> Self {
+        Self { data }
+    }
+
+    /// Pop the last component off from the [Path]
+    // FIXME: Should probably only be on PathBuf
+    pub fn pop(&self) -> Result<PathBuf> {
+        let copy = self.try_clone()?;
+
+        todo!()
+    }
+
+    pub fn as_path(&self) -> Path {
+        // Safety: `self.data` is valid
+        unsafe { Path::new(DevicePath::new(self.data.as_ptr())) }
+    }
+
+    pub fn try_clone(&self) -> Result<Self> {
+        let table = table()?;
+        let boot = table.boot();
+        let util = boot
+            .locate_protocol::<DevicePathUtil>()?
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+
+        let copy = util.duplicate(&self.data)?;
+        let v = PathBuf::new(copy);
+        Ok(
+            // FIXME: EVIL
+            // Safety: Evil lifetime hack, turn our local borrow
+            // into a `'table` borrow
+            // This should be safe because the only way to call to_text is
+            // by having a valid lifetime
+            unsafe { core::mem::transmute(v) },
+        )
+    }
+}
+
+impl<'table> Clone for PathBuf<'table> {
+    #[inline]
+    fn clone(&self) -> Self {
+        self.try_clone().unwrap()
+    }
 }
 
 impl<'table> Drop for PathBuf<'table> {
