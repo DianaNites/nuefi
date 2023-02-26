@@ -299,6 +299,42 @@ impl FileInfo {
         Self { info, name }
     }
 
+    /// Create `FileInfo` from bytes
+    fn from_bytes(v: Vec<u8>) -> Result<FileInfo> {
+        // Safety: Described within
+        unsafe {
+            let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
+            let f_size = size_of::<RawFileInfo>();
+
+            // Split off the raw info struct from the name
+            let (raw, name) = v.split_at(f_size);
+
+            // If `raw` is empty, error
+            if raw.len() < f_size {
+                return Err(EfiStatus::BUFFER_TOO_SMALL.into());
+            }
+
+            // Initialize the new info struct
+            info.as_mut_ptr()
+                .cast::<u8>()
+                .copy_from_nonoverlapping(raw.as_ptr() as *const u8, f_size);
+            let info = info.assume_init();
+
+            // The length of the filename in UTF-16, minus the nul terminator.
+            let name_len = (name.len() / 2) - 1;
+
+            // Rebind `name` from a `&[u8]` slice
+            // to a `&[u16]` slice of half the length
+            let name = from_raw_parts(name.as_ptr() as *const u16, name_len);
+
+            // Then decode it as UTF-16
+            let name = char::decode_utf16(name.iter().copied())
+                .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                .collect::<String>();
+            Ok(FileInfo::new(info, name))
+        }
+    }
+
     pub fn directory(&self) -> bool {
         (self.info.flags & Self::DIRECTORY) == Self::DIRECTORY
     }
