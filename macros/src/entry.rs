@@ -555,12 +555,17 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         } else {
             quote! {UefiLogger}
         };
+        let all = if log.all {
+            quote! { all() }
+        } else {
+            quote! { new(&[module_path!(), #(#targets),*]) }
+        };
         quote! {{
             #[allow(unused_imports)]
             use #krate::logger::{UefiColorLogger, UefiLogger};
             use ::core::module_path;
 
-            static NUEFI_LOGGER: #color_ty = UefiLogger::new(&[module_path!(), #(#targets),*])
+            static NUEFI_LOGGER: #color_ty = UefiLogger::#all
                 .exclude(&[#(#exclude),*])
                 #color
 
