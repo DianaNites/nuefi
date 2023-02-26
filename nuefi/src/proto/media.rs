@@ -201,7 +201,13 @@ pub struct FileInfo {
 }
 
 impl FileInfo {
+    const DIRECTORY: u64 = 0x10;
+
     fn new(info: RawFileInfo, name: String) -> Result<Self> {
         Ok(Self { info, name })
+    }
+
+    pub fn directory(&self) -> bool {
+        (self.info.flags & Self::DIRECTORY) == Self::DIRECTORY
     }
 }
