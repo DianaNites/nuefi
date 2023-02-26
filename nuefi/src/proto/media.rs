@@ -1,6 +1,7 @@
 //! UEFI Media protocols
 use alloc::{string::String, vec::Vec};
 use core::{
+    cell::Cell,
     iter::{from_fn, once},
     mem::{size_of, MaybeUninit},
     ptr::null_mut,
@@ -60,20 +61,51 @@ impl<'table> SimpleFileSystem<'table> {
     }
 }
 
-interface!(
-    /// UEFI File Protocol
-    ///
-    /// This represents both files and directories on a filesystem.
-    ///
-    /// # Note
-    ///
-    /// This does not have a [`trait@Protocol`] implementation because this
-    /// is not a standalone protocol.
-    ///
-    /// See [`SimpleFileSystem`]
-    // TODO: Is File a good name? its more like a path but like.. not a path?
-    File(RawFile)
-);
+// Terrible hacks
+mod file_imp {
+    use super::*;
+
+    interface!(FileImp(RawFile));
+}
+use file_imp::FileImp;
+
+/// UEFI File Protocol
+///
+/// This represents both files and directories on a filesystem.
+///
+/// This will call [`File::close`] on [`Drop`]
+///
+/// # Note
+///
+/// This does not have a [`trait@Protocol`] implementation because this
+/// is not a standalone protocol.
+///
+/// See [`SimpleFileSystem`]
+// TODO: Is File a good name? its more like a path but like.. not a path?
+pub struct File<'table> {
+    raw: FileImp<'table>,
+    interface: *mut RawFile,
+    closed: Cell<bool>,
+}
+
+// interface hacks
+impl<'table> File<'table> {
+    pub(crate) unsafe fn new(interface: *mut RawFile) -> Self {
+        Self {
+            raw: FileImp::new(interface),
+            interface,
+            closed: Cell::new(false),
+        }
+    }
+
+    fn interface(&self) -> &RawFile {
+        // SAFETY:
+        // Ensured valid in construction.
+        // Continued validity ensured by the type system
+        // Should be statically impossible to invalidate
+        unsafe { &*(self.interface.cast_const()) }
+    }
+}
 
 impl<'table> File<'table> {
     fn open_impl(&self, name: &str, mode: u64, flags: u64) -> Result<File> {
@@ -210,7 +242,7 @@ impl<'table> File<'table> {
                 // Safety: We only call this once
                 // This iterator will return `None` forever
                 // now
-                match me.close_ref() {
+                match me.close() {
                     Ok(_) => (),
                     Err(e) => return Some(Err(e)),
                 };
@@ -303,11 +335,18 @@ impl<'table> File<'table> {
     }
 
     /// Close the handle, flushing all data, waiting for any pending async I/O.
-    pub fn close(self) -> Result<()> {
+    ///
+    /// Does nothing if called multiple times
+    pub fn close(&self) -> Result<()> {
+        if self.closed.get() {
+            return Ok(());
+        }
+        self.closed.set(true);
         // Safety: checked for null, anything else is the responsibility of firmware
         // This can only be called once.
         // Idk about real hardware yet, but
         // QEMU GP faults if this is called multiple times.
+        // FIXME: QEMU/UEFI faults if `close` is called multiple times?
         unsafe { (self.interface().close.unwrap())(self.interface) }.into()
     }
 
@@ -316,15 +355,14 @@ impl<'table> File<'table> {
         // Safety: checked for null, anything else is the responsibility of firmware
         unsafe { (self.interface().flush.unwrap())(self.interface) }.into()
     }
+}
 
-    /// [`File::close`] but takes `&self`
-    ///
-    /// # Safety:
-    ///
-    /// - See [`File::close`]
-    /// - Only call once.
-    unsafe fn close_ref(&self) -> Result<()> {
-        (self.interface().close.unwrap())(self.interface).into()
+impl<'table> Drop for File<'table> {
+    fn drop(&mut self) {
+        if !self.closed.get() {
+            self.closed.set(true);
+            let _ = self.close();
+        }
     }
 }
 
