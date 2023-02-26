@@ -4,15 +4,18 @@
 //! # Quick Start
 //!
 //! Minimal quick start example, this will setup a UEFI entry point for you that
-//! does nothing.
+//! prints "Hello, world!".
 //!
-//! ```rust
+//! This example does not compile because of limitations in rustdoc.
+//!
+//! ```rust,compile_fail
 //! // No standard library
 //! #![no_std]
 //!
 //! // No main function
 //! #![no_main]
 //! use nuefi::{entry, EfiHandle, SystemTable, Boot, error};
+//! use core::fmt::Write;
 //!
 //! // Generate the UEFI entry point
 //! #[entry(
@@ -23,6 +26,8 @@
 //!     alloc,
 //! )]
 //! fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+//!     let mut stdout = table.stdout();
+//!     writeln!(&mut stdout, "Hello, world!")?;
 //!     Ok(())
 //! }
 //! ```
