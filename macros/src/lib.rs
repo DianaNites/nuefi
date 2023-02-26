@@ -68,25 +68,52 @@ mod proto;
 /// }
 /// ```
 ///
+/// # Panic, alloc, and alloc error handlers
+///
+/// These attributes generate the necessary implementations of these
+/// to compile `no_std` code.
+///
+/// The provided `panic` handler will print to the UEFI stdout,
+/// if available and in [`Boot`][Boot] mode, then loops forever.
+/// (This will result in the UEFI watchdog, or the user, restarting)
+///
+/// The provided `alloc_error` handler will panic with information
+/// about the failed `Layout`
+///
+/// The `alloc` attribute will generate the following code
+///
+/// ```rust,no_run
+/// # extern crate alloc;
+/// use nuefi::mem::UefiAlloc;
+///
+/// #[global_allocator]
+/// static NUEFI_ALLOC: UefiAlloc = UefiAlloc::new();
+/// ```
+///
 /// # Logger
 ///
 /// The `log` attribute generates code equivalent to the following,
 ///
 /// ```rust
-/// # use nuefi::{error::Result, Boot, SystemTable, EfiHandle, entry};
-/// use nuefi::logger::{UefiColorLogger, UefiLogger};
+/// # use nuefi::{error::Result, Boot, SystemTable, EfiHandle};
+/// use log::info;
 ///
 /// // This
+/// use nuefi::entry;
+///
 /// #[entry(log(
 ///     targets("targets", "..."),
 ///     exclude("..."),
 ///     color
 /// ))]
 /// fn uefi_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+///     info!("Hello, world!");
 ///     Ok(())
 /// }
 ///
 /// // Is the same as this
+/// use nuefi::logger::{UefiColorLogger, UefiLogger};
+///
 /// static NUEFI_LOGGER: UefiColorLogger = UefiLogger::new(
 ///         &[module_path!(), "targets", "..."],
 ///     )
@@ -96,6 +123,7 @@ mod proto;
 /// fn main() {
 ///     // Called before your code runs
 ///     UefiLogger::init(&NUEFI_LOGGER);
+///     info!("Hello, world!");
 /// }
 /// ```
 ///
@@ -104,6 +132,7 @@ mod proto;
 /// [UefiLogger]: ./logger/struct.UefiLogger.html
 /// [SystemTable]: ./table/struct.SystemTable.html
 /// [EfiHandle]: ./struct.EfiHandle.html
+/// [Boot]: ./table/struct.Boot.html
 /// [Result]: ./error/type.Result.html
 // FIXME: Above links for docs.rs? is there a way to portably link?
 // ..just make proc macro depend on nuefi?
