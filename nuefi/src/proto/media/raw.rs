@@ -73,15 +73,25 @@ pub struct RawFile {
     /// Currently `0x00020000`
     pub revision: u64,
 
+    /// Open a path relative to this handle
     pub open: Option<Open>,
+
+    /// Close the handle
     pub close: Option<Close>,
+
+    ///
     pub delete: *const u8,
+
+    /// Read files/ReadDir
     pub read: Option<Read>,
+
+    ///
     pub write: *const u8,
 
     pub get_pos: *const u8,
     pub set_pos: *const u8,
 
+    /// Get information about the File/filesystem
     pub get_info: Option<GetInfo>,
 
     pub set_info: *const u8,
