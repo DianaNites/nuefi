@@ -178,6 +178,10 @@ impl<'table> File<'table> {
                     // Signals EOF
                     if v.is_empty() {
                         stop = true;
+                        // Safety: We only call this once
+                        // This iterator will return `None` forever
+                        // now
+                        unsafe { me.close_ref().unwrap() };
                         return None;
                     }
                     let info = FileInfo::from_bytes(v).unwrap();
@@ -191,6 +195,18 @@ impl<'table> File<'table> {
             };
             break ret;
         }))
+    }
+
+    /// Read bytes into `buf`, returning how many were read.
+    ///
+    /// The files current position increases by that amount.
+    pub fn read(&self, buf: &mut [u8]) -> Result<usize> {
+        let info = self.info()?;
+        if info.directory() {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
+        let ret = self.read_impl(false)?;
+        todo!()
     }
 
     /// Information about this [`File`]. See [`FileInfo`]
@@ -255,7 +271,20 @@ impl<'table> File<'table> {
     /// Close the handle, flushing all data, waiting for any pending async I/O.
     pub fn close(self) -> Result<()> {
         // Safety: checked for null, anything else is the responsibility of firmware
+        // This can only be called once.
+        // Idk about real hardware yet, but
+        // QEMU GP faults if this is called multiple times.
         unsafe { (self.interface().close.unwrap())(self.interface) }.into()
+    }
+
+    /// [`File::close`] but takes `&self`
+    ///
+    /// # Safety:
+    ///
+    /// - See [`File::close`]
+    /// - Only call once.
+    unsafe fn close_ref(&self) -> Result<()> {
+        (self.interface().close.unwrap())(self.interface).into()
     }
 }
 
