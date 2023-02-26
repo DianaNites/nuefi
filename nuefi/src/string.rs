@@ -262,9 +262,9 @@ impl<'table> PathBuf<'table> {
     }
 
     /// Pop the last component off from the [Path]
-    // FIXME: Should probably only be on PathBuf
     pub fn pop(&self) -> Result<PathBuf> {
         let copy = self.try_clone()?;
+        // TODO: Figure out how to manipulate DevicePaths
 
         todo!()
     }
