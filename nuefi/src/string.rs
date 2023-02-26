@@ -14,6 +14,15 @@ use crate::{
     SystemTable,
 };
 
+fn table() -> Result<SystemTable<Boot>> {
+    if let Some(table) = get_boot_table() {
+        Ok(table)
+    } else {
+        error!("Tried to use `Path` while not in `Boot` mode");
+        Err(UefiError::new(EfiStatus::UNSUPPORTED))
+    }
+}
+
 /// An owned UEFI string, encoded as UTF-16/UCS-2/lies*
 ///
 /// *UEFI firmware supposedly often lies/is not conformant with UCS-2.
@@ -168,18 +177,9 @@ impl<'table> Path<'table> {
         Self { data }
     }
 
-    fn table() -> Result<SystemTable<Boot>> {
-        if let Some(table) = get_boot_table() {
-            Ok(table)
-        } else {
-            error!("Tried to use `Path` while not in `Boot` mode");
-            Err(UefiError::new(EfiStatus::UNSUPPORTED))
-        }
-    }
-
     /// Convert this path to a UEFI String
     pub fn to_text(&'table self) -> Result<UefiString<'table>> {
-        let table = Self::table()?;
+        let table = table()?;
         let boot = table.boot();
         let text = boot
             .locate_protocol::<DevicePathToText>()?
@@ -199,7 +199,7 @@ impl<'table> Path<'table> {
     ///
     /// Invalid characters are mapped to [`char::REPLACEMENT_CHARACTER`]
     pub fn to_string(&self) -> Result<String> {
-        let table = Self::table()?;
+        let table = table()?;
         let boot = table.boot();
         let text = boot
             .locate_protocol::<DevicePathToText>()?
