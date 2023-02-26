@@ -200,6 +200,8 @@ impl<'table> File<'table> {
     /// Read bytes into `buf`, returning how many were read.
     ///
     /// The files current position increases by that amount.
+    ///
+    /// This will truncate the read if it would go beyond the end of the file.
     pub fn read(&self, buf: &mut [u8]) -> Result<usize> {
         let info = self.info()?;
         if info.directory() {
