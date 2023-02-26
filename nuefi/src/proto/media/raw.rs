@@ -61,6 +61,12 @@ pub type GetInfo = unsafe extern "efiapi" fn(
 
 pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
 
+pub type Read = unsafe extern "efiapi" fn(
+    this: *mut RawFile,
+    buffer_size: *mut usize,
+    buffer: *mut u8,
+) -> EfiStatus;
+
 /// UEFI File protocol
 #[repr(C)]
 pub struct RawFile {
@@ -69,7 +75,7 @@ pub struct RawFile {
     pub open: Option<Open>,
     pub close: Option<Close>,
     pub delete: Option<*const u8>,
-    pub read: Option<*const u8>,
+    pub read: Option<Read>,
     pub write: Option<*const u8>,
 
     pub get_pos: Option<*const u8>,
