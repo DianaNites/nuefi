@@ -22,3 +22,41 @@ impl RawLoadFile2 {
         }
     }
 }
+
+pub type OpenVolume = unsafe extern "efiapi" fn(
+    //
+    this: *mut RawSimpleFileSystem,
+    root: *mut *mut RawFile,
+) -> EfiStatus;
+
+/// UEFI Simple File System protocol
+#[repr(C)]
+pub struct RawSimpleFileSystem {
+    /// Currently `0x00010000`
+    pub revision: u64,
+    pub open_volume: Option<OpenVolume>,
+}
+
+impl RawSimpleFileSystem {
+    //
+}
+
+pub type Open = unsafe extern "efiapi" fn(
+    //
+    this: *mut RawFile,
+    new: *mut *mut RawFile,
+    name: *const u16,
+    mode: u64,
+    attributes: u64,
+) -> EfiStatus;
+
+pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+
+/// UEFI File protocol
+#[repr(C)]
+pub struct RawFile {
+    /// Currently `0x00020000`
+    pub revision: u64,
+    pub open: Option<Open>,
+    pub close: Option<Close>,
+}
