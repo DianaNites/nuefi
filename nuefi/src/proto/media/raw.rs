@@ -1,4 +1,7 @@
-use crate::{error::EfiStatus, proto::device_path::raw::RawDevicePath};
+use crate::{
+    error::EfiStatus,
+    proto::{device_path::raw::RawDevicePath, Guid, Time},
+};
 
 pub type LoadFile2Fn = unsafe extern "efiapi" fn(
     this: *mut RawLoadFile2,
@@ -42,12 +45,18 @@ impl RawSimpleFileSystem {
 }
 
 pub type Open = unsafe extern "efiapi" fn(
-    //
     this: *mut RawFile,
     new: *mut *mut RawFile,
     name: *const u16,
     mode: u64,
     attributes: u64,
+) -> EfiStatus;
+
+pub type GetInfo = unsafe extern "efiapi" fn(
+    this: *mut RawFile,
+    info_type: *const Guid,
+    buffer_size: *mut usize,
+    buffer: *mut u8,
 ) -> EfiStatus;
 
 pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
@@ -59,4 +68,19 @@ pub struct RawFile {
     pub revision: u64,
     pub open: Option<Open>,
     pub close: Option<Close>,
+    pub get_info: Option<GetInfo>,
+}
+
+/// UEFI [`RawFile`] information
+#[repr(C)]
+pub struct RawFileInfo {
+    pub size: u64,
+    pub file_size: u64,
+    pub physical_size: u64,
+    pub create_time: Time,
+    pub last_access_time: Time,
+    pub modification_time: Time,
+    pub flags: u64,
+    // This type is dynamically sized
+    // pub filename: *mut u16,
 }

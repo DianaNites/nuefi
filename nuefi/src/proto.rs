@@ -195,3 +195,41 @@ impl<'table, Proto: Protocol<'table>> Drop for Scope<'table, Proto> {
         }
     }
 }
+
+/// UEFI Time information
+///
+///
+/// Defined at <https://uefi.org/specs/UEFI/2.10/08_Services_Runtime_Services.html#gettime>
+#[derive(Debug, Default, Clone, Copy)]
+#[repr(C)]
+pub struct Time {
+    /// 1900 - 9999
+    pub year: u16,
+
+    /// 1 - 12
+    pub month: u8,
+
+    /// 1 - 31
+    pub day: u8,
+
+    /// 0 - 23
+    pub hour: u8,
+
+    /// 0 - 59
+    pub minute: u8,
+
+    /// 0 - 59
+    pub second: u8,
+
+    pub _pad1: u8,
+
+    /// 0 - 999,999,999
+    pub nanosecond: u32,
+
+    /// —1440 to 1440 or 2047
+    pub time_zone: i16,
+
+    pub daylight: u8,
+
+    pub _pad2: u8,
+}

@@ -34,9 +34,10 @@
 #![allow(
     unused_imports,
     unused_variables,
-    clippy::let_and_return,
     dead_code,
-    unreachable_code
+    unreachable_code,
+    clippy::let_and_return,
+    clippy::diverging_sub_expression
 )]
 #![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
 #![no_std]
