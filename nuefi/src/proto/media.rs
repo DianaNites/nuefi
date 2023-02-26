@@ -222,9 +222,6 @@ impl<'table> File<'table> {
 
         let mut stop = false;
 
-        // TODO: Clone impl?
-        let me = self.open(".")?;
-
         let mut out: Vec<u8> = Vec::new();
 
         Ok(from_fn(move || loop {
@@ -232,19 +229,15 @@ impl<'table> File<'table> {
                 return None;
             }
 
-            let n = match me.read_impl(&mut out) {
+            let n = match self.read_impl(&mut out) {
                 Ok(s) => s,
                 Err(e) => return Some(Err(e)),
             };
             // Signals EOF
             if n == 0 {
                 stop = true;
-                // Safety: We only call this once
-                // This iterator will return `None` forever
-                // now
-                match me.close() {
-                    Ok(_) => (),
-                    Err(e) => return Some(Err(e)),
+                if let Err(e) = self.set_position(0) {
+                    return Some(Err(e));
                 };
                 return None;
             }
