@@ -209,12 +209,12 @@ impl<'table> File<'table> {
 
         // Safety: Described within
         unsafe {
-            let size_ptr: *mut usize = &mut size;
-
             let fp = self.interface().get_info.unwrap();
 
-            // Get the buffer size in `size`
-            let info = (fp)(self.interface, &guid, size_ptr, null_mut());
+            // Get the buffer size
+
+            // All arguments are guaranteed valid
+            let info = (fp)(self.interface, &guid, &mut size, null_mut());
 
             // It should be `BUFFER_TOO_SMALL`
             if info != EfiStatus::BUFFER_TOO_SMALL {
@@ -224,18 +224,27 @@ impl<'table> File<'table> {
             if size == 0 {
                 return Err(UefiError::new(EfiStatus::INVALID_PARAMETER));
             }
-            out.reserve_exact(size);
-            assert!(out.capacity() >= size, "FileInfo capacity bug");
-            // `ptr` was invalidated
+
+            // Reserve enough memory for `size`, initializing to `0`.
+            out.resize(size, 0);
+
+            // Just in case?
+            assert!(out.capacity() >= size, "File::info capacity bug");
+
             let ptr = out.as_mut_ptr();
 
             // This time fill buffer
+
+            // All arguments are guaranteed valid
+            // `ptr` is valid for `size` bytes
             let info = (fp)(self.interface, &guid, &mut size, ptr);
 
             if info.is_success() {
-                // Set `out`'s length
+                // We only call this on success, and before returning.
+                // Out has been fully initialized, because we started initialized
                 out.set_len(size);
-                let info = FileInfo::from_bytes(out.clone()).unwrap();
+
+                let info = FileInfo::from_bytes(out).unwrap();
                 Ok(info)
             } else {
                 Err(UefiError::new(info))
