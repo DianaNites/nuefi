@@ -144,6 +144,8 @@ impl<'table> File<'table> {
     }
 
     /// Read the contents of the directory referred to by our handle
+    ///
+    /// This skips the `.` and `..` entries
     pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<FileInfo>> + '_> {
         let info = self.info()?;
         if !info.directory() {
@@ -152,13 +154,14 @@ impl<'table> File<'table> {
 
         let mut stop = false;
 
-        Ok(core::iter::from_fn(move || {
+        // TODO: Clone impl?
+        let me = self.open(".")?;
+
+        Ok(core::iter::from_fn(move || loop {
             if stop {
                 return None;
             }
-            // TODO: Clone self to keep valid?
-            let rd = self.read_impl(true);
-            match rd {
+            let ret = match me.read_impl(true) {
                 Ok(v) => {
                     if v.is_empty() {
                         stop = true;
@@ -175,6 +178,9 @@ impl<'table> File<'table> {
                     let name = char::decode_utf16(name.iter().copied())
                         .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
                         .collect::<String>();
+                    if name == "." {
+                        // continue;
+                    }
                     let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
 
                     // Safety: See `info` method
@@ -189,7 +195,8 @@ impl<'table> File<'table> {
                     }
                 }
                 Err(e) => Some(Err(e)),
-            }
+            };
+            break ret;
         }))
     }
 
@@ -237,20 +244,10 @@ impl<'table> File<'table> {
                 out.set_len(size);
 
                 let f_size = size_of::<RawFileInfo>();
+                let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
 
                 // Split off the raw info struct from the name
                 let (raw_info, name) = out.split_at(f_size);
-
-                // Rebind `name` from a `&[MaybeUninit<u8>]` slice
-                // to a `&[u16]` slice of half the length
-                let name = from_raw_parts(name.as_ptr() as *const u16, name.len() / 2);
-
-                // Then decode it as UTF-16
-                let name = char::decode_utf16(name.iter().copied())
-                    .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
-                    .collect::<String>();
-
-                let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
 
                 // Initialize the new info struct
                 info.as_mut_ptr()
@@ -259,6 +256,17 @@ impl<'table> File<'table> {
                 let info = info.assume_init();
 
                 assert_eq!(info.size, size as u64, "FileInfo size mismatch");
+
+                let name_len = (size - f_size) - 5;
+
+                // Rebind `name` from a `&[MaybeUninit<u8>]` slice
+                // to a `&[u16]` slice of half the length
+                let name = from_raw_parts(name.as_ptr() as *const u16, name_len);
+
+                // Then decode it as UTF-16
+                let name = char::decode_utf16(name.iter().copied())
+                    .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                    .collect::<String>();
 
                 Ok(FileInfo::new(info, name))
             } else {
