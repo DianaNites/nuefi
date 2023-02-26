@@ -113,27 +113,39 @@ impl<'table> File<'table> {
         let mut size = 0;
         let mut out: Vec<u8> = Vec::new();
 
-        // Safety: See `info` method
-        // TODO: Figure out way to de-duplicate?
+        // Safety: Described within
         unsafe {
-            let ptr = null_mut();
             let rd = self.interface().read.unwrap();
 
-            let ret = (rd)(self.interface, &mut size, ptr);
+            // Calling to get buffer size
+
+            // `interface` and `size` are always valid
+            // ptr is null and thats okay
+            let ret = (rd)(self.interface, &mut size, null_mut());
             if dir && size == 0 && ret.is_success() {
                 // End of directories
                 return Ok(Vec::new());
             } else if ret != EfiStatus::BUFFER_TOO_SMALL {
+                // Anything other than `BUFFER_TOO_SMALL` here is an error
                 return Err(UefiError::new(ret));
             }
 
-            out.reserve_exact(size);
-            assert!(out.capacity() >= size, "FileInfo read capacity bug");
+            // Here we reserve enough memory for `size`, initializing to `0`.
+            out.resize(size, 0);
+
+            // Assert just in case?
+            assert!(out.capacity() >= size, "File read capacity bug");
             let ptr = out.as_mut_ptr() as *mut u8;
 
+            // Calling to fill the buffer
+
+            // `interface`, `size`, are valid
+            // `ptr` is valid for `size` bytes
             let ret = (rd)(self.interface, &mut size, ptr);
 
             if ret.is_success() {
+                // We only call this on success, and before returning.
+                // Out has been fully initialized, because we started initialized
                 out.set_len(size);
 
                 Ok(out)
