@@ -1,4 +1,40 @@
-//! Supported/known UEFI Protocols
+//! Defines the supported/known UEFI Protocols
+//!
+//! UEFI Protocols are how you interact with UEFI firmware, and how firmware
+//! interacts with you.
+//!
+//! Currently, only a subset of the UEFI API is implemented.
+//!
+//! # Example
+//!
+//! Locate a protocol
+//!
+//! ```rust
+//! use nuefi::{entry, EfiHandle, SystemTable, Boot, error, error::EfiStatus};
+//! use nuefi::proto::graphics::GraphicsOutput;
+//!
+//! // Generate the UEFI entry point
+//! #[entry()]
+//! fn efi_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+//!     // Get UEFI Boot Services
+//!     let boot = table.boot();
+//!
+//!     // Locate the `GraphicsOutput` Protocol
+//!     match boot.locate_protocol::<GraphicsOutput>() {
+//!         Ok(proto) => {
+//!             // Do something
+//!         }
+//!         Err(e) => {
+//!             // Return an error if the Protocol does not exist.
+//!             // For example, if the device doesn't have a screen.
+//!             return Err(EfiStatus::INVALID_PARAMETER.into());
+//!         }
+//!     };
+//!     Ok(())
+//! }
+//! #
+//! # fn main() {}
+//! ```
 
 use core::{marker::PhantomData, ops::Deref};
 
