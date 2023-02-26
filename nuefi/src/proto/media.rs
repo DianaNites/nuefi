@@ -210,11 +210,17 @@ impl<'table> File<'table> {
                 // Safety: We only call this once
                 // This iterator will return `None` forever
                 // now
-                unsafe { me.close_ref().unwrap() };
+                match me.close_ref() {
+                    Ok(_) => (),
+                    Err(e) => return Some(Err(e)),
+                };
                 return None;
             }
 
-            let info = FileInfo::from_bytes(out.clone()).unwrap();
+            let info = match FileInfo::from_bytes(out.clone()) {
+                Ok(i) => i,
+                Err(e) => return Some(Err(e)),
+            };
             let name = info.name();
             if name == "." || name == ".." {
                 continue;
