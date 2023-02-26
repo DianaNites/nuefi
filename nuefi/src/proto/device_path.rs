@@ -40,6 +40,21 @@ impl<'table> DevicePathUtil<'table> {
                 - core::mem::size_of::<RawDevicePath>()
         }
     }
+
+    /// Duplicate/Clone the [DevicePath] `path`
+    pub fn duplicate(&self, path: &DevicePath) -> Result<DevicePath> {
+        // Safety: Construction ensures these are valid
+        let ret = unsafe {
+            //
+            (self.interface().duplicate_device_path.unwrap())(path.interface)
+        };
+        if !ret.is_null() {
+            // Safety: ret is non-null
+            unsafe { Ok(DevicePath::from_raw(ret)) }
+        } else {
+            Err(EfiStatus::OUT_OF_RESOURCES.into())
+        }
+    }
 }
 
 interface!(

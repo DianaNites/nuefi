@@ -44,7 +44,8 @@ impl RawDevicePath {
 #[repr(C)]
 pub struct RawDevicePathUtil {
     pub get_device_path_size: Option<unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize>,
-    pub duplicate_device_path: *mut u8,
+    pub duplicate_device_path:
+        Option<unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> *mut RawDevicePath>,
     pub append_device_path: *mut u8,
     pub append_device_node: *mut u8,
     pub append_device_path_instance: *mut u8,
