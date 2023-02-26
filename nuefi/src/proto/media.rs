@@ -1,7 +1,7 @@
 //! UEFI Media protocols
 use alloc::{string::String, vec::Vec};
 use core::{
-    iter::once,
+    iter::{from_fn, once},
     mem::{size_of, MaybeUninit},
     ptr::null_mut,
     slice::from_raw_parts,
@@ -169,7 +169,7 @@ impl<'table> File<'table> {
         // TODO: Clone impl?
         let me = self.open(".")?;
 
-        Ok(core::iter::from_fn(move || loop {
+        Ok(from_fn(move || loop {
             if stop {
                 return None;
             }
