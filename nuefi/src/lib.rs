@@ -435,7 +435,10 @@ mod tests {
         let boot = table.boot();
 
         let gop = boot.locate_protocol::<GraphicsOutput>()?.unwrap();
+        let gop2 = boot.locate_protocol::<GraphicsOutput>()?.unwrap();
         let _ = gop.set_mode(69);
+        info!("{:?}", gop2.mode());
+        let _ = gop.set_mode(420);
         // panic!("{gop:?}");
         Ok(())
     }
