@@ -238,4 +238,8 @@ impl FileInfo {
     pub fn directory(&self) -> bool {
         (self.info.flags & Self::DIRECTORY) == Self::DIRECTORY
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
