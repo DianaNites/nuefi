@@ -43,7 +43,10 @@
     clippy::let_unit_value,
     clippy::never_loop
 )]
-#![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
+// Enable these when actively working on them
+// Empty or poor documentation blocks are worse than none at all,
+// now they're harder to find.
+// #![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
 #![no_std]
 #![feature(alloc_error_handler)]
 extern crate alloc;
