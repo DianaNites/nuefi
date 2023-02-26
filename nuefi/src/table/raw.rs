@@ -306,7 +306,7 @@ pub struct RawBootServices {
             interface: *mut *mut u8,
         ) -> EfiStatus,
     >,
-    pub reserved: *mut u8,
+    pub _reserved: *mut u8,
     pub register_protocol_notify: *mut u8,
     pub locate_handle: *mut u8,
     pub locate_device_path: *mut u8,
