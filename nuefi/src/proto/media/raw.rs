@@ -72,6 +72,7 @@ pub struct RawFile {
 }
 
 /// UEFI [`RawFile`] information
+#[derive(Debug)]
 #[repr(C)]
 pub struct RawFileInfo {
     pub size: u64,
