@@ -61,6 +61,8 @@ pub type GetInfo = unsafe extern "efiapi" fn(
 
 pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
 
+pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+
 pub type Read = unsafe extern "efiapi" fn(
     this: *mut RawFile,
     buffer_size: *mut usize,
@@ -95,7 +97,8 @@ pub struct RawFile {
     pub get_info: Option<GetInfo>,
 
     pub set_info: *const u8,
-    pub flush: *const u8,
+
+    pub flush: Option<Flush>,
 
     // Below added in revision 2
     pub open_ex: *const u8,

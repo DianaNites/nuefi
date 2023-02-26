@@ -305,6 +305,12 @@ impl<'table> File<'table> {
         unsafe { (self.interface().close.unwrap())(self.interface) }.into()
     }
 
+    /// Flush all data with this handle
+    pub fn flush(&self) -> Result<()> {
+        // Safety: checked for null, anything else is the responsibility of firmware
+        unsafe { (self.interface().flush.unwrap())(self.interface) }.into()
+    }
+
     /// [`File::close`] but takes `&self`
     ///
     /// # Safety:
