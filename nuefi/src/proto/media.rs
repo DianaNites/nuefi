@@ -169,6 +169,10 @@ impl<'table> File<'table> {
                         return None;
                     }
                     let info = FileInfo::from_bytes(v).unwrap();
+                    let name = info.name();
+                    if name == "." || name == ".." {
+                        continue;
+                    }
                     Some(Ok(info))
                 }
                 Err(e) => Some(Err(e)),
