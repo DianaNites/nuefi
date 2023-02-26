@@ -341,11 +341,18 @@ impl FileInfo {
         }
     }
 
+    /// Is this a directory or not?
     pub fn directory(&self) -> bool {
         (self.info.flags & Self::DIRECTORY) == Self::DIRECTORY
     }
 
+    /// File name
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// File size in bytes
+    pub fn file_size(&self) -> u64 {
+        self.info.file_size
     }
 }
