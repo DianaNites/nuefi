@@ -34,6 +34,7 @@
 #![allow(
     unused_imports,
     unused_variables,
+    unused_mut,
     dead_code,
     unreachable_code,
     clippy::let_and_return,
