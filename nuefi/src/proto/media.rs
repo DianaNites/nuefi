@@ -365,6 +365,26 @@ impl<'table> File<'table> {
             Err(ret.into())
         }
     }
+
+    /// Return `Ok(true)` if file exists
+    pub fn try_exists(&self) -> Result<bool> {
+        let ret = self.info();
+        match ret {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.status() == EfiStatus::NOT_FOUND {
+                    Ok(false)
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    /// Return `true` if file exists, `false` otherwise
+    pub fn exists(&self) -> bool {
+        self.try_exists().unwrap_or_default()
+    }
 }
 
 impl<'table> Drop for File<'table> {
