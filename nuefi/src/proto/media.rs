@@ -349,11 +349,13 @@ impl<'table> File<'table> {
         unsafe { (self.interface().flush.unwrap())(self.interface) }.into()
     }
 
+    /// Set file cursor position
     pub fn set_position(&self, pos: u64) -> Result<()> {
         // Safety: statically valid
         unsafe { (self.interface().set_pos.unwrap())(self.interface, pos).into() }
     }
 
+    /// Current file cursor position
     pub fn position(&self) -> Result<u64> {
         let mut pos: u64 = 0;
         // Safety: statically valid
