@@ -38,6 +38,8 @@ impl<'table> LoadedImage<'table> {
     }
 
     /// The device handle that the EFI Image was loaded from, or [None]
+    // FIXME: Should this return Option?
+    // We don't guarantee `EfiHandle` not being null right?
     pub fn device(&self) -> Option<EfiHandle> {
         if !self.interface().device.0.is_null() {
             Some(self.interface().device)
