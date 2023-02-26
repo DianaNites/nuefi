@@ -1,11 +1,17 @@
 //! UEFI Media protocols
-use alloc::vec::Vec;
-use core::{iter::once, ptr::null_mut};
+use alloc::{string::String, vec::Vec};
+use core::{
+    iter::once,
+    mem::{size_of, MaybeUninit},
+    ptr::null_mut,
+    slice::from_raw_parts,
+};
 
+use log::trace;
 use raw::*;
 
 use crate::{
-    error::{Result, UefiError},
+    error::{EfiStatus, Result, UefiError},
     proto::{Guid, Protocol},
     util::interface,
     Protocol,
@@ -103,9 +109,89 @@ impl<'table> File<'table> {
         todo!()
     }
 
+    /// Information about this [`File`]. See [`FileInfo`]
+    pub fn info(&self) -> Result<FileInfo> {
+        // FIXME: GUID macro 09576E92-6D3F-11D2-8E39-00A0C969723B
+        #[allow(clippy::undocumented_unsafe_blocks)]
+        const GUID: Guid = unsafe {
+            Guid::from_bytes([
+                0x09, 0x57, 0x6e, 0x92, 0x6d, 0x3f, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
+                0x72, 0x3b,
+            ])
+        };
+        let guid = GUID;
+        let mut size = 0;
+        let mut out: Vec<MaybeUninit<u8>> = Vec::new();
+        // Safety: Described within
+        unsafe {
+            let ptr = out.as_mut_ptr() as *mut u8;
+            // let ptr = null_mut();
+
+            // Get the buffer size in `size`
+            let info = (self.interface().get_info.unwrap())(self.interface, &guid, &mut size, ptr);
+
+            // It should be `BUFFER_TOO_SMALL`
+            if info != EfiStatus::BUFFER_TOO_SMALL {
+                trace!("what, size {size}");
+                return Err(UefiError::new(info));
+            }
+            // Sanity check
+            if size == 0 {
+                return Err(UefiError::new(EfiStatus::INVALID_PARAMETER));
+            }
+            out.reserve_exact(size);
+            assert!(out.capacity() >= size, "FileInfo capacity bug");
+            // `ptr` was invalidated
+            let ptr = out.as_mut_ptr() as *mut u8;
+
+            // This time fill buffer
+            let info = (self.interface().get_info.unwrap())(self.interface, &guid, &mut size, ptr);
+
+            if info.is_success() {
+                // Set `out`'s length
+                out.set_len(size);
+
+                let f_size = size_of::<RawFileInfo>();
+
+                // Split off the raw info struct from the name
+                let (raw_info, name) = out.split_at(f_size);
+                let name = from_raw_parts(name.as_ptr() as *const u16, name.len() / 2);
+
+                let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
+                // Initialize the new info struct
+                info.as_mut_ptr()
+                    .cast::<u8>()
+                    .copy_from_nonoverlapping(raw_info.as_ptr() as *const u8, f_size);
+                let info = info.assume_init();
+
+                // assert_eq!(info.size, size);
+                todo!()
+                // Ok(FileInfo::new(new_info, name))
+            } else {
+                Err(UefiError::new(info))
+            }
+        }
+    }
+
     /// Close the handle, flushing all data, waiting for any pending async I/O.
     pub fn close(self) -> Result<()> {
         // Safety: checked for null, anything else is the responsibility of firmware
         unsafe { (self.interface().close.unwrap())(self.interface) }.into()
+    }
+}
+
+/// UEFI [`File`] information
+///
+/// This represents both files and directories on a filesystem.
+// TODO: Separate GUID and Protocol traits?
+#[derive(Debug)]
+pub struct FileInfo {
+    info: RawFileInfo,
+    name: String,
+}
+
+impl FileInfo {
+    fn new(info: RawFileInfo, name: String) -> Result<Self> {
+        Ok(Self { info, name })
     }
 }
