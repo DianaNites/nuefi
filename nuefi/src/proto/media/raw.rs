@@ -79,6 +79,14 @@ pub type Read = unsafe extern "efiapi" fn(
 pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: *mut u64) -> EfiStatus;
 pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: u64) -> EfiStatus;
 
+pub type Delete = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+
+pub type Write = unsafe extern "efiapi" fn(
+    this: *mut RawFile,
+    buffer_size: *mut usize,
+    buffer: *const u8,
+) -> EfiStatus;
+
 /// UEFI File protocol
 #[repr(C)]
 pub struct RawFile {
@@ -91,14 +99,14 @@ pub struct RawFile {
     /// Close the handle
     pub close: Option<Close>,
 
-    ///
-    pub delete: *const u8,
+    /// Close and delete a file
+    pub delete: Option<Delete>,
 
     /// Read files/ReadDir
     pub read: Option<Read>,
 
-    ///
-    pub write: *const u8,
+    /// Write data to file
+    pub write: Option<Write>,
 
     /// Get current cursor position
     pub get_pos: Option<GetPos>,
