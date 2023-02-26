@@ -120,19 +120,20 @@ impl<'table> File<'table> {
             ])
         };
         let guid = GUID;
-        let mut size = 0;
+        let mut size: usize = 0;
         let mut out: Vec<MaybeUninit<u8>> = Vec::new();
+
         // Safety: Described within
         unsafe {
-            let ptr = out.as_mut_ptr() as *mut u8;
-            // let ptr = null_mut();
+            let size_ptr: *mut usize = &mut size;
+
+            let fp = self.interface().get_info.unwrap();
 
             // Get the buffer size in `size`
-            let info = (self.interface().get_info.unwrap())(self.interface, &guid, &mut size, ptr);
+            let info = (fp)(self.interface, &guid, size_ptr, null_mut());
 
             // It should be `BUFFER_TOO_SMALL`
             if info != EfiStatus::BUFFER_TOO_SMALL {
-                trace!("what, size {size}");
                 return Err(UefiError::new(info));
             }
             // Sanity check
@@ -145,7 +146,7 @@ impl<'table> File<'table> {
             let ptr = out.as_mut_ptr() as *mut u8;
 
             // This time fill buffer
-            let info = (self.interface().get_info.unwrap())(self.interface, &guid, &mut size, ptr);
+            let info = (fp)(self.interface, &guid, &mut size, ptr);
 
             if info.is_success() {
                 // Set `out`'s length
@@ -155,18 +156,27 @@ impl<'table> File<'table> {
 
                 // Split off the raw info struct from the name
                 let (raw_info, name) = out.split_at(f_size);
+
+                // Rebind `name` from a `&[MaybeUninit<u8>]` slice
+                // to a `&[u16]` slice of half the length
                 let name = from_raw_parts(name.as_ptr() as *const u16, name.len() / 2);
 
+                // Then decode it as UTF-16
+                let name = char::decode_utf16(name.iter().copied())
+                    .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+                    .collect::<String>();
+
                 let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
+
                 // Initialize the new info struct
                 info.as_mut_ptr()
                     .cast::<u8>()
                     .copy_from_nonoverlapping(raw_info.as_ptr() as *const u8, f_size);
                 let info = info.assume_init();
 
-                // assert_eq!(info.size, size);
-                todo!()
-                // Ok(FileInfo::new(new_info, name))
+                assert_eq!(info.size, size as u64, "FileInfo size mismatch");
+
+                Ok(FileInfo::new(info, name)?)
             } else {
                 Err(UefiError::new(info))
             }
