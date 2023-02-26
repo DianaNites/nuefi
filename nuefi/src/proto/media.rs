@@ -355,6 +355,23 @@ impl<'table> File<'table> {
         // Safety: checked for null, anything else is the responsibility of firmware
         unsafe { (self.interface().flush.unwrap())(self.interface) }.into()
     }
+
+    pub fn set_position(&self, pos: u64) -> Result<()> {
+        // Safety: statically valid
+        unsafe { (self.interface().set_pos.unwrap())(self.interface, pos).into() }
+    }
+
+    pub fn position(&self) -> Result<u64> {
+        let mut pos: u64 = 0;
+        // Safety: statically valid
+        let ret = unsafe { (self.interface().get_pos.unwrap())(self.interface, &mut pos) };
+
+        if ret.is_success() {
+            Ok(pos)
+        } else {
+            Err(ret.into())
+        }
+    }
 }
 
 impl<'table> Drop for File<'table> {
