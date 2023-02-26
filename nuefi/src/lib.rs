@@ -204,7 +204,11 @@ mod tests {
     use mock::{mock, MOCK_VENDOR};
 
     use super::*;
-    use crate::{entry, error::Result, proto::graphics::GraphicsOutput};
+    use crate::{
+        entry,
+        error::Result,
+        proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
+    };
 
     mod mock {
         use alloc::{boxed::Box, vec, vec::Vec};
@@ -441,6 +445,18 @@ mod tests {
         info!("{:?}", gop2.mode());
         let _ = gop.set_mode(420);
         // panic!("{gop:?}");
+
+        #[cfg(no)]
+        {
+            let img = boot.handle_protocol::<LoadedImage>(handle)?;
+            let dev = img
+                .map(|img| {
+                    info!("img: path = {}", img.file_path().unwrap());
+                    img
+                })
+                .and_then(|f| f.device())
+                .ok_or(EfiStatus::INVALID_PARAMETER)?;
+        }
         Ok(())
     }
 
