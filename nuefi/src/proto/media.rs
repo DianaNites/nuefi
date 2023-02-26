@@ -27,7 +27,7 @@ interface!(
     /// Gives [`File`] based access to a device.
     ///
     /// UEFI supports the `FAT{12,16,32}` filesystems out of the box
-    #[Protocol("0964E5B02-2645-911D-28E3-900A0C969723B", crate = "crate")]
+    #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B", crate = "crate")]
     SimpleFileSystem(RawSimpleFileSystem)
 );
 
