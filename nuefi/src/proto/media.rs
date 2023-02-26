@@ -163,36 +163,13 @@ impl<'table> File<'table> {
             }
             let ret = match me.read_impl(true) {
                 Ok(v) => {
+                    // Signals EOF
                     if v.is_empty() {
                         stop = true;
                         return None;
                     }
-                    let f_size = size_of::<RawFileInfo>();
-                    let (raw, name) = v.split_at(f_size);
-
-                    // Safety:
-                    let name = unsafe {
-                        //
-                        from_raw_parts(name.as_ptr() as *const u16, name.len() / 2)
-                    };
-                    let name = char::decode_utf16(name.iter().copied())
-                        .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
-                        .collect::<String>();
-                    if name == "." {
-                        // continue;
-                    }
-                    let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
-
-                    // Safety: See `info` method
-                    // TODO: Figure out way to de-duplicate?
-                    unsafe {
-                        info.as_mut_ptr()
-                            .cast::<u8>()
-                            .copy_from_nonoverlapping(raw.as_ptr() as *const u8, f_size);
-                        let info = info.assume_init();
-
-                        Some(Ok(FileInfo::new(info, name)))
-                    }
+                    let info = FileInfo::from_bytes(v).unwrap();
+                    Some(Ok(info))
                 }
                 Err(e) => Some(Err(e)),
             };
@@ -212,7 +189,7 @@ impl<'table> File<'table> {
         };
         let guid = GUID;
         let mut size: usize = 0;
-        let mut out: Vec<MaybeUninit<u8>> = Vec::new();
+        let mut out: Vec<u8> = Vec::new();
 
         // Safety: Described within
         unsafe {
@@ -234,7 +211,7 @@ impl<'table> File<'table> {
             out.reserve_exact(size);
             assert!(out.capacity() >= size, "FileInfo capacity bug");
             // `ptr` was invalidated
-            let ptr = out.as_mut_ptr() as *mut u8;
+            let ptr = out.as_mut_ptr();
 
             // This time fill buffer
             let info = (fp)(self.interface, &guid, &mut size, ptr);
@@ -242,33 +219,8 @@ impl<'table> File<'table> {
             if info.is_success() {
                 // Set `out`'s length
                 out.set_len(size);
-
-                let f_size = size_of::<RawFileInfo>();
-                let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
-
-                // Split off the raw info struct from the name
-                let (raw_info, name) = out.split_at(f_size);
-
-                // Initialize the new info struct
-                info.as_mut_ptr()
-                    .cast::<u8>()
-                    .copy_from_nonoverlapping(raw_info.as_ptr() as *const u8, f_size);
-                let info = info.assume_init();
-
-                assert_eq!(info.size, size as u64, "FileInfo size mismatch");
-
-                let name_len = (size - f_size) - 5;
-
-                // Rebind `name` from a `&[MaybeUninit<u8>]` slice
-                // to a `&[u16]` slice of half the length
-                let name = from_raw_parts(name.as_ptr() as *const u16, name_len);
-
-                // Then decode it as UTF-16
-                let name = char::decode_utf16(name.iter().copied())
-                    .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
-                    .collect::<String>();
-
-                Ok(FileInfo::new(info, name))
+                let info = FileInfo::from_bytes(out.clone()).unwrap();
+                Ok(info)
             } else {
                 Err(UefiError::new(info))
             }
