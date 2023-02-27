@@ -29,7 +29,7 @@ impl RawLoadFile2 {
 pub type OpenVolume = unsafe extern "efiapi" fn(
     //
     this: *mut RawSimpleFileSystem,
-    root: *mut *mut RawFile,
+    root: *mut *mut RawFsHandle,
 ) -> EfiStatus;
 
 /// UEFI Simple File System protocol
@@ -45,51 +45,51 @@ impl RawSimpleFileSystem {
 }
 
 pub type Open = unsafe extern "efiapi" fn(
-    this: *mut RawFile,
-    new: *mut *mut RawFile,
+    this: *mut RawFsHandle,
+    new: *mut *mut RawFsHandle,
     name: *const u16,
     mode: u64,
     attributes: u64,
 ) -> EfiStatus;
 
 pub type GetInfo = unsafe extern "efiapi" fn(
-    this: *mut RawFile,
+    this: *mut RawFsHandle,
     info_type: *const Guid,
     buffer_size: *mut usize,
     buffer: *mut u8,
 ) -> EfiStatus;
 
 pub type SetInfo = unsafe extern "efiapi" fn(
-    this: *const RawFile,
+    this: *const RawFsHandle,
     info_type: *const Guid,
     buffer_size: usize,
     buffer: *const u8,
 ) -> EfiStatus;
 
-pub type Close = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+pub type Close = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
 
-pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
 
 pub type Read = unsafe extern "efiapi" fn(
-    this: *mut RawFile,
+    this: *mut RawFsHandle,
     buffer_size: *mut usize,
     buffer: *mut u8,
 ) -> EfiStatus;
 
-pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: *mut u64) -> EfiStatus;
-pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFile, pos: u64) -> EfiStatus;
+pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: *mut u64) -> EfiStatus;
+pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: u64) -> EfiStatus;
 
-pub type Delete = unsafe extern "efiapi" fn(this: *mut RawFile) -> EfiStatus;
+pub type Delete = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
 
 pub type Write = unsafe extern "efiapi" fn(
-    this: *mut RawFile,
+    this: *mut RawFsHandle,
     buffer_size: *mut usize,
     buffer: *const u8,
 ) -> EfiStatus;
 
 /// UEFI File protocol
 #[repr(C)]
-pub struct RawFile {
+pub struct RawFsHandle {
     /// Currently `0x00020000`
     pub revision: u64,
 
@@ -130,10 +130,10 @@ pub struct RawFile {
     pub flush_ex: *const u8,
 }
 
-/// UEFI [`RawFile`] information
+/// UEFI [`RawFsInfo`] information
 #[derive(Debug)]
 #[repr(C)]
-pub struct RawFileInfo {
+pub struct RawFsInfo {
     pub this_size: u64,
     pub file_size: u64,
     pub physical_size: u64,

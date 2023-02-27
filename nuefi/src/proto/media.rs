@@ -65,7 +65,7 @@ impl<'table> SimpleFileSystem<'table> {
 mod file_imp {
     use super::*;
 
-    interface!(FileImp(RawFile));
+    interface!(FileImp(RawFsHandle));
 }
 use file_imp::FileImp;
 
@@ -84,13 +84,13 @@ use file_imp::FileImp;
 // TODO: Is File a good name? its more like a path but like.. not a path?
 pub struct File<'table> {
     raw: FileImp<'table>,
-    interface: *mut RawFile,
+    interface: *mut RawFsHandle,
     closed: Cell<bool>,
 }
 
 // interface hacks
 impl<'table> File<'table> {
-    pub(crate) unsafe fn new(interface: *mut RawFile) -> Self {
+    pub(crate) unsafe fn new(interface: *mut RawFsHandle) -> Self {
         Self {
             raw: FileImp::new(interface),
             interface,
@@ -98,7 +98,7 @@ impl<'table> File<'table> {
         }
     }
 
-    fn interface(&self) -> &RawFile {
+    fn interface(&self) -> &RawFsHandle {
         // SAFETY:
         // Ensured valid in construction.
         // Continued validity ensured by the type system
@@ -406,14 +406,14 @@ impl<'table> Drop for File<'table> {
 // TODO: Separate GUID and Protocol traits?
 #[derive(Debug)]
 pub struct FileInfo {
-    info: RawFileInfo,
+    info: RawFsInfo,
     name: String,
 }
 
 impl FileInfo {
     const DIRECTORY: u64 = 0x10;
 
-    fn new(info: RawFileInfo, name: String) -> Self {
+    fn new(info: RawFsInfo, name: String) -> Self {
         Self { info, name }
     }
 
@@ -421,8 +421,8 @@ impl FileInfo {
     fn from_bytes(v: Vec<u8>) -> Result<FileInfo> {
         // Safety: Described within
         unsafe {
-            let mut info: MaybeUninit<RawFileInfo> = MaybeUninit::uninit();
-            let f_size = size_of::<RawFileInfo>();
+            let mut info: MaybeUninit<RawFsInfo> = MaybeUninit::uninit();
+            let f_size = size_of::<RawFsInfo>();
 
             // Split off the raw info struct from the name
             let (raw, name) = v.split_at(f_size);
