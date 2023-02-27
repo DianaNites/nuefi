@@ -5,6 +5,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, spanned::Spanned, AttributeArgs, Error, ItemFn, Lit, Meta, Pat};
 
 mod entry;
+mod guid;
 mod proto;
 
 /// The UEFI Entry point
@@ -181,4 +182,22 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 #[allow(non_snake_case)]
 pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
     proto::proto(args, input)
+}
+
+/// Macro to parse a GUID. Accepts a single mixed-endian hex string literal
+///
+/// This macro accepts the GUID as a string literal, in mixed-endian hex.
+///
+/// # Example
+///
+/// ```rust
+/// # use nuefi::GUID;
+///
+/// #[GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")]
+/// struct HasID;
+/// ```
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn GUID(args: TokenStream, input: TokenStream) -> TokenStream {
+    guid::guid(args, input)
 }

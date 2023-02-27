@@ -22,60 +22,30 @@ use syn::{
     TypePath,
 };
 
-fn parse_args(
-    args: &[NestedMeta],
-    errors: &mut Vec<Error>,
-    krate: &mut Ident,
-    guid: &mut Option<String>,
-) {
-    for arg in args {
-        match &arg {
-            syn::NestedMeta::Meta(Meta::NameValue(m)) => {
-                if let Some(i) = m.path.get_ident() {
-                    if i == "crate" {
-                        if let Lit::Str(s) = &m.lit {
-                            *krate = format_ident!("{}", s.value());
-                        } else {
-                            errors.push(Error::new(m.lit.span(), "Expected string literal"));
-                        }
-                    } else {
-                        errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
-                    }
-                } else {
-                    errors.push(Error::new(
-                        m.span(),
-                        format!("Unexpected argument `{:?}`", m.path),
-                    ));
-                }
-            }
-            // #[cfg(no)]
-            syn::NestedMeta::Meta(m) => {
-                let name = m.path().get_ident();
-                let span = m.span();
-                if let Some(name) = name {
-                    errors.push(Error::new(span, format!("Unexpected argument `{}`", name)));
-                } else {
-                    errors.push(Error::new(span, format!("Unexpected argument `{:?}`", m)));
-                }
-            }
-            syn::NestedMeta::Lit(Lit::Str(lit)) => {
-                let s = lit.value();
-                // Don't check for UUID validity here, its checked later.
-                if guid.replace(s).is_some() {
-                    errors.push(Error::new(lit.span(), "Duplicate GUID attribute"));
-                }
-            }
-            syn::NestedMeta::Lit(l) => {
-                errors.push(Error::new(l.span(), format!("Unknown literal: `{:?}`", l)));
-            }
-        }
+pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as ItemStruct);
+    let mut errors: Vec<Error> = Vec::new();
+
+    let expanded = quote! {
+        #input
+    };
+
+    if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
+        acc.combine(e);
+        acc
+    }) {
+        let e = e.into_compile_error();
+        TokenStream::from(quote! {
+            #e
+            #expanded
+        })
+    } else {
+        TokenStream::from(expanded)
     }
 }
 
-fn parse_guid() {
-    //
-}
-
+#[cfg(no)]
 pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemStruct);

@@ -62,7 +62,7 @@ use core::{
 
 use error::EfiStatus;
 use log::{error, info};
-pub use macros::{entry, Protocol};
+pub use macros::{entry, Protocol, GUID};
 use table::raw::RawSystemTable;
 
 pub use crate::table::{Boot, SystemTable};
