@@ -14,7 +14,12 @@ path = "tests/test.rs"
 [dependencies]
 nuuid = { version = "0.4.6", default-features = false }
 quote = "1.0.23"
-syn = { version = "1.0.107", features = ["full", "fold", "extra-traits"] }
+syn = { version = "1.0.107", features = [
+    "full",
+    "fold",
+    "visit",
+    "extra-traits",
+] }
 
 [dev-dependencies]
 log = { version = "0.4.17", default-features = false }
