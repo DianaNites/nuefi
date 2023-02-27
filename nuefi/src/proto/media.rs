@@ -31,7 +31,7 @@ impl<'table> LoadFile2<'table> {
 
 interface!(
     /// UEFI Simple filesystem protocol.
-    /// Gives [`File`] based access to a device.
+    /// Gives [`FsHandle`] based access to a device.
     ///
     /// UEFI supports the `FAT{12,16,32}` filesystems out of the box
     #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B", crate = "crate")]
@@ -40,10 +40,7 @@ interface!(
 
 impl<'table> SimpleFileSystem<'table> {
     /// Open the root directory of a volume
-    ///
-    /// It is your responsibility to call [`File::close`].
-    /// If you don't, the volume will remain open.
-    pub fn open_volume(&self) -> Result<File> {
+    pub fn open_volume(&self) -> Result<FsHandle> {
         let mut out = null_mut();
         // Safety: `file` is always valid, checked for null
         // anything else is the responsibility of firmware
@@ -53,8 +50,8 @@ impl<'table> SimpleFileSystem<'table> {
                 !out.is_null(),
                 "SimpleFileSystem returned success, but the file was null.",
             );
-            // Safety: `File` isn't a Protocol
-            unsafe { Ok(File::new(out)) }
+            // Safety: `FsHandle` isn't a Protocol
+            unsafe { Ok(FsHandle::new(out)) }
         } else {
             Err(UefiError::new(ret))
         }
@@ -71,25 +68,19 @@ use file_imp::FileImp;
 
 /// UEFI File Protocol
 ///
-/// This represents both files and directories on a filesystem.
+/// This represents an entity on the filesystem, files and directories.
 ///
-/// This will call [`File::close`] on [`Drop`]
-///
-/// # Note
-///
-/// This does not have a [`trait@Protocol`] implementation because this
-/// is not a standalone protocol.
+/// This will call [`FsHandle::close`] on [`Drop`]
 ///
 /// See [`SimpleFileSystem`]
-// TODO: Is File a good name? its more like a path but like.. not a path?
-pub struct File<'table> {
+pub struct FsHandle<'table> {
     raw: FileImp<'table>,
     interface: *mut RawFsHandle,
     closed: Cell<bool>,
 }
 
 // interface hacks
-impl<'table> File<'table> {
+impl<'table> FsHandle<'table> {
     pub(crate) unsafe fn new(interface: *mut RawFsHandle) -> Self {
         Self {
             raw: FileImp::new(interface),
@@ -107,8 +98,8 @@ impl<'table> File<'table> {
     }
 }
 
-impl<'table> File<'table> {
-    fn open_impl(&self, name: &str, mode: u64, flags: u64) -> Result<File> {
+impl<'table> FsHandle<'table> {
+    fn open_impl(&self, name: &str, mode: u64, flags: u64) -> Result<FsHandle> {
         let mut out = null_mut();
         let name: Vec<u16> = name.encode_utf16().chain(once(0)).collect();
 
@@ -122,26 +113,26 @@ impl<'table> File<'table> {
                 !out.is_null(),
                 "File returned success, but the file was null.",
             );
-            // Safety: `File` isn't a Protocol
-            unsafe { Ok(File::new(out)) }
+            // Safety: `FsHandle` isn't a Protocol
+            unsafe { Ok(FsHandle::new(out)) }
         } else {
             Err(UefiError::new(ret))
         }
     }
 
-    /// Open a new `File` relative to this one
-    pub fn open(&self, name: &str) -> Result<File> {
+    /// Open a new [`FsHandle`] relative to this one
+    pub fn open(&self, name: &str) -> Result<FsHandle> {
         let mode = 0x1;
         let flags = 0;
         self.open_impl(name, mode, flags)
     }
 
-    /// Create a new `File` relative to this one
-    pub fn create(&self, name: &str) -> Result<File> {
+    /// Create a new [`FsHandle`] relative to this one
+    pub fn create(&self, name: &str) -> Result<FsHandle> {
         todo!()
     }
 
-    /// Reads the buffer for [`File::read_impl`]
+    /// Reads the buffer for [`FsHandle::read_impl`]
     fn read_impl_size(&self) -> Result<usize> {
         let rd = self.interface().read.unwrap();
         let mut size = 0;
@@ -163,7 +154,7 @@ impl<'table> File<'table> {
         }
     }
 
-    /// Reads the buffer for [`File::read_impl`].
+    /// Reads the buffer for [`FsHandle::read_impl`].
     /// Returns how many bytes were written.
     ///
     /// # Safety
@@ -187,7 +178,7 @@ impl<'table> File<'table> {
 
     /// Implementation of the `read` call. Returns how many bytes written
     ///
-    /// takes `out` as input, expects it to be an empty vector, and will be
+    /// Takes `out` as input, expects it to be an empty vector, and will be
     /// resized.
     fn read_impl(&self, out: &mut Vec<u8>) -> Result<usize> {
         assert!(out.is_empty(), "Expected `out` to be empty");
@@ -215,7 +206,7 @@ impl<'table> File<'table> {
     /// Read the contents of the directory referred to by our handle
     ///
     /// This skips the `.` and `..` entries
-    pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<FileInfo>> + '_> {
+    pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<FsInfo>> + '_> {
         let info = self.info()?;
         if !info.directory() {
             return Err(EfiStatus::INVALID_PARAMETER.into());
@@ -244,7 +235,7 @@ impl<'table> File<'table> {
                 return None;
             }
 
-            let info = match FileInfo::from_bytes(out.clone()) {
+            let info = match FsInfo::from_bytes(out.clone()) {
                 Ok(i) => i,
                 Err(e) => return Some(Err(e)),
             };
@@ -256,11 +247,11 @@ impl<'table> File<'table> {
         }))
     }
 
-    /// Read bytes into `buf`, resizing to fit.
+    /// Read bytes into `buf`, returning how many were actually read.
     ///
-    /// The files current position increases by that amount.
+    /// Less than requested may be read due to device error or EOF.
     ///
-    /// This will truncate the read if it would go beyond the end of the file.
+    /// The files current [`FsHandle::position`] increases by the amount read.
     pub fn read(&self, out: &mut [u8]) -> Result<usize> {
         let info = self.info()?;
         if info.directory() {
@@ -270,8 +261,8 @@ impl<'table> File<'table> {
         unsafe { self.read_impl_write(size, out) }
     }
 
-    /// Information about this [`File`]. See [`FileInfo`]
-    pub fn info(&self) -> Result<FileInfo> {
+    /// Information about this [`FsHandle`]. See [`FsInfo`]
+    pub fn info(&self) -> Result<FsInfo> {
         // FIXME: GUID macro 09576E92-6D3F-11D2-8E39-00A0C969723B
         #[allow(clippy::undocumented_unsafe_blocks)]
         const GUID: Guid = unsafe {
@@ -321,7 +312,7 @@ impl<'table> File<'table> {
                 // Out has been fully initialized, because we started initialized
                 out.set_len(size);
 
-                let info = FileInfo::from_bytes(out).unwrap();
+                let info = FsInfo::from_bytes(out).unwrap();
                 Ok(info)
             } else {
                 Err(UefiError::new(info))
@@ -353,6 +344,11 @@ impl<'table> File<'table> {
 
     /// Set file cursor position
     pub fn set_position(&self, pos: u64) -> Result<()> {
+        // TODO: read_dir needs this
+        #[cfg(no)]
+        if self.info()?.directory() {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
         // Safety: statically valid
         unsafe { (self.interface().set_pos.unwrap())(self.interface, pos).into() }
     }
@@ -370,7 +366,7 @@ impl<'table> File<'table> {
         }
     }
 
-    /// Return `Ok(true)` if file exists
+    /// Return `Ok(true)` if entity exists
     pub fn try_exists(&self) -> Result<bool> {
         let ret = self.info();
         match ret {
@@ -385,13 +381,13 @@ impl<'table> File<'table> {
         }
     }
 
-    /// Return `true` if file exists, `false` otherwise
+    /// Return `true` if entity exists, `false` otherwise
     pub fn exists(&self) -> bool {
         self.try_exists().unwrap_or_default()
     }
 }
 
-impl<'table> Drop for File<'table> {
+impl<'table> Drop for FsHandle<'table> {
     fn drop(&mut self) {
         if !self.closed.get() {
             self.closed.set(true);
@@ -400,25 +396,25 @@ impl<'table> Drop for File<'table> {
     }
 }
 
-/// UEFI [`File`] information
+/// UEFI [`FsHandle`] information
 ///
-/// This represents both files and directories on a filesystem.
+/// Represents information about an entity on the filesystem
 // TODO: Separate GUID and Protocol traits?
 #[derive(Debug)]
-pub struct FileInfo {
+pub struct FsInfo {
     info: RawFsInfo,
     name: String,
 }
 
-impl FileInfo {
+impl FsInfo {
     const DIRECTORY: u64 = 0x10;
 
     fn new(info: RawFsInfo, name: String) -> Self {
         Self { info, name }
     }
 
-    /// Create `FileInfo` from bytes
-    fn from_bytes(v: Vec<u8>) -> Result<FileInfo> {
+    /// Create `FsInfo` from bytes
+    fn from_bytes(v: Vec<u8>) -> Result<FsInfo> {
         // Safety: Described within
         unsafe {
             let mut info: MaybeUninit<RawFsInfo> = MaybeUninit::uninit();
@@ -449,7 +445,7 @@ impl FileInfo {
             let name = char::decode_utf16(name.iter().copied())
                 .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
                 .collect::<String>();
-            Ok(FileInfo::new(info, name))
+            Ok(FsInfo::new(info, name))
         }
     }
 
@@ -458,13 +454,18 @@ impl FileInfo {
         (self.info.flags & Self::DIRECTORY) == Self::DIRECTORY
     }
 
-    /// File name
+    /// Entity name
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// File size in bytes
-    pub fn file_size(&self) -> u64 {
+    /// Entity filesystem size in bytes
+    pub fn size(&self) -> u64 {
         self.info.file_size
+    }
+
+    /// Entity device size in bytes
+    pub fn dev_size(&self) -> u64 {
+        self.info.physical_size
     }
 }
