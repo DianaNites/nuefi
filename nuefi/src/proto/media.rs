@@ -190,6 +190,7 @@ impl<'table> File<'table> {
     /// takes `out` as input, expects it to be an empty vector, and will be
     /// resized.
     fn read_impl(&self, out: &mut Vec<u8>) -> Result<usize> {
+        assert!(out.is_empty(), "Expected `out` to be empty");
         // Safety: Described within
         unsafe {
             let rd = self.interface().read.unwrap();
@@ -228,6 +229,7 @@ impl<'table> File<'table> {
             if stop {
                 return None;
             }
+            out.clear();
 
             let n = match self.read_impl(&mut out) {
                 Ok(s) => s,
