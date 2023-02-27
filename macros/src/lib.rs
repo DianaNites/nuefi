@@ -1,3 +1,4 @@
+//! Nuefi internal semver-exempt unstable macro crate
 #![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
