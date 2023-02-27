@@ -9,20 +9,20 @@
 //! This example does not compile because of limitations in rustdoc.
 //!
 //! ```rust,compile_fail
-//! // No standard library
+//! // We need both these options for a UEFI application
 //! #![no_std]
-//!
-//! // No main function
 //! #![no_main]
+//!
+//! // And these imports
 //! use nuefi::{entry, EfiHandle, SystemTable, Boot, error};
 //! use core::fmt::Write;
 //!
 //! // Generate the UEFI entry point
 //! #[entry(
-//!     // Generates a panic handler implementation for you!
+//!     // Generates a panic handler implementation for you
 //!     panic,
 //!
-//!     // Generates a global allocator for you!
+//!     // Generates a global allocator for you
 //!     alloc,
 //! )]
 //! fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
