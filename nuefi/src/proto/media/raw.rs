@@ -134,7 +134,7 @@ pub struct RawFile {
 #[derive(Debug)]
 #[repr(C)]
 pub struct RawFileInfo {
-    pub size: u64,
+    pub this_size: u64,
     pub file_size: u64,
     pub physical_size: u64,
     pub create_time: Time,
