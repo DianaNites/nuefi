@@ -70,7 +70,7 @@ impl TextBackground {
 // interface!(SimpleTextInput(RawSimpleTextInput));
 
 interface!(
-    #[Protocol("387477C2-69C7-11D2-8E39-00A0C969723B", crate = "crate")]
+    #[Protocol("387477C2-69C7-11D2-8E39-00A0C969723B", crate("crate"))]
     SimpleTextOutput(RawSimpleTextOutput)
 );
 

@@ -11,7 +11,7 @@ use crate::{
 pub mod raw;
 
 interface!(
-    #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839", crate = "crate")]
+    #[Protocol("A46423E3-4617-49F1-B9FF-D1BFA9115839", crate("crate"))]
     SecurityArch(RawSecurityArch)
 );
 
@@ -20,7 +20,7 @@ impl<'table> SecurityArch<'table> {
 }
 
 interface!(
-    #[Protocol("94AB2F58-1438-4EF1-9152-18941A3A0E68", crate = "crate")]
+    #[Protocol("94AB2F58-1438-4EF1-9152-18941A3A0E68", crate("crate"))]
     SecurityArch2(RawSecurityArch2)
 );
 

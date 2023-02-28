@@ -9,7 +9,7 @@ use crate::{string::Path, util::interface, EfiHandle, Protocol};
 pub mod raw;
 
 interface!(
-    #[Protocol("5B1B31A1-9562-11D2-8E3F-00A0C969723B", crate = "crate")]
+    #[Protocol("5B1B31A1-9562-11D2-8E3F-00A0C969723B", crate("crate"))]
     LoadedImage(RawLoadedImage)
 );
 

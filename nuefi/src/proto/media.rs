@@ -21,7 +21,7 @@ use crate::{
 pub mod raw;
 
 interface!(
-    #[Protocol("4006C0C1-FCB3-403E-996D-4A6C8724E06D", crate = "crate")]
+    #[Protocol("4006C0C1-FCB3-403E-996D-4A6C8724E06D", crate("crate"))]
     LoadFile2(RawLoadFile2)
 );
 
@@ -34,7 +34,7 @@ interface!(
     /// Gives [`FsHandle`] based access to a device.
     ///
     /// UEFI supports the `FAT{12,16,32}` filesystems out of the box
-    #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B", crate = "crate")]
+    #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B", crate("crate"))]
     SimpleFileSystem(RawSimpleFileSystem)
 );
 
