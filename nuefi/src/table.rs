@@ -209,6 +209,7 @@ impl<'table> BootServices<'table> {
                 false,
                 parent,
                 // TODO: Provide fake device path
+                // This makes nicer debugging?, and images may expect it
                 null_mut(),
                 // UEFI pls do not modify us.
                 src.as_ptr() as *mut _,

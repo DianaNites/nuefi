@@ -337,11 +337,6 @@ impl<'table> FsHandle<'table> {
 
     /// Set file cursor position
     pub fn set_position(&self, pos: u64) -> Result<()> {
-        // TODO: read_dir needs this
-        #[cfg(no)]
-        if self.info()?.directory() {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
-        }
         // Safety: statically valid
         unsafe { (self.interface().set_pos.unwrap())(self.interface, pos).into() }
     }

@@ -208,23 +208,20 @@ impl RawSystemTable {
     /// - Must be a valid pointer
     /// - Must only be called before running user code.
     pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
-        // FIXME: Miri failure here. Actual uB or bug or TBD?
-        // #[cfg(not(miri))]
-        {
-            // Safety: Pointer to first C struct member
-            Header::validate(this as *const u8, Self::SIGNATURE)?;
+        // Safety: Pointer to first C struct member
+        Header::validate(this as *const u8, Self::SIGNATURE)?;
 
-            let header = &(*this);
+        let header = &(*this);
 
-            Header::validate(
-                header.boot_services as *const u8,
-                RawBootServices::SIGNATURE,
-            )?;
-            Header::validate(
-                header.runtime_services as *const u8,
-                RawRuntimeServices::SIGNATURE,
-            )?;
-        }
+        Header::validate(
+            header.boot_services as *const u8,
+            RawBootServices::SIGNATURE,
+        )?;
+        Header::validate(
+            header.runtime_services as *const u8,
+            RawRuntimeServices::SIGNATURE,
+        )?;
+
         Ok(())
     }
 }
