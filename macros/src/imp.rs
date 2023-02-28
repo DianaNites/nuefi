@@ -87,6 +87,11 @@ fn _parse_args<F>(args: &[NestedMeta], errors: &mut Errors, opts: &mut CommonOpt
 where
     F: FnMut(&NestedMeta, &mut Errors) -> bool,
 {
+    // TODO: New steps
+    // - for loop in macro mod
+    // - *we* take one nested meta
+    // - macros call us before parsing
+    //  - Alternatively we call user code the same
     let mut user = user;
     for arg in args {
         match arg {
