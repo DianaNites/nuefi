@@ -22,27 +22,27 @@ use syn::{
     TypePath,
 };
 
+use crate::imp::{krate, CommonOpts, Errors};
+
 pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemStruct);
-    let mut errors: Vec<Error> = Vec::new();
+    let mut errors = Errors::new();
 
     let expanded = quote! {
         #input
     };
 
-    if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
-        acc.combine(e);
-        acc
-    }) {
-        let e = e.into_compile_error();
-        TokenStream::from(quote! {
-            #e
-            #expanded
-        })
+    let e = if let Some(e) = errors.combine() {
+        e.into_compile_error()
     } else {
-        TokenStream::from(expanded)
-    }
+        quote! {}
+    };
+
+    TokenStream::from(quote! {
+        #e
+        #expanded
+    })
 }
 
 #[cfg(no)]
