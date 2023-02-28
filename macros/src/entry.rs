@@ -127,7 +127,6 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
         let mut exclude: Vec<String> = Vec::new();
         let mut targets: Vec<String> = Vec::new();
 
-        // TODO: Rest of log opts
         for a in &list.nested {
             match a {
                 NestedMeta::Meta(Meta::Path(p)) => {
