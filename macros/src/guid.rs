@@ -2,6 +2,7 @@ use nuuid::Uuid;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{
+    ext::IdentExt,
     parse_macro_input,
     spanned::Spanned,
     AttributeArgs,
@@ -146,11 +147,27 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let krate = opts.common.krate();
 
-    let _guid = parse_guid(&opts.guid, &input, &krate, &mut errors);
+    let guid = parse_guid(&opts.guid, &input, &krate, &mut errors);
 
-    // TODO: GUID Trait in Nuefi
+    let imp_struct = &input.ident;
+    let imp_generics = &input.generics;
+
+    let name = imp_struct.unraw().to_string();
+
+    let guid_imp = quote! {
+
+        // #[cfg(no)]
+        unsafe impl #krate::proto::Entity for #imp_struct #imp_generics {
+            #guid
+
+            const NAME: &'static str = #name;
+        }
+    };
+
     let expanded = quote! {
         #input
+
+        #guid_imp
     };
 
     let e = if let Some(e) = errors.combine() {
