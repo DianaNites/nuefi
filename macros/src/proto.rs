@@ -1,4 +1,3 @@
-use nuuid::Uuid;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
@@ -6,7 +5,6 @@ use syn::{
     parse_macro_input,
     spanned::Spanned,
     AttributeArgs,
-    ExprArray,
     Ident,
     ItemStruct,
     Lit,
@@ -164,45 +162,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    // This makes errors really nice
-    let error_def = quote! {unsafe {
-        #krate::proto::Guid::from_bytes([
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00,
-        ])
-    }};
-
-    let guid_bytes = if let Some(guid) = guid {
-        match Uuid::parse_me(&guid) {
-            Ok(guid) => {
-                let lol = format!("{:?}", guid.to_bytes());
-                if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
-                    quote! {unsafe {
-                        #krate::proto::Guid::__from_bytes_protocol(#lol)
-                    }}
-                } else {
-                    quote! {
-                        compile_error!(
-                            "Uh this shouldn't have happened. Syn failed when it shouldn't have.\n\
-                            This breaks the macro.\n\
-                            This is message brought to you by the Nuefi `Protocol` macro.\n\
-                            Please direct your bug report there."
-                        )
-
-                        #error_def
-                    }
-                }
-            }
-            Err(e) => {
-                // TODO: parse args config struct, store GUID lit span, use here.
-                errors.push(guid.span(), format!("Invalid GUID: {e}"));
-                error_def
-            }
-        }
-    } else {
-        errors.push(input.span(), "Missing Protocol GUID");
-        error_def
-    };
+    let guid = crate::guid::parse_guid(&guid, &input, &krate, &mut errors);
 
     let name = imp_struct.unraw().to_string();
 
@@ -211,7 +171,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
 
         // #[cfg(no)]
         unsafe impl<'table> #krate::proto::Protocol<'table> for #imp_struct #imp_generics {
-            const GUID: #krate::proto::Guid = #guid_bytes;
+            #guid
 
             const NAME: &'static str = #name;
 

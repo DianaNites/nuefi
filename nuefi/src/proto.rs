@@ -120,15 +120,6 @@ impl Guid {
 
     /// # Safety
     ///
-    /// - MUST be a valid protocol GUID
-    /// - MUST only be called by the [`crate::Protocol`] macro
-    #[doc(hidden)]
-    pub const unsafe fn __from_bytes_protocol(bytes: [u8; 16]) -> Self {
-        Self(bytes)
-    }
-
-    /// # Safety
-    ///
     /// - MUST only be called by the [`crate::Protocol`] macro
     #[doc(hidden)]
     pub const unsafe fn to_bytes(self) -> [u8; 16] {
