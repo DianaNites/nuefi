@@ -187,6 +187,8 @@ pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// This macro accepts the GUID as a string literal, in mixed-endian hex.
 ///
+/// The resultant GUID is accessible as the `GUID` associated constant.
+///
 /// # Example
 ///
 /// ```rust
