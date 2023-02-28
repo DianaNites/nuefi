@@ -1,29 +1,20 @@
-#![allow(clippy::redundant_clone, clippy::ptr_arg, unreachable_code)]
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::{
-    parse::{Parse, Parser},
     parse_macro_input,
-    punctuated::Punctuated,
     spanned::Spanned,
-    Attribute,
     AttributeArgs,
-    Error,
     Ident,
     ItemFn,
     Lit,
     Meta,
     MetaList,
-    MetaNameValue,
     NestedMeta,
     Pat,
     Path,
-    Token,
 };
 
 use crate::imp::{krate, CommonOpts, Errors};
-
-type Args = Punctuated<NestedMeta, Token![,]>;
 
 /// Options our macro accepts
 struct Config {
@@ -105,7 +96,7 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> 
     if i == "delay" {
         if let Some(f) = list.nested.first() {
             match f {
-                NestedMeta::Meta(m) => {
+                NestedMeta::Meta(_m) => {
                     errors.push(list.span(), format!("Expected value: {:?}", list.nested));
                 }
                 NestedMeta::Lit(li) => match li {
@@ -116,7 +107,7 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> 
                             }
                         }
                     }
-                    v => {
+                    _v => {
                         errors.push(li.span(), format!("Expected integer, got: {:?}", f));
                     }
                 },
@@ -167,7 +158,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                             } else {
                                 for f in &li.nested {
                                     match f {
-                                        NestedMeta::Meta(m) => {
+                                        NestedMeta::Meta(_m) => {
                                             errors.push(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
@@ -177,7 +168,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                                             Lit::Str(lit) => {
                                                 exclude.push(lit.value());
                                             }
-                                            v => {
+                                            _v => {
                                                 errors.push(
                                                     lit.span(),
                                                     format!("Expected string, got: {:?}", f),
@@ -200,7 +191,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                             } else {
                                 for f in &li.nested {
                                     match f {
-                                        NestedMeta::Meta(m) => {
+                                        NestedMeta::Meta(_) => {
                                             errors.push(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
@@ -210,7 +201,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                                             Lit::Str(lit) => {
                                                 targets.push(lit.value());
                                             }
-                                            v => {
+                                            _ => {
                                                 errors.push(
                                                     lit.span(),
                                                     format!("Expected string, got: {:?}", f),
@@ -229,11 +220,11 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                 // NestedMeta::Lit(_) => {}
                 NestedMeta::Meta(m) => {
                     let path = m.path();
-                    let span = path.span();
+                    let span = m.span();
                     if let Some(i) = path.get_ident() {
-                        errors.push(m.span(), format!("Unexpected argument `{}`", i));
+                        errors.push(span, format!("Unexpected argument `{}`", i));
                     } else {
-                        errors.push(m.span(), format!("Unexpected argument `{:?}`", path));
+                        errors.push(span, format!("Unexpected argument `{:?}`", path));
                     }
                 }
                 e => {
@@ -255,7 +246,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
 // TODO: Do this but the other way around, got value when didn't expect,
 // try removing (args)
 // and for MetaNameValue
-fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Errors, opts: &mut Config) -> bool {
+fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Errors) -> bool {
     if i == "delay" {
         errors.push(
             path.span(),
@@ -325,10 +316,10 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
                     errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
                 }
             }
-            NestedMeta::Meta(m @ Meta::Path(p)) => {
+            NestedMeta::Meta(Meta::Path(p)) => {
                 if let Some(i) = p.get_ident() {
                     if simple_opts(i, p, errors, opts) {
-                    } else if unexpected_as_path(i, p, errors, opts) {
+                    } else if unexpected_as_path(i, p, errors) {
                     } else {
                         errors.push(p.span(), format!("Unexpected argument `{}`", i));
                     }
@@ -354,7 +345,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let sig = &input.sig;
     let ident = &sig.ident;
-    let attrs = &input.attrs;
+    let _attrs = &input.attrs;
     let params = &sig.inputs;
     // TODO: sig.output
     if params.is_empty() {

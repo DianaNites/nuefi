@@ -1,8 +1,5 @@
 //! Nuefi internal semver-exempt unstable macro crate
-#![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse_macro_input, spanned::Spanned, AttributeArgs, Error, ItemFn, Lit, Meta, Pat};
 
 mod entry;
 mod guid;
