@@ -94,7 +94,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         ()
     };
 
-    // FIXME: Workaround the interface macro Type being `*mut Ty`
+    // Makes nice errors
     let mut imp_raw_ty_ident = quote! {()};
 
     let match_path = |path: &syn::Path, span, errors: &mut Errors| {
