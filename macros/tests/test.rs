@@ -1,4 +1,4 @@
-// FIXME: TryBuild doest work in miri
+// NOTE: TryBuild doest work in miri
 #[cfg(not(miri))]
 #[test]
 fn tests() {
