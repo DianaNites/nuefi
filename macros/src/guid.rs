@@ -76,28 +76,42 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
 }
 
 /// Parse a GUID
-pub fn parse_guid(
+///
+/// Returns code like the below,
+/// without imports and with the input GUID bytes filled in.
+///
+/// ```rust,no_run
+/// use nuefi::proto::Guid;
+///
+/// const GUID: Guid = unsafe {
+///       Guid::from_bytes([
+///           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+///           0x00, 0x00,
+///       ])
+///   };
+/// ```
+pub(crate) fn parse_guid(
     opts: &Guid,
     input: impl Spanned,
     krate: &Ident,
     errors: &mut Errors,
 ) -> impl ToTokens {
     // This makes errors really nice
-    let error_def = quote! {unsafe {
+    let error_def = quote! {const GUID: #krate::proto::Guid = unsafe {
         #krate::proto::Guid::from_bytes([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00,
         ])
-    }};
+    };};
 
     if let Some(guid) = &opts {
         match Uuid::parse_me(guid) {
             Ok(guid) => {
-                let lol = format!("{:?}", guid.to_bytes());
+                let lol = format!("{:?}", guid.to_bytes_me());
                 if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
-                    quote! {unsafe {
-                        #krate::proto::Guid::__from_bytes_protocol(#lol)
-                    }}
+                    quote! {const GUID: #krate::proto::Guid = unsafe {
+                        #krate::proto::Guid::from_bytes(#lol)
+                    };}
                 } else {
                     quote! {
                         compile_error!(
