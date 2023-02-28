@@ -6,7 +6,6 @@ mod guid;
 mod proto;
 
 mod imp;
-use imp::*;
 
 /// The UEFI Entry point
 ///
