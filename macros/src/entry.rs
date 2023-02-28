@@ -533,13 +533,14 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         #alloc_error
     };
 
-    if let Some(e) = errors.combine() {
-        let e = e.into_compile_error();
-        TokenStream::from(quote! {
-            #e
-            #expanded
-        })
+    let e = if let Some(e) = errors.combine() {
+        e.into_compile_error()
     } else {
-        TokenStream::from(expanded)
-    }
+        quote! {}
+    };
+
+    TokenStream::from(quote! {
+        #e
+        #expanded
+    })
 }
