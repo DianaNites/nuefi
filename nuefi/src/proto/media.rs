@@ -9,11 +9,12 @@ use core::{
 };
 
 use log::trace;
+use macros::GUID;
 use raw::*;
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
-    proto::{Guid, Protocol},
+    proto::{Entity, Guid, Protocol},
     util::interface,
     Protocol,
 };
@@ -263,15 +264,7 @@ impl<'table> FsHandle<'table> {
 
     /// Information about this [`FsHandle`]. See [`FsInfo`]
     pub fn info(&self) -> Result<FsInfo> {
-        // FIXME: GUID macro 09576E92-6D3F-11D2-8E39-00A0C969723B
-        #[allow(clippy::undocumented_unsafe_blocks)]
-        const GUID: Guid = unsafe {
-            Guid::from_bytes([
-                0x09, 0x57, 0x6e, 0x92, 0x6d, 0x3f, 0x11, 0xd2, 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69,
-                0x72, 0x3b,
-            ])
-        };
-        let guid = GUID;
+        let guid = FsInfo::GUID;
         let mut size: usize = 0;
         let mut out: Vec<u8> = Vec::new();
 
@@ -399,7 +392,7 @@ impl<'table> Drop for FsHandle<'table> {
 /// UEFI [`FsHandle`] information
 ///
 /// Represents information about an entity on the filesystem
-// TODO: Separate GUID and Protocol traits?
+#[GUID("09576E92-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
 #[derive(Debug)]
 pub struct FsInfo {
     info: RawFsInfo,
