@@ -21,16 +21,14 @@ use syn::{
     Token,
 };
 
-use crate::imp::Errors;
+use crate::imp::{krate, CommonOpts, Errors};
 
 type Args = Punctuated<NestedMeta, Token![,]>;
 
 /// Options our macro accepts
 struct Config {
-    /// `nuefi` crate name
-    ///
-    /// `entry(crate = "name")`
-    krate: Option<Ident>,
+    /// Common macro arguments
+    common: CommonOpts,
 
     /// Exit to fw delay in seconds
     ///
@@ -62,7 +60,7 @@ struct Config {
 impl Config {
     fn new() -> Self {
         Self {
-            krate: None,
+            common: CommonOpts::new(),
             delay: None,
             alloc: false,
             panic: false,
@@ -100,35 +98,6 @@ impl Log {
             targets: None,
             exclude: None,
         }
-    }
-}
-
-fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut Config) -> bool {
-    if i == "crate" {
-        if let Some(f) = meta.nested.first() {
-            match f {
-                NestedMeta::Meta(m) => {
-                    errors.push(meta.span(), format!("Expected value: {:?}", meta.nested));
-                }
-                NestedMeta::Lit(li) => match li {
-                    Lit::Str(lit) => match opts.krate {
-                        Some(_) => {
-                            errors.push(meta.span(), "Duplicate attribute `crate`");
-                        }
-                        None => {
-                            opts.krate.replace(format_ident!("{}", lit.value()));
-                        }
-                    },
-                    v => {
-                        errors.push(meta.nested.span(), "Expected string literal");
-                        errors.push(li.span(), "Expected string literal");
-                    }
-                },
-            }
-        }
-        true
-    } else {
-        false
     }
 }
 
@@ -350,9 +319,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
                 if let Some(i) = l.path.get_ident() {
                     if delay(i, l, errors, opts) {
                     } else if log(i, l, errors, opts) {
-                    } else if krate(i, l, errors, opts) {
-                    } else {
-                        errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
+                    } else if krate(i, l, errors, &mut opts.common) {
                     }
                 } else {
                     errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
@@ -448,7 +415,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         }
     };
 
-    let krate = opts.krate.unwrap_or(format_ident!("nuefi"));
+    let krate = opts.common.krate();
 
     let panic = if opts.panic {
         quote! {
