@@ -21,6 +21,8 @@ use syn::{
     Token,
 };
 
+use crate::imp::Errors;
+
 type Args = Punctuated<NestedMeta, Token![,]>;
 
 /// Options our macro accepts
@@ -101,28 +103,25 @@ impl Log {
     }
 }
 
-fn krate(i: &Ident, meta: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "crate" {
         if let Some(f) = meta.nested.first() {
             match f {
                 NestedMeta::Meta(m) => {
-                    errors.push(Error::new(
-                        meta.span(),
-                        format!("Expected value: {:?}", meta.nested),
-                    ));
+                    errors.push(meta.span(), format!("Expected value: {:?}", meta.nested));
                 }
                 NestedMeta::Lit(li) => match li {
                     Lit::Str(lit) => match opts.krate {
                         Some(_) => {
-                            errors.push(Error::new(meta.span(), "Duplicate attribute `crate`"))
+                            errors.push(meta.span(), "Duplicate attribute `crate`");
                         }
                         None => {
                             opts.krate.replace(format_ident!("{}", lit.value()));
                         }
                     },
                     v => {
-                        errors.push(Error::new(meta.nested.span(), "Expected string literal"));
-                        errors.push(Error::new(li.span(), "Expected string literal"));
+                        errors.push(meta.nested.span(), "Expected string literal");
+                        errors.push(li.span(), "Expected string literal");
                     }
                 },
             }
@@ -133,37 +132,28 @@ fn krate(i: &Ident, meta: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
     }
 }
 
-fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn delay(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "delay" {
         if let Some(f) = list.nested.first() {
             match f {
                 NestedMeta::Meta(m) => {
-                    errors.push(Error::new(
-                        list.span(),
-                        format!("Expected value: {:?}", list.nested),
-                    ));
+                    errors.push(list.span(), format!("Expected value: {:?}", list.nested));
                 }
                 NestedMeta::Lit(li) => match li {
                     Lit::Int(lit) => {
                         if let Ok(lit) = lit.base10_parse::<u64>() {
                             if opts.delay.replace(lit).is_some() {
-                                errors.push(Error::new(list.span(), "Duplicate attribute `delay`"));
+                                errors.push(list.span(), "Duplicate attribute `delay`");
                             }
                         }
                     }
                     v => {
-                        errors.push(Error::new(
-                            li.span(),
-                            format!("Expected integer, got: {:?}", f),
-                        ));
+                        errors.push(li.span(), format!("Expected integer, got: {:?}", f));
                     }
                 },
             }
         } else {
-            errors.push(Error::new(
-                list.span(),
-                format!("Expected value: {:?}", list.nested),
-            ));
+            errors.push(list.span(), format!("Expected value: {:?}", list.nested));
         }
         true
     } else {
@@ -171,7 +161,7 @@ fn delay(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config)
     }
 }
 
-fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "log" {
         let mut log = Log::new();
         let mut exclude: Vec<String> = Vec::new();
@@ -184,23 +174,19 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                     if let Some(i) = p.get_ident() {
                         if i == "color" {
                             if log.color {
-                                errors.push(Error::new(p.span(), "Duplicate attribute `color`"));
+                                errors.push(p.span(), "Duplicate attribute `color`");
                             }
                             log.color = true;
                         } else if i == "all" {
                             if log.targets.is_some() {
-                                errors.push(Error::new(
-                                    p.span(),
-                                    "Cannot use `all` and `targets` together",
-                                ));
+                                errors.push(p.span(), "Cannot use `all` and `targets` together");
                             }
                             if log.all {
-                                errors.push(Error::new(p.span(), "Duplicate attribute `all`"));
+                                errors.push(p.span(), "Duplicate attribute `all`");
                             }
                             log.all = true;
                         } else {
-                            errors
-                                .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
+                            errors.push(i.span(), format!("Unexpected argument `{}`", i));
                         }
                     }
                 }
@@ -208,28 +194,25 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                     if let Some(i) = li.path.get_ident() {
                         if i == "exclude" {
                             if log.exclude.is_some() {
-                                errors.push(Error::new(
-                                    li.path.span(),
-                                    "Duplicate attribute `exclude`",
-                                ));
+                                errors.push(li.path.span(), "Duplicate attribute `exclude`");
                             } else {
                                 for f in &li.nested {
                                     match f {
                                         NestedMeta::Meta(m) => {
-                                            errors.push(Error::new(
+                                            errors.push(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
-                                            ));
+                                            );
                                         }
                                         NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
                                                 exclude.push(lit.value());
                                             }
                                             v => {
-                                                errors.push(Error::new(
+                                                errors.push(
                                                     lit.span(),
                                                     format!("Expected string, got: {:?}", f),
-                                                ));
+                                                );
                                             }
                                         },
                                     }
@@ -238,34 +221,31 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                             }
                         } else if i == "targets" {
                             if log.all {
-                                errors.push(Error::new(
+                                errors.push(
                                     li.path.span(),
                                     "Cannot use `targets` and `all` together",
-                                ));
+                                );
                             }
                             if log.targets.is_some() {
-                                errors.push(Error::new(
-                                    li.path.span(),
-                                    "Duplicate attribute `targets`",
-                                ));
+                                errors.push(li.path.span(), "Duplicate attribute `targets`");
                             } else {
                                 for f in &li.nested {
                                     match f {
                                         NestedMeta::Meta(m) => {
-                                            errors.push(Error::new(
+                                            errors.push(
                                                 li.span(),
                                                 format!("Expected value: {:?}", li.nested),
-                                            ));
+                                            );
                                         }
                                         NestedMeta::Lit(lit) => match lit {
                                             Lit::Str(lit) => {
                                                 targets.push(lit.value());
                                             }
                                             v => {
-                                                errors.push(Error::new(
+                                                errors.push(
                                                     lit.span(),
                                                     format!("Expected string, got: {:?}", f),
-                                                ));
+                                                );
                                             }
                                         },
                                     }
@@ -273,8 +253,7 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                                 log.targets = Some(targets.clone());
                             }
                         } else {
-                            errors
-                                .push(Error::new(i.span(), format!("Unexpected argument `{}`", i)));
+                            errors.push(i.span(), format!("Unexpected argument `{}`", i));
                         }
                     }
                 }
@@ -283,25 +262,19 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
                     let path = m.path();
                     let span = path.span();
                     if let Some(i) = path.get_ident() {
-                        errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
+                        errors.push(m.span(), format!("Unexpected argument `{}`", i));
                     } else {
-                        errors.push(Error::new(
-                            m.span(),
-                            format!("Unexpected argument `{:?}`", path),
-                        ));
+                        errors.push(m.span(), format!("Unexpected argument `{:?}`", path));
                     }
                 }
                 e => {
-                    errors.push(Error::new(
-                        e.span(),
-                        format!("Unexpected argument `{:?}`", e),
-                    ));
+                    errors.push(e.span(), format!("Unexpected argument `{:?}`", e));
                 }
             }
         }
 
         if opts.log.replace(log).is_some() {
-            errors.push(Error::new(i.span(), "Duplicate attribute `log`"));
+            errors.push(i.span(), "Duplicate attribute `log`");
         }
 
         true
@@ -313,40 +286,40 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Vec<Error>, opts: &mut Config) -
 // TODO: Do this but the other way around, got value when didn't expect,
 // try removing (args)
 // and for MetaNameValue
-fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "delay" {
-        errors.push(Error::new(
+        errors.push(
             path.span(),
             "Attribute `delay` expected value. Try `delay(VALUE)`",
-        ));
+        );
         true
     } else {
         false
     }
 }
 
-fn simple_opts(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Config) -> bool {
+fn simple_opts(i: &Ident, path: &Path, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "log" {
         let log = Log::new();
         if opts.log.replace(log).is_some() {
-            errors.push(Error::new(path.span(), "Duplicate attribute `log`"));
+            errors.push(path.span(), "Duplicate attribute `log`");
         }
         true
     } else if i == "alloc" {
         if opts.alloc {
-            errors.push(Error::new(path.span(), "Duplicate attribute `alloc`"));
+            errors.push(path.span(), "Duplicate attribute `alloc`");
         }
         opts.alloc = true;
         true
     } else if i == "alloc_error" {
         if opts.alloc_error {
-            errors.push(Error::new(path.span(), "Duplicate attribute `alloc_error`"));
+            errors.push(path.span(), "Duplicate attribute `alloc_error`");
         }
         opts.alloc_error = true;
         true
     } else if i == "panic" {
         if opts.panic {
-            errors.push(Error::new(path.span(), "Duplicate attribute `panic`"));
+            errors.push(path.span(), "Duplicate attribute `panic`");
         }
         opts.panic = true;
         true
@@ -356,24 +329,21 @@ fn simple_opts(i: &Ident, path: &Path, errors: &mut Vec<Error>, opts: &mut Confi
 }
 
 #[allow(clippy::if_same_then_else)]
-fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
+fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
     for arg in args {
         match &arg {
             NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
                     if i == "crate" {
-                        errors.push(Error::new(
+                        errors.push(
                             m.span(),
                             r#"Attribute `crate` expected value. Try `crate("VALUE")`"#,
-                        ));
+                        );
                     } else {
-                        errors.push(Error::new(m.span(), format!("Unexpected argument `{}`", i)));
+                        errors.push(m.span(), format!("Unexpected argument `{}`", i));
                     }
                 } else {
-                    errors.push(Error::new(
-                        m.span(),
-                        format!("Unexpected argument `{:?}`", m.path),
-                    ));
+                    errors.push(m.span(), format!("Unexpected argument `{:?}`", m.path));
                 }
             }
             NestedMeta::Meta(Meta::List(l)) => {
@@ -382,18 +352,10 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     } else if log(i, l, errors, opts) {
                     } else if krate(i, l, errors, opts) {
                     } else {
-                        errors.push(Error::new(
-                            l.span(),
-                            format!("Unexpected argument `{:?}`", l.path),
-                        ));
+                        errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
                     }
-                } else if let Some(i) = l.path.get_ident() {
-                    errors.push(Error::new(l.span(), format!("Unexpected argument `{}`", i)));
                 } else {
-                    errors.push(Error::new(
-                        l.span(),
-                        format!("Unexpected argument `{:?}`", l.path),
-                    ));
+                    errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
                 }
             }
             NestedMeta::Meta(m @ Meta::Path(p)) => {
@@ -401,17 +363,14 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
                     if simple_opts(i, p, errors, opts) {
                     } else if unexpected_as_path(i, p, errors, opts) {
                     } else {
-                        errors.push(Error::new(p.span(), format!("Unexpected argument `{}`", i)));
+                        errors.push(p.span(), format!("Unexpected argument `{}`", i));
                     }
                 } else {
-                    errors.push(Error::new(
-                        p.span(),
-                        format!("Unexpected argument `{:?}`", p),
-                    ));
+                    errors.push(p.span(), format!("Unexpected argument `{:?}`", p));
                 }
             }
             NestedMeta::Lit(l) => {
-                errors.push(Error::new(l.span(), format!("Unknown literal: `{:?}`", l)));
+                errors.push(l.span(), format!("Unknown literal: `{:?}`", l));
             }
         }
     }
@@ -420,7 +379,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Vec<Error>, opts: &mut Config) {
 pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemFn);
-    let mut errors = Vec::new();
+    let mut errors = Errors::new();
 
     let mut opts = Config::new();
 
@@ -432,7 +391,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
     let params = &sig.inputs;
     // TODO: sig.output
     if params.is_empty() {
-        errors.push(Error::new(
+        errors.push(
             sig.span(),
             // TODO: Only include return if its actually incorrect?
             format!(
@@ -443,29 +402,25 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
 ",
                 ident
             ),
-        ));
+        );
     }
     if params.len() == 1 {
         let mut p = params.iter();
         let unexpected = p.next().unwrap();
         let span = unexpected.span();
-        let err = Error::new(span, "Missing `table` argument");
-        errors.push(err);
+        errors.push(span, "Missing `table` argument");
     }
     if params.len() > 2 {
         let p = params.iter().skip(2);
         for unexpected in p {
             let span = unexpected.span();
             match unexpected {
-                syn::FnArg::Receiver(_) => errors.push(Error::new(span, "Unexpected argument")),
+                syn::FnArg::Receiver(_) => errors.push(span, "Unexpected argument"),
                 syn::FnArg::Typed(n) => {
                     if let Pat::Ident(i) = &*n.pat {
-                        errors.push(Error::new(
-                            span,
-                            format!("Unexpected argument: `{}`", i.ident),
-                        ));
+                        errors.push(span, format!("Unexpected argument: `{}`", i.ident));
                     } else {
-                        errors.push(Error::new(span, "Unexpected argument"))
+                        errors.push(span, "Unexpected argument");
                     }
                 }
             }
@@ -475,7 +430,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
     for a in params.iter().take(2) {
         match a {
             syn::FnArg::Receiver(a) => {
-                errors.push(Error::new(a.span(), "Cannot be a method"));
+                errors.push(a.span(), "Cannot be a method");
             }
             syn::FnArg::Typed(_) => {
                 // NOTE: Apparently not possible to verify types in proc macro?
@@ -611,10 +566,7 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
         #alloc_error
     };
 
-    if let Some(e) = errors.into_iter().reduce(|mut acc, e| {
-        acc.combine(e);
-        acc
-    }) {
+    if let Some(e) = errors.combine() {
         let e = e.into_compile_error();
         TokenStream::from(quote! {
             #e

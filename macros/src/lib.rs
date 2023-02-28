@@ -8,6 +8,9 @@ mod entry;
 mod guid;
 mod proto;
 
+mod imp;
+use imp::*;
+
 /// The UEFI Entry point
 ///
 /// This attribute marks a function as the UEFI entry point.
