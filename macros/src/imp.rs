@@ -43,7 +43,7 @@ pub struct CommonOpts {
 }
 
 impl CommonOpts {
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             //
             krate: None,
@@ -80,23 +80,9 @@ impl Errors {
     }
 }
 
-/// Parse attribute macro arguments, returning [`CommonOpts`], calling
-/// `check_arg`
-///
-/// `check_arg` is expected to return `true` if it parsed an argument and
-/// `false` otherwise.
-pub fn parse<F>(args: &[NestedMeta], errors: &mut Errors, check_arg: F) -> CommonOpts
-where
-    F: FnMut(&NestedMeta, &mut Errors) -> bool,
-{
-    let mut opts = CommonOpts::new();
-
-    parse_args::<F>(args, errors, &mut opts, check_arg);
-
-    opts
-}
-
-fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonOpts) -> bool {
+/// Attempt to parse the `crate("name")` attribute argument,
+/// returning whether we did so.
+pub fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonOpts) -> bool {
     if i == "crate" {
         if let Some(f) = meta.nested.first() {
             match f {
