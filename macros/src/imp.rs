@@ -1,37 +1,7 @@
-#![allow(
-    unreachable_code,
-    clippy::redundant_clone,
-    clippy::ptr_arg,
-    // clippy::match_single_binding
-)]
 use std::fmt::Display;
 
-use proc_macro::TokenStream;
-use quote::{__private::Span, format_ident, quote};
-use syn::{
-    braced,
-    parse::{Parse, ParseStream, Parser},
-    parse_macro_input,
-    punctuated::Punctuated,
-    spanned::Spanned,
-    token,
-    visit::Visit,
-    Attribute,
-    AttributeArgs,
-    Error,
-    Field,
-    Ident,
-    ItemFn,
-    Lit,
-    Meta,
-    MetaList,
-    MetaNameValue,
-    NestedMeta,
-    Pat,
-    Path,
-    Result,
-    Token,
-};
+use quote::{__private::Span, format_ident};
+use syn::{spanned::Spanned, Error, Ident, Lit, Meta, MetaList, NestedMeta};
 
 /// Options common to our macro, such as `crate`
 #[derive(Debug)]
@@ -86,7 +56,7 @@ pub fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonO
     if i == "crate" {
         if let Some(f) = meta.nested.first() {
             match f {
-                NestedMeta::Meta(m) => {
+                NestedMeta::Meta(_) => {
                     errors.push(meta.span(), format!("Expected value: {:?}", meta.nested));
                 }
                 NestedMeta::Lit(li) => match li {
@@ -98,7 +68,7 @@ pub fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonO
                             opts.krate.replace(format_ident!("{}", lit.value()));
                         }
                     },
-                    v => {
+                    _ => {
                         errors.push(meta.nested.span(), "Expected string literal");
                         errors.push(li.span(), "Expected string literal");
                     }
@@ -113,7 +83,7 @@ pub fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonO
 
 // #[cfg(no)]
 #[allow(clippy::if_same_then_else)]
-fn parse_args<F>(args: &[NestedMeta], errors: &mut Errors, opts: &mut CommonOpts, user: F)
+fn _parse_args<F>(args: &[NestedMeta], errors: &mut Errors, opts: &mut CommonOpts, user: F)
 where
     F: FnMut(&NestedMeta, &mut Errors) -> bool,
 {
@@ -154,10 +124,10 @@ where
                 // User match expected to return bool
                 match nested {
                     // `arg(val)`
-                    NestedMeta::Meta(Meta::List(l)) => {}
+                    NestedMeta::Meta(Meta::List(_l)) => {}
 
                     // `val`
-                    NestedMeta::Meta(m @ Meta::Path(p)) => {}
+                    NestedMeta::Meta(Meta::Path(_p)) => {}
 
                     // `val`
                     NestedMeta::Lit(l) => {

@@ -1,22 +1,18 @@
 use nuuid::Uuid;
 use proc_macro::TokenStream;
-use quote::{__private::Span, format_ident, quote};
+use quote::{format_ident, quote};
 use syn::{
     ext::IdentExt,
     parse_macro_input,
     spanned::Spanned,
     AttributeArgs,
-    DeriveInput,
     Error,
-    Expr,
     ExprArray,
     Ident,
-    ItemFn,
     ItemStruct,
     Lit,
     Meta,
     NestedMeta,
-    Pat,
     Type,
     TypeGroup,
     TypePath,
@@ -72,10 +68,6 @@ fn parse_args(
     }
 }
 
-fn parse_guid() {
-    //
-}
-
 pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemStruct);
@@ -97,7 +89,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
     // FIXME: Workaround the interface macro Type being `*mut Ty`
     let mut imp_raw_ty_ident = quote! {()};
 
-    let mut match_path = |path: &syn::Path, span, errors: &mut Vec<Error>| {
+    let match_path = |path: &syn::Path, span, errors: &mut Vec<Error>| {
         if let Some(path) = path.get_ident() {
             quote! { #path }
         } else {
@@ -109,7 +101,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let mut match_group = |elem: &syn::Type, span, errors: &mut Vec<Error>| match elem {
+    let match_group = |elem: &syn::Type, span, errors: &mut Vec<Error>| match elem {
         syn::Type::Path(TypePath { path, .. }) => match_path(path, span, errors),
         _ => {
             errors.push(Error::new(
