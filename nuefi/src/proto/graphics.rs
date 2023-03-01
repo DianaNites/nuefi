@@ -271,14 +271,14 @@ impl From<BltOperation> for RawBltOperation {
 
 /// UEFI Framebuffer
 #[derive(Debug)]
-pub struct Framebuffer<'mode> {
+pub struct Framebuffer<'gop> {
     ptr: *mut u8,
     size: usize,
     stride: u32,
-    phantom: PhantomData<&'mode u8>,
+    phantom: PhantomData<&'gop u8>,
 }
 
-impl<'mode> Framebuffer<'mode> {
+impl<'gop> Framebuffer<'gop> {
     /// Create new Framebuffer wrapper
     ///
     /// - `ptr` MUST be valid for `size` bytes
@@ -291,14 +291,14 @@ impl<'mode> Framebuffer<'mode> {
         }
     }
 
-    pub fn pixels(&self) -> &'mode [Pixel] {
+    pub fn pixels(&self) -> &'gop [Pixel] {
         let ptr = self.ptr as *mut Pixel;
         let len = self.size / size_of::<Pixel>();
         // Safety:
         unsafe { from_raw_parts(ptr, len) }
     }
 
-    pub fn pixels_mut(&mut self) -> &'mode mut [Pixel] {
+    pub fn pixels_mut(&mut self) -> &'gop mut [Pixel] {
         let ptr = self.ptr as *mut Pixel;
         let len = self.size / size_of::<Pixel>();
         // Safety:
@@ -306,7 +306,7 @@ impl<'mode> Framebuffer<'mode> {
     }
 }
 
-impl<'m> Index<(u32, u32)> for Framebuffer<'m> {
+impl<'gop> Index<(u32, u32)> for Framebuffer<'gop> {
     type Output = Pixel;
 
     fn index(&self, (x, y): (u32, u32)) -> &Self::Output {
