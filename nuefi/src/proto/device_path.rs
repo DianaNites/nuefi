@@ -59,6 +59,21 @@ impl<'table> DevicePath<'table> {
             Err(EfiStatus::DEVICE_ERROR.into())
         }
     }
+
+    /// Append `node` to ourselves, returning a new path.
+    pub fn append(&self, node: &DevicePath) -> Result<DevicePath<'table>> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
+            let util = boot.locate_protocol::<DevicePathUtil>()?.unwrap();
+            let s = util.append(self, node);
+            // Safety: This is required because our local table is an implementation detail
+            // The correct lifetime is `'table`
+            unsafe { Ok(transmute(s)) }
+        } else {
+            Err(EfiStatus::DEVICE_ERROR.into())
+        }
+    }
 }
 
 interface!(
@@ -90,6 +105,17 @@ impl<'table> DevicePathUtil<'table> {
         } else {
             Err(EfiStatus::OUT_OF_RESOURCES.into())
         }
+    }
+
+    /// Append the specified [`DevicePath`] *node*
+    pub fn append(&self, path: &DevicePath, node: &DevicePath) -> DevicePath<'table> {
+        // Safety: Construction ensures these are valid
+        let ret = unsafe {
+            (self.interface().append_device_node.unwrap())(path.interface, node.interface)
+        };
+        assert!(!ret.is_null(), "appended device path was null");
+        // Safety: ret is non-null
+        unsafe { DevicePath::from_raw(ret) }
     }
 }
 
