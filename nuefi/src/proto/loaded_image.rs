@@ -17,7 +17,7 @@ impl<'table> LoadedImage<'table> {
     const _REVISION: u32 = 0x1000;
 
     /// The [Path] to the file of the loaded image, if it exists.
-    pub fn file_path(&self) -> Option<Path> {
+    pub fn file_path(&self) -> Option<Path<'_>> {
         let path = self.interface().path;
         if !path.is_null() {
             // Safety: `path` is valid
@@ -80,7 +80,7 @@ impl<'table> LoadedImage<'table> {
     /// # Safety
     ///
     /// Only use this if you know what you're doing
-    pub unsafe fn set_path(&self, path: &Path) {
+    pub unsafe fn set_path(&self, path: &Path<'_>) {
         self.interface_mut().path = path.as_device().as_ptr();
     }
 }
