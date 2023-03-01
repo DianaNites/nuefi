@@ -337,6 +337,32 @@ impl<'table> BootServices<'table> {
         }
     }
 
+    /// Load an image specified by [`DevicePath`]
+    /// , returning its handle.
+    ///
+    /// `parent` should be your image handle, as your will be th parent of this
+    /// new image.
+    ///
+    /// If the image was from a device, you should set `devpath` to the
+    /// [`DevicePath`] for the image on that device.
+    ///
+    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    ///
+    /// You will need to handle that case in [`BootServices::start_image`]
+    pub fn load_image_fs(&self, parent: EfiHandle, devpath: &DevicePath) -> Result<EfiHandle> {
+        let mut out = EfiHandle(null_mut());
+
+        // Safety: Statically correct for this operation
+        // - policy is always false
+        // - Devpath is statically valid
+        // - parent is statically valid
+        // - Source buffer and its size are always null
+        unsafe {
+            let devpath = devpath.as_ptr();
+            self.load_image_impl(false, devpath, parent, null_mut(), 0)
+        }
+    }
+
     /// Unload an earlier loaded image
     pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
         // Safety: Construction ensures safety. Statically verified arguments.
