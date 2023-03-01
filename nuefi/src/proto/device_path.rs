@@ -168,3 +168,18 @@ impl<'table> DevicePathToText<'table> {
         }
     }
 }
+
+mod seal {
+    use super::DevicePath;
+
+    pub trait Sealed {}
+
+    impl<'table> Sealed for DevicePath<'table> {}
+    impl<'table, 'a> Sealed for &'a DevicePath<'table> {}
+}
+
+/// Represents something that can be represented as a [`DevicePath`]
+pub trait AsDevicePath<'table>: seal::Sealed {
+    //
+    fn as_device_path(&self) -> &DevicePath<'table>;
+}
