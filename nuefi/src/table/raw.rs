@@ -10,8 +10,8 @@ use crate::{
     proto::{
         self,
         console::raw::{RawSimpleTextInput, RawSimpleTextOutput},
-        device_path::DevicePath,
-        graphics::{raw::RawGraphicsOutput, GraphicsOutput},
+        device_path::raw::RawDevicePath,
+        graphics::raw::RawGraphicsOutput,
         Guid,
         Protocol,
     },
@@ -348,7 +348,7 @@ pub struct RawBootServices {
         unsafe extern "efiapi" fn(
             policy: bool,
             parent: EfiHandle,
-            path: *mut DevicePath,
+            path: *mut RawDevicePath,
             source: *mut u8,
             source_size: usize,
             out: *mut EfiHandle,
