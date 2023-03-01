@@ -113,6 +113,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
     }
 }
 
+// Internal
 impl<'this, 'table> FsHandle<'this, 'table> {
     // Use a new lifetime because this is a new handle independent of ours.
     fn open_impl<'new_this>(
@@ -139,21 +140,6 @@ impl<'this, 'table> FsHandle<'this, 'table> {
         } else {
             Err(UefiError::new(ret))
         }
-    }
-
-    /// Open a new [`FsHandle`] relative to this one
-    ///
-    /// Remember that UEFI paths use `\`, not `/`
-    // FIXME: Provide a nice UEFI path type
-    pub fn open<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
-        let mode = 0x1;
-        let flags = 0;
-        self.open_impl(name, mode, flags)
-    }
-
-    /// Create a new [`FsHandle`] relative to this one
-    pub fn create<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
-        todo!()
     }
 
     /// Reads the buffer for [`FsHandle::read_impl`]
@@ -225,6 +211,47 @@ impl<'this, 'table> FsHandle<'this, 'table> {
                 Err(e) => Err(e),
             }
         }
+    }
+}
+
+// Deeper abstractions around UEFI
+impl<'this, 'table> FsHandle<'this, 'table> {
+    /// Return `Ok(true)` if entity exists
+    pub fn try_exists(&self) -> Result<bool> {
+        let ret = self.info();
+        match ret {
+            Ok(_) => Ok(true),
+            Err(e) => {
+                if e.status() == EfiStatus::NOT_FOUND {
+                    Ok(false)
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    /// Return `true` if entity exists, `false` otherwise
+    pub fn exists(&self) -> bool {
+        self.try_exists().unwrap_or_default()
+    }
+}
+
+// Relatively direct UEFI wrappers
+impl<'this, 'table> FsHandle<'this, 'table> {
+    /// Open a new [`FsHandle`] relative to this one
+    ///
+    /// Remember that UEFI paths use `\`, not `/`
+    // FIXME: Provide a nice UEFI path type
+    pub fn open<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
+        let mode = 0x1;
+        let flags = 0;
+        self.open_impl(name, mode, flags)
+    }
+
+    /// Create a new [`FsHandle`] relative to this one
+    pub fn create<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
+        todo!()
     }
 
     /// Read the contents of the directory referred to by our handle
@@ -375,26 +402,6 @@ impl<'this, 'table> FsHandle<'this, 'table> {
         } else {
             Err(ret.into())
         }
-    }
-
-    /// Return `Ok(true)` if entity exists
-    pub fn try_exists(&self) -> Result<bool> {
-        let ret = self.info();
-        match ret {
-            Ok(_) => Ok(true),
-            Err(e) => {
-                if e.status() == EfiStatus::NOT_FOUND {
-                    Ok(false)
-                } else {
-                    Err(e)
-                }
-            }
-        }
-    }
-
-    /// Return `true` if entity exists, `false` otherwise
-    pub fn exists(&self) -> bool {
-        self.try_exists().unwrap_or_default()
     }
 }
 
