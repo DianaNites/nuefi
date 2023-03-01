@@ -104,7 +104,9 @@ impl MemoryDescriptor {
 /// A UEFI memory allocator
 ///
 /// Relies on [`BootServices::allocate_pool`][allocate_pool]
-/// and [`BootServices::free_pool`][free_pool]
+/// and [`BootServices::free_pool`][free_pool].
+///
+/// Allocates all data in [`MemoryType::LOADER_DATA`]
 ///
 /// After ExitBootServices is called, all allocations will fail.
 ///
