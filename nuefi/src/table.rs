@@ -261,77 +261,12 @@ impl<'table> BootServices<'table> {
     }
 }
 
+/// Image Services
 impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`
     pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
         // Safety: Construction ensures safety
         unsafe { (self.interface().exit.unwrap())(handle, status, 0, null_mut()) }.into()
-    }
-
-    /// Stall for [`Duration`]
-    ///
-    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
-    /// [usize]
-    pub fn stall(&self, dur: Duration) -> Result<()> {
-        let time = match dur
-            .as_micros()
-            .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
-        {
-            Ok(t) => t,
-            Err(e) => return e.into(),
-        };
-        // Safety: Construction ensures safety
-        unsafe { (self.interface().stall.unwrap())(time) }.into()
-    }
-
-    /// The next monotonic count
-    pub fn next_monotonic_count(&self) -> Result<u64> {
-        let mut out = 0;
-        // Safety: Construction ensures safety
-        let ret = unsafe { (self.interface().get_next_monotonic_count.unwrap())(&mut out) };
-        if ret.is_success() {
-            return Ok(out);
-        }
-        Err(UefiError::new(ret))
-    }
-
-    /// Set the watchdog timer. [`None`] disables the timer.
-    pub fn set_watchdog(&self, timeout: Option<Duration>) -> Result<()> {
-        let timeout = timeout.unwrap_or_default();
-        let secs = match timeout
-            .as_secs()
-            .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
-        {
-            Ok(t) => t,
-            Err(e) => return e.into(),
-        };
-        // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().set_watchdog_timer.unwrap())(secs, 0x10000, 0, null_mut()) }
-            .into()
-    }
-
-    /// Allocate `size` bytes of memory from pool of type `ty`
-    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
-        let mut out: *mut u8 = null_mut();
-        // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
-        if ret.is_success() {
-            Ok(out)
-        } else {
-            Err(UefiError::new(ret))
-        }
-    }
-
-    /// Free memory allocated by [BootServices::allocate_pool]
-    ///
-    /// # Safety
-    ///
-    /// - Must have been allocated by [BootServices::allocate_pool]
-    /// - Must be non-null
-    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
-        (self.interface().free_pool.unwrap())(memory).into()
     }
 
     /// Load an image from memory `src`, returning its handle.
@@ -376,6 +311,81 @@ impl<'table> BootServices<'table> {
         unsafe { (self.interface().unload_image.unwrap())(handle).into() }
     }
 }
+
+/// Miscellaneous
+impl<'table> BootServices<'table> {
+    /// Stall for [`Duration`]
+    ///
+    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
+    /// [usize]
+    pub fn stall(&self, dur: Duration) -> Result<()> {
+        let time = match dur
+            .as_micros()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        // Safety: Construction ensures safety
+        unsafe { (self.interface().stall.unwrap())(time) }.into()
+    }
+
+    /// The next monotonic count
+    pub fn next_monotonic_count(&self) -> Result<u64> {
+        let mut out = 0;
+        // Safety: Construction ensures safety
+        let ret = unsafe { (self.interface().get_next_monotonic_count.unwrap())(&mut out) };
+        if ret.is_success() {
+            return Ok(out);
+        }
+        Err(UefiError::new(ret))
+    }
+
+    /// Set the watchdog timer. [`None`] disables the timer.
+    pub fn set_watchdog(&self, timeout: Option<Duration>) -> Result<()> {
+        let timeout = timeout.unwrap_or_default();
+        let secs = match timeout
+            .as_secs()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        // Safety: Construction ensures safety. Statically verified arguments.
+        unsafe { (self.interface().set_watchdog_timer.unwrap())(secs, 0x10000, 0, null_mut()) }
+            .into()
+    }
+}
+
+/// Memory Allocation Services
+impl<'table> BootServices<'table> {
+    /// Allocate `size` bytes of memory from pool of type `ty`
+    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
+        let mut out: *mut u8 = null_mut();
+        // Safety: Construction ensures safety. Statically verified arguments.
+        let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
+        if ret.is_success() {
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Free memory allocated by [BootServices::allocate_pool]
+    ///
+    /// # Safety
+    ///
+    /// - Must have been allocated by [BootServices::allocate_pool]
+    /// - Must be non-null
+    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
+        (self.interface().free_pool.unwrap())(memory).into()
+    }
+}
+
+/// Event/Timer/Task Priority
+impl<'table> BootServices<'table> {}
 
 interface!(
     // /// The UEFI Runtime Services
