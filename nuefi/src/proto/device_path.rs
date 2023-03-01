@@ -65,6 +65,9 @@ interface!(
 impl<'table> DevicePathToText<'table> {
     /// Returns an owned [UefiString] of `node`, a component of a [DevicePath]
     ///
+    /// With the path `PciRoot(0x0)/Pci(0x1F,0x2)/Sata(0x0,0xFFFF,0x0)`,
+    /// this would return `PciRoot(0x0)`.
+    ///
     /// # Errors
     ///
     /// - If memory allocation fails
