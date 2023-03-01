@@ -2,7 +2,7 @@
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
 use alloc::string::String;
-use core::{fmt::Display, marker::PhantomData, ops::Deref, slice::from_raw_parts};
+use core::{fmt::Display, marker::PhantomData, mem::transmute, ops::Deref, slice::from_raw_parts};
 
 use log::{error, trace};
 
@@ -78,7 +78,7 @@ impl<'table> Deref for UefiString<'table> {
 
     fn deref(&self) -> &Self::Target {
         // Safety: UefiStr and UefiString have the same layout
-        unsafe { core::mem::transmute(self) }
+        unsafe { transmute(self) }
     }
 }
 
@@ -193,7 +193,7 @@ impl<'table> Path<'table> {
             // into a `'table` borrow
             // This should be safe because the only way to call to_text is
             // by having a valid lifetime
-            unsafe { core::mem::transmute(v) },
+            unsafe { transmute(v) },
         )
     }
 
@@ -212,7 +212,7 @@ impl<'table> Path<'table> {
             // into a `'table` borrow
             // This should be safe because the only way to call to_text is
             // by having a valid lifetime
-            unsafe { core::mem::transmute(s) },
+            unsafe { transmute(s) },
         )
     }
 
@@ -289,7 +289,7 @@ impl<'table> PathBuf<'table> {
             // into a `'table` borrow
             // This should be safe because the only way to call to_text is
             // by having a valid lifetime
-            unsafe { core::mem::transmute(v) },
+            unsafe { transmute(v) },
         )
     }
 }
