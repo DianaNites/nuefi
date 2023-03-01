@@ -76,7 +76,7 @@ impl<'table> BootServices<'table> {
     }
 
     /// Get every handle that support the [`Protocol`]
-    pub fn handles_for_protocol<Proto: Protocol<'table>>(&self) -> Result<Vec<EfiHandle>> {
+    pub fn handles_for_protocol<'boot, Proto: Protocol<'boot>>(&self) -> Result<Vec<EfiHandle>> {
         let guid = Proto::GUID;
         // Safety: Statically correct for this call
         // `search_key` is ignored for BY_PROTOCOL
@@ -175,13 +175,13 @@ impl<'table> BootServices<'table> {
     ///
     /// `handle`, `agent`, and `controller` must be the same [EfiHandle]'s
     /// passed to [`BootServices::open_protocol`]
-    pub fn close_protocol<'boot, T: proto::Protocol<'boot>>(
+    pub fn close_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &self,
         handle: EfiHandle,
         agent: EfiHandle,
         controller: Option<EfiHandle>,
     ) -> Result<()> {
-        let mut guid = T::GUID;
+        let mut guid = Proto::GUID;
         // Safety: Construction ensures safety. Statically verified arguments.
         unsafe {
             (self.interface().close_protocol.unwrap())(
@@ -195,14 +195,14 @@ impl<'table> BootServices<'table> {
     }
 
     /// Install an instance of [proto::Protocol] on `handle`
-    pub fn install_protocol<'a, T: proto::Protocol<'a>>(
+    pub fn install_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &self,
         handle: EfiHandle,
-        interface: &'static mut T::Raw,
+        interface: &'static mut Proto::Raw,
     ) -> Result<()> {
         // Safety:
         // `interface` being a static mut reference guarantees validity and lifetime.
-        unsafe { self.install_protocol_ptr::<T>(handle, interface) }
+        unsafe { self.install_protocol_ptr::<Proto>(handle, interface) }
     }
 
     /// Install a `Protocol` on `handle`
@@ -211,12 +211,12 @@ impl<'table> BootServices<'table> {
     ///
     /// - Pointer must be a valid instance of [proto::Protocol]
     /// - Pointer must live long enough
-    pub unsafe fn install_protocol_ptr<'a, T: proto::Protocol<'a>>(
+    pub unsafe fn install_protocol_ptr<'boot, Proto: proto::Protocol<'boot>>(
         &self,
         handle: EfiHandle,
-        interface: *mut T::Raw,
+        interface: *mut Proto::Raw,
     ) -> Result<()> {
-        let mut guid = T::GUID;
+        let mut guid = Proto::GUID;
         let mut h = handle;
 
         (self.interface().install_protocol_interface.unwrap())(
