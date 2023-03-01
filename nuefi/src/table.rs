@@ -75,7 +75,7 @@ impl<'table> BootServices<'table> {
     }
 
     /// Get every handle that support the [`Protocol`]
-    pub fn handles_for_proto<Proto: Protocol<'table>>(&self) -> Result<Vec<EfiHandle>> {
+    pub fn handles_for_protocol<Proto: Protocol<'table>>(&self) -> Result<Vec<EfiHandle>> {
         let guid = Proto::GUID;
         // Safety: Statically correct for this call
         // `search_key` is ignored for BY_PROTOCOL
