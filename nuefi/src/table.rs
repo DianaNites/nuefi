@@ -413,7 +413,16 @@ pub(crate) struct Internal;
 ///
 /// This is your entry-point to using UEFI and all its services
 // NOTE: This CANNOT be Copy or Clone, as this would violate the planned
-// safety guarantees of passing it to ExitBootServices
+// safety guarantees of passing it to ExitBootServices.
+//
+// It is also important that the lifetimes involved stay within their
+// respective structures, that the lifetime of the SystemTable is not used
+// for data from BootServices.
+// That way we can potentially statically prevent incorrect ExitBootServices
+// calls, without invalidating RuntimeServices?
+// Existing RuntimeServices and pointers might become invalid though?
+//
+// Defining lifetimes this way should be fine either way though
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct SystemTable<State> {
@@ -430,6 +439,7 @@ pub struct SystemTable<State> {
     phantom: PhantomData<*const State>,
 }
 
+// Internal, all
 impl<T> SystemTable<T> {
     /// Create new SystemTable
     ///
@@ -454,6 +464,7 @@ impl<T> SystemTable<T> {
     }
 }
 
+// Internal, all
 impl SystemTable<Internal> {
     /// Get the SystemTable if still in boot mode.
     ///
@@ -488,6 +499,7 @@ impl SystemTable<Internal> {
     }
 }
 
+/// Available during Boot Services
 impl SystemTable<Boot> {
     /// String identifying the vendor
     pub fn firmware_vendor(&self) -> String {
@@ -513,7 +525,9 @@ impl SystemTable<Boot> {
         )
     }
 
-    /// Output on stdout
+    /// Output on stdout.
+    ///
+    /// This is only valid for as long as the SystemTable is
     pub fn stdout(&self) -> SimpleTextOutput<'_> {
         let ptr = self.table().con_out;
         assert!(!ptr.is_null(), "con_out handle was null");
@@ -521,7 +535,9 @@ impl SystemTable<Boot> {
         unsafe { SimpleTextOutput::new(ptr) }
     }
 
-    /// Output on stderr
+    /// Output on stderr.
+    ///
+    /// This is only valid for as long as the SystemTable is
     pub fn stderr(&self) -> SimpleTextOutput<'_> {
         let ptr = self.table().con_err;
         assert!(!ptr.is_null(), "std_err handle was null");
@@ -530,6 +546,8 @@ impl SystemTable<Boot> {
     }
 
     /// Reference to the UEFI Boot services.
+    ///
+    /// This is only valid for as long as the SystemTable is
     pub fn boot(&self) -> BootServices<'_> {
         let ptr = self.table().boot_services;
         assert!(!ptr.is_null(), "boot_services handle was null");
