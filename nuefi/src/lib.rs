@@ -102,6 +102,16 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
     table.as_boot()
 }
 
+fn get_image_handle() -> Option<EfiHandle> {
+    let _table = TABLE.load(Ordering::Acquire);
+    let handle_p = HANDLE.load(Ordering::Relaxed);
+    if !handle_p.is_null() {
+        Some(EfiHandle(handle_p))
+    } else {
+        None
+    }
+}
+
 /// UEFI Entry point
 ///
 /// Uses a user-provided main function of type [`MainCheck`] as the library
