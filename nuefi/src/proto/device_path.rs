@@ -1,11 +1,15 @@
 //! UEFI Device Path Protocol
 
-use core::mem::transmute;
+use core::{
+    mem::{size_of, transmute},
+    slice::from_raw_parts,
+};
 
 use super::{Guid, Protocol};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
+    mem::MemoryType,
     string::UefiString,
     table::BootServices,
     util::interface,
@@ -13,7 +17,7 @@ use crate::{
 };
 
 pub mod raw;
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 
 use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
@@ -74,6 +78,55 @@ impl<'table> DevicePath<'table> {
             unsafe { Ok(transmute(s)) }
         } else {
             Err(EfiStatus::DEVICE_ERROR.into())
+        }
+    }
+
+    /// Append the UEFI file path, returning the new device path
+    // FIXME: These leak memory.
+    pub fn append_file_path(&self, path: &str) -> Result<DevicePath<'table>> {
+        let table = get_boot_table().ok_or(EfiStatus::UNSUPPORTED)?;
+        let boot = table.boot();
+        // log::trace!("Path: {path}");
+
+        let hdr_size = size_of::<RawDevicePath>();
+        let path: Vec<u16> = path.encode_utf16().chain([0]).collect();
+        let path_len = path.len() * 2;
+
+        let cap = path_len + hdr_size + hdr_size;
+        // log::trace!("Capacity: {cap} - {path_len}");
+
+        let data = boot.allocate_pool(MemoryType::LOADER_DATA, cap)?;
+
+        let path_len = path_len
+            .try_into()
+            .map_err(|_| EfiStatus::BAD_BUFFER_SIZE)?;
+
+        let media = RawDevicePath::media_file(path_len);
+        let end = RawDevicePath::end();
+
+        // Safety: `data` is valid for `cap`, which is all we write
+        unsafe {
+            // Write Media file node
+            let ptr = &media as *const _ as *const u8;
+            data.as_ptr().copy_from_nonoverlapping(ptr, hdr_size);
+
+            // Write name
+            let ptr = path.as_ptr() as *const u8;
+            let name = data.as_ptr().add(hdr_size);
+            name.copy_from_nonoverlapping(ptr, path_len.into());
+
+            // Write end of structure node
+            let ptr = &end as *const _ as *const u8;
+            let eos = data.as_ptr().add(hdr_size + path_len as usize);
+            eos.copy_from_nonoverlapping(ptr, hdr_size);
+
+            // We've ensured this is a valid `DevicePath` structure
+            let node = unsafe { DevicePath::new(data.as_ptr() as *mut _) };
+            // log::trace!("Node: {:#?}", node.to_string());
+
+            // Append it
+            let ret = self.append(&node)?;
+            Ok(ret)
         }
     }
 }
