@@ -614,7 +614,7 @@ impl SystemTable<Boot> {
             return String::new();
         }
         // Safety: always valid
-        unsafe { UefiStr::from_ptr(p) }.to_string()
+        unsafe { UefiStr::from_ptr(p) }.into_string()
     }
 
     /// Firmware-specific value indicating its revision

@@ -58,7 +58,7 @@ impl<'table> DevicePath<'table> {
             // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
             let util = boot.locate_protocol::<DevicePathToText>()?.unwrap();
             let s = util.convert_device_path_to_text(self)?;
-            let s = s.to_string();
+            let s = s.into_string();
             Ok(s)
         } else {
             Err(EfiStatus::DEVICE_ERROR.into())

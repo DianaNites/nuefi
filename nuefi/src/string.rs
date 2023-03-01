@@ -202,11 +202,14 @@ impl<'buf> UefiStr<'buf> {
         unsafe { from_raw_parts(self.data, self.len) }
     }
 
-    /// Convert this to a string
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
+    /// Convert the [`UefiString`] into a [`String`]
+    ///
+    /// # Panics
+    ///
+    /// - On failure
+    pub fn into_string(&self) -> String {
         char::decode_utf16(self.as_slice().iter().cloned())
-            .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
+            .map(|r| r.unwrap())
             .collect::<String>()
     }
 }
