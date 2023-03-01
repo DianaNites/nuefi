@@ -1,22 +1,20 @@
 //! UEFI Console related protocols
 use core::{
     fmt::{self, Write},
-    iter::once,
     mem::size_of,
     slice::from_raw_parts_mut,
 };
 
-use super::{Guid, Str16};
+use super::Str16;
 use crate::{
-    error::{EfiStatus, Result, UefiError},
-    get_boot_table,
+    error::{EfiStatus, Result},
+    string::UefiString,
     util::interface,
 };
 
 pub mod raw;
-use alloc::vec::Vec;
 
-use raw::{RawSimpleTextOutput, RawTextMode};
+use raw::RawSimpleTextOutput;
 
 use crate::Protocol;
 
@@ -77,7 +75,7 @@ interface!(
 impl<'table> SimpleTextOutput<'table> {
     pub fn output_string(&self, string: &str) -> Result<()> {
         let out = self.interface().output_string.unwrap();
-        let s: Vec<u16> = string.encode_utf16().chain(once(0)).collect();
+        let s = UefiString::new(string);
         // Safety: s is a nul terminated string
         unsafe { out(self.interface, s.as_ptr()) }.into()
     }
@@ -189,7 +187,7 @@ impl<'table> SimpleTextOutput<'table> {
             let mode = TextMode::new(mode, (cols, rows));
             Ok(mode)
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -226,9 +224,15 @@ impl<'table> SimpleTextOutput<'table> {
 /// Interior newlines are not, yet.
 impl<'t> Write for SimpleTextOutput<'t> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        (&*self).write_str(s)
+    }
+}
+
+impl<'t> Write for &SimpleTextOutput<'t> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
         let ret = match self.output_string(s) {
             Ok(()) => Ok(()),
-            Err(e) if e.status().is_warning() => Ok(()),
+            Err(e) if e.status() == EfiStatus::WARN_UNKNOWN_GLYPH => Ok(()),
             Err(_) => Err(fmt::Error),
         };
         if s.ends_with('\n') {
