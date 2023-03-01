@@ -4,6 +4,7 @@ use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
+    mem::MemoryType,
     proto::{self, console::SimpleTextOutput, Guid, Protocol, Scope},
     string::UefiStr,
     util::interface,
@@ -362,7 +363,12 @@ impl<'table> BootServices<'table> {
 /// Memory Allocation Services
 impl<'table> BootServices<'table> {
     /// Allocate `size` bytes of memory from pool of type `ty`
-    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
+    ///
+    /// This will fail if `ty` is [MemoryType::RESERVED]
+    pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<*mut u8> {
+        if ty == MemoryType::RESERVED {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
         let mut out: *mut u8 = null_mut();
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
