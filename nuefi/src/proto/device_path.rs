@@ -27,7 +27,7 @@ impl<'table> DevicePath<'table> {
         unsafe { boot.free_pool(self.interface as *mut u8) }
     }
 
-    /// Get this DevicePath as a String, if possible.
+    /// Get this DevicePath as a String using [`DevicePathToText`]
     pub fn to_string(&self) -> Result<String> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
