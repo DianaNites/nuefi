@@ -131,20 +131,28 @@ impl<'table> BootServices<'table> {
         }
     }
 
-    /// Open the protocol on `handle`, if it exists.
+    /// Open the protocol on `handle`, if it exists, on behalf of `agent`.
+    ///
+    /// For applications, `agent` is your image handle.
+    /// `controller` is [`None`].
+    ///
+    /// For drivers, `agent` is the handle with `EFI_DRIVER_BINDING_PROTOCOL`.
+    /// `controller` is the controller handle that requires `Proto`
     ///
     /// The protocol is opened in Exclusive mode
+    // FIXME: This method is actually incompatible with drivers. Have two separate
+    // ones
     // TODO: Is this safe/sound to call with the same protocol twice?
     // Do we need to test the protocol first?
     // *Seems* to be fine, in qemu?
-    pub fn open_protocol<'boot, T: proto::Protocol<'boot>>(
+    pub fn open_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
         agent: EfiHandle,
         controller: Option<EfiHandle>,
-    ) -> Result<Option<Scope<T>>> {
+    ) -> Result<Option<Scope<Proto>>> {
         let mut out: *mut u8 = null_mut();
-        let mut guid = T::GUID;
+        let mut guid = Proto::GUID;
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
             (self.interface().open_protocol.unwrap())(
@@ -160,7 +168,7 @@ impl<'table> BootServices<'table> {
             // Safety: Success means out is valid
             unsafe {
                 Ok(Some(Scope::new(
-                    T::from_raw(out as *mut T::Raw),
+                    Proto::from_raw(out as *mut Proto::Raw),
                     handle,
                     agent,
                     controller,
