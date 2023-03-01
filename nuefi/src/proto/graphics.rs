@@ -11,6 +11,7 @@ use core::{
 
 use raw::{RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat};
 
+use self::raw::RawGraphicsMode;
 use super::{Guid, Str16};
 use crate::{
     error::{EfiStatus, Result, UefiError},
@@ -64,7 +65,6 @@ impl<'table> GraphicsOutput<'table> {
     pub fn modes(&self) -> impl Iterator<Item = Result<GraphicsMode>> + '_ {
         let mut mode = 0;
         core::iter::from_fn(move || {
-            // FIXME: Is this right? should it be `- 1`?
             if mode >= self.max_mode() {
                 return None;
             }
@@ -76,10 +76,15 @@ impl<'table> GraphicsOutput<'table> {
 
     /// Current [`GraphicsMode`]
     pub fn mode(&self) -> GraphicsMode {
+        let mode = self.mode_raw();
+        let info = mode.info;
+        assert!(
+            !info.is_null(),
+            "GraphicsMode current mode.info pointer was null"
+        );
         // Safety: types
-        let info = unsafe { *(*self.interface().mode).info };
-        // Safety: types
-        let mode = unsafe { (*self.interface().mode).mode };
+        let info = unsafe { *info };
+        let mode = mode.mode;
         GraphicsMode::new(mode, info)
     }
 
@@ -134,7 +139,7 @@ impl<'table> GraphicsOutput<'table> {
         // FIXME: Volatile?
         // Safety:
         unsafe {
-            let mode = &*self.interface().mode;
+            let mode = self.mode_raw();
             let ptr = mode.fb_base as *mut u8;
             let size = mode.fb_size;
             let fb = Framebuffer::new(ptr, size, self.mode().stride());
@@ -142,9 +147,23 @@ impl<'table> GraphicsOutput<'table> {
         }
     }
 
+    /// Max supported mode
+    ///
+    /// # Note
+    ///
+    /// Unlike the raw structure, the return value is the last valid mode.
     fn max_mode(&self) -> u32 {
-        // Safety: Type system
-        unsafe { (*self.interface().mode).max_mode }
+        self.mode_raw().max_mode - 1
+    }
+
+    fn mode_raw(&self) -> &RawGraphicsMode {
+        let mode = self.interface().mode;
+        assert!(
+            !mode.is_null(),
+            "GraphicsMode current mode pointer was null"
+        );
+        // Safety: Asserted pointer is not null
+        unsafe { &*mode }
     }
 }
 
@@ -358,4 +377,9 @@ impl Coord {
     pub fn new(x: u32, y: u32) -> Self {
         Self(x, y)
     }
+}
+
+/// A double buffer for the framebuffer
+pub struct Double<'table> {
+    fb: Framebuffer<'table>,
 }
