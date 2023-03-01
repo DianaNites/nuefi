@@ -86,7 +86,7 @@ impl RawDevicePath {
 
     /// Create a media filepath node for a null terminated path of bytes `len`
     pub fn media_file(len: u16) -> Self {
-        let len = len + 4;
+        let len = len.checked_add(4).unwrap();
         Self {
             ty: RawDevicePathType::MEDIA,
             sub_ty: RawDevicePathSubType::MEDIA_FILE,
