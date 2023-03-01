@@ -59,7 +59,7 @@ impl<'table> DevicePathUtil<'table> {
     }
 
     /// Duplicate/Clone the [DevicePath] `path`
-    pub fn duplicate(&self, path: &DevicePath) -> Result<DevicePath> {
+    pub fn duplicate(&self, path: &DevicePath) -> Result<DevicePath<'table>> {
         // Safety: Construction ensures these are valid
         let ret = unsafe {
             //
@@ -88,7 +88,7 @@ impl<'table> DevicePathToText<'table> {
     /// # Errors
     ///
     /// - If memory allocation fails
-    pub fn convert_device_node_to_text(&self, node: &DevicePath) -> Result<UefiString> {
+    pub fn convert_device_node_to_text(&self, node: &DevicePath) -> Result<UefiString<'table>> {
         // Safety: construction ensures correctness
         let ret = unsafe {
             //
@@ -107,7 +107,7 @@ impl<'table> DevicePathToText<'table> {
     /// # Errors
     ///
     /// - If memory allocation fails
-    pub fn convert_device_path_to_text(&self, path: &DevicePath) -> Result<UefiString> {
+    pub fn convert_device_path_to_text(&self, path: &DevicePath) -> Result<UefiString<'table>> {
         // Safety: construction ensures correctness
         let ret = unsafe {
             //
