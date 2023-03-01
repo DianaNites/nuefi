@@ -39,7 +39,7 @@ impl AllocateType {
 }
 
 /// UEFI Memory type
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct MemoryType(u32);
 
@@ -66,7 +66,7 @@ impl MemoryType {
 }
 
 /// UEFI Memory flags
-#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryFlags(u64);
 
 impl MemoryFlags {
