@@ -292,11 +292,11 @@ impl<'m> Index<(u32, u32)> for Framebuffer<'m> {
 
     fn index(&self, (x, y): (u32, u32)) -> &Self::Output {
         let index = ((y * self.stride) + x) as usize;
+        assert!(index <= self.size, "Framebuffer index out of bounds");
         // Safety:
-        unsafe {
-            //
-            &*self.ptr.add(index).cast::<Pixel>()
-        }
+        // - We assert `index` is within range
+        // - The type here is a `Pixel`
+        unsafe { &*self.ptr.add(index).cast::<Pixel>() }
     }
 }
 
