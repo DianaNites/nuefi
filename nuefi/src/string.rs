@@ -54,8 +54,9 @@ impl<'table> UefiString<'table> {
     /// # Panics
     ///
     /// If `s` has any internal nulls
+    #[track_caller]
     pub fn new(s: &str) -> Self {
-        assert!(s.contains('\0'), "UefiString cannot have internal null");
+        assert!(!s.contains('\0'), "UefiString cannot have internal null");
         let mut data: Vec<u16> = s.encode_utf16().chain([0]).collect();
 
         let len = data.len();
