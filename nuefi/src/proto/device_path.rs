@@ -1,5 +1,7 @@
 //! UEFI Device Path Protocol
 
+use core::mem::transmute;
+
 use super::{Guid, Protocol};
 use crate::{
     error::{EfiStatus, Result, UefiError},
@@ -25,6 +27,23 @@ impl<'table> DevicePath<'table> {
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe { boot.free_pool(self.interface as *mut u8) }
+    }
+
+    /// Duplicate/clone the path
+    ///
+    /// See [`DevicePathUtil::duplicate`]
+    pub fn duplicate(&self) -> Result<DevicePath<'table>> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
+            let util = boot.locate_protocol::<DevicePathUtil>()?.unwrap();
+            let s = util.duplicate(self)?;
+            // Safety: This is required because our local table is an implementation detail
+            // The correct lifetime is `'table`
+            unsafe { Ok(transmute(s)) }
+        } else {
+            Err(EfiStatus::DEVICE_ERROR.into())
+        }
     }
 
     /// Get this DevicePath as a String using [`DevicePathToText`]
