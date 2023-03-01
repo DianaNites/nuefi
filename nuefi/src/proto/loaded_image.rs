@@ -85,7 +85,7 @@ impl<'table> LoadedImage<'table> {
     /// - `cmd` MUST live until [`BootServices::start_image`][start_image] is
     ///   called
     ///
-    /// [start_image]: [crate::table::BootServices::start_image]
+    /// [start_image]: crate::table::BootServices::start_image
     pub unsafe fn set_shell_options(&self, cmd: &UefiStr<'_>) {
         // Safety: Always correct fot shell options
         self.set_options::<u16>(cmd.as_slice());
