@@ -217,15 +217,23 @@ impl<'buf> UefiStr<'buf> {
         }
     }
 
+    /// Get the pointer to the [`UefiStr`]s buffer
+    #[inline]
+    pub const fn as_ptr(&self) -> *const u16 {
+        self.data
+    }
+
     /// Get the string as a slice of u16 characters.
     ///
     /// Does not include trailing nul
+    #[inline]
     pub const fn as_slice(&self) -> &[u16] {
         // Safety: Ensured valid in from_ptr
         unsafe { from_raw_parts(self.data, self.len - 1) }
     }
 
     /// Get the string as a slice of u16 characters
+    #[inline]
     pub const fn as_slice_with_nul(&self) -> &[u16] {
         // Safety: Ensured valid in from_ptr
         unsafe { from_raw_parts(self.data, self.len) }
