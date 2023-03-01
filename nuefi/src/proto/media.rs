@@ -122,6 +122,9 @@ impl<'table> FsHandle<'table> {
     }
 
     /// Open a new [`FsHandle`] relative to this one
+    ///
+    /// Remember that UEFI paths use `\`, not `/`
+    // FIXME: Provide a nice UEFI path type
     pub fn open(&self, name: &str) -> Result<FsHandle> {
         let mode = 0x1;
         let flags = 0;
