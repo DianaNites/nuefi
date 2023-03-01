@@ -50,7 +50,7 @@ pub struct UefiString<'table> {
 }
 
 impl<'table> UefiString<'table> {
-    /// Create a new UEFI string
+    /// Create a new, null terminated, UEFI string
     ///
     /// # Panics
     ///
