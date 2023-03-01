@@ -95,7 +95,13 @@ impl<'table> LoadedImage<'table> {
     ///
     /// # Safety
     ///
-    /// Only use this if you know what you're doing
+    /// - `device` must be the [`EfiHandle`] for the device this image was
+    ///   loaded from.
+    ///
+    /// This is normally/should be set [load_image][load_image] when you call
+    /// it.
+    ///
+    /// [load_image]: crate::table::BootServices
     pub unsafe fn set_device(&self, device: EfiHandle) {
         self.interface_mut().device = device;
     }
