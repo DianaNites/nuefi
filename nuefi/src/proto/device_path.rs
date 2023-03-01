@@ -3,6 +3,7 @@
 use super::{Guid, Protocol};
 use crate::{
     error::{EfiStatus, Result, UefiError},
+    get_boot_table,
     string::UefiString,
     table::BootServices,
     util::interface,
@@ -10,6 +11,8 @@ use crate::{
 };
 
 pub mod raw;
+use alloc::string::String;
+
 use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
 interface!(
@@ -22,6 +25,20 @@ impl<'table> DevicePath<'table> {
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe { boot.free_pool(self.interface as *mut u8) }
+    }
+
+    /// Get this DevicePath as a String, if possible.
+    pub fn to_string(&self) -> Result<String> {
+        if let Some(table) = get_boot_table() {
+            let boot = table.boot();
+            // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
+            let util = boot.locate_protocol::<DevicePathToText>()?.unwrap();
+            let s = util.convert_device_path_to_text(self)?;
+            let s = s.to_string();
+            Ok(s)
+        } else {
+            Err(EfiStatus::DEVICE_ERROR.into())
+        }
     }
 }
 
