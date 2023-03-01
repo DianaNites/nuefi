@@ -273,8 +273,8 @@ impl<'table> BootServices<'table> {
     /// Query `handle` to determine if it supports `Protocol`
     ///
     /// If no protocol is found, [`Ok(None)`] is returned.
-    // TODO: Is this safe/sound to call with the same protocol twice?
-    // Same reasons as `open_protocol`
+    // FIXME: This needs to be unsafe.
+    // Unless otherwise specified, Protocols are not reentrant
     pub fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
