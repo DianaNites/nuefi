@@ -5,7 +5,14 @@ use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     mem::MemoryType,
-    proto::{self, console::SimpleTextOutput, Guid, Protocol, Scope},
+    proto::{
+        self,
+        console::SimpleTextOutput,
+        device_path::{raw::RawDevicePath, DevicePath},
+        Guid,
+        Protocol,
+        Scope,
+    },
     string::UefiStr,
     util::interface,
     EfiHandle,
@@ -62,6 +69,36 @@ impl<'table> BootServices<'table> {
             Ok(Vec::new())
         } else {
             Err(ret.into())
+        }
+    }
+
+    /// Load an image from memory `src`, returning its handle.
+    ///
+    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    ///
+    /// This case will need to be handled in [`BootServices::start_image`]
+    ///
+    /// # Safety
+    ///
+    /// Arguments must be correct for [load_image][`BootServices::load_image`]
+    unsafe fn load_image_impl(
+        &self,
+        policy: bool,
+        devpath: *mut RawDevicePath,
+        parent: EfiHandle,
+        src: *mut u8,
+        src_len: usize,
+    ) -> Result<EfiHandle> {
+        let mut out = EfiHandle(null_mut());
+        // Safety: Callers responsibility
+        let ret =
+            (self.interface().load_image.unwrap())(policy, parent, devpath, src, src_len, &mut out);
+
+        if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
+            assert_ne!(out, EfiHandle(null_mut()));
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
         }
     }
 }
@@ -272,31 +309,31 @@ impl<'table> BootServices<'table> {
 
     /// Load an image from memory `src`, returning its handle.
     ///
+    /// `parent` should be your image handle, as your will be th parent of this
+    /// new image.
+    ///
+    /// If the image was from a device, you should set `devpath` to the
+    /// [`DevicePath`] for the image on that device.
+    ///
     /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
     ///
     /// You will need to handle that case in [`BootServices::start_image`]
-    pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
+    pub fn load_image(
+        &self,
+        parent: EfiHandle,
+        devpath: Option<&DevicePath>,
+        src: &[u8],
+    ) -> Result<EfiHandle> {
         let mut out = EfiHandle(null_mut());
-        // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe {
-            (self.interface().load_image.unwrap())(
-                false,
-                parent,
-                // TODO: Provide fake device path
-                // This makes nicer debugging?, and images may expect it
-                null_mut(),
-                // UEFI pls do not modify us.
-                src.as_ptr() as *mut _,
-                src.len(),
-                &mut out,
-            )
-        };
 
-        if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
-            assert_ne!(out, EfiHandle(null_mut()));
-            Ok(out)
-        } else {
-            Err(UefiError::new(ret))
+        // Safety: Statically correct for these arguments
+        // - policy is always false
+        // - Devpath is statically valid or null
+        // - parent is statically valid
+        // - Source buffer and its size are valid
+        unsafe {
+            let devpath = devpath.map(|d| d.as_ptr()).unwrap_or(null_mut());
+            self.load_image_impl(false, devpath, parent, src.as_ptr() as *mut u8, src.len())
         }
     }
 
