@@ -39,15 +39,29 @@ impl RawDevicePath {
     }
 }
 
+pub type GetDevicePathSize = unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize;
+
+pub type DuplicateDevicePath =
+    unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> *mut RawDevicePath;
+
+pub type AppendDeviceNode = unsafe extern "efiapi" fn(
+    this: *mut RawDevicePath,
+    other: *mut RawDevicePath,
+) -> *mut RawDevicePath;
+
+pub type AppendDevicePath = unsafe extern "efiapi" fn(
+    this: *mut RawDevicePath,
+    other: *mut RawDevicePath,
+) -> *mut RawDevicePath;
+
 /// Device Path Utilities protocol
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawDevicePathUtil {
-    pub get_device_path_size: Option<unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize>,
-    pub duplicate_device_path:
-        Option<unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> *mut RawDevicePath>,
-    pub append_device_path: *mut u8,
-    pub append_device_node: *mut u8,
+    pub get_device_path_size: Option<GetDevicePathSize>,
+    pub duplicate_device_path: Option<DuplicateDevicePath>,
+    pub append_device_path: Option<AppendDevicePath>,
+    pub append_device_node: Option<AppendDeviceNode>,
     pub append_device_path_instance: *mut u8,
     pub get_next_device_path_instance: *mut u8,
     pub is_device_path_multi_instance: *mut u8,
