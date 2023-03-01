@@ -9,6 +9,7 @@ use log::{error, trace};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
+    mem::MemoryType,
     proto::device_path::{DevicePath, DevicePathToText, DevicePathUtil},
     Boot,
     SystemTable,
@@ -53,14 +54,36 @@ impl<'table> UefiString<'table> {
     ///
     /// # Panics
     ///
-    /// If `s` has any internal nulls
+    /// - If `s` has any internal nulls
+    /// - Failure to allocate memory
     #[track_caller]
     pub fn new(s: &str) -> Self {
         assert!(!s.contains('\0'), "UefiString cannot have internal null");
-        let mut data: Vec<u16> = s.encode_utf16().chain([0]).collect();
+        let table = get_boot_table().unwrap();
+        let boot = table.boot();
+        // Length in UTF-16
+        let cap = s.len() + 1;
 
-        let len = data.len();
-        let data = data.as_mut_ptr();
+        // Safety: aligned
+        let data = unsafe {
+            boot.allocate_pool_ty_array::<u16>(MemoryType::LOADER_DATA, cap)
+                .unwrap()
+                .cast::<u16>()
+        };
+        let mut write = data.as_ptr();
+
+        s.encode_utf16().chain([0]).for_each(|c| {
+            // Safety: `write` is valid for `cap`,
+            // which is the length of `s` and nul terminator.
+            unsafe {
+                write.write(c);
+                write = write.add(1);
+            }
+        });
+        // `data` should now be fully initialized
+
+        let len = cap;
+        let data = data.as_ptr();
         Self {
             data,
             len,
@@ -140,6 +163,12 @@ impl<'table> Drop for UefiString<'table> {
                 self.data
             )
         }
+    }
+}
+
+impl<'table> Display for UefiString<'table> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.ref_.fmt(f)
     }
 }
 
