@@ -3,6 +3,7 @@ use alloc::{string::String, vec::Vec};
 use core::{
     cell::Cell,
     iter::{from_fn, once},
+    marker::PhantomData,
     mem::{size_of, MaybeUninit},
     ptr::null_mut,
     slice::from_raw_parts,
@@ -41,7 +42,7 @@ interface!(
 
 impl<'table> SimpleFileSystem<'table> {
     /// Open the root directory of a volume
-    pub fn open_volume(&self) -> Result<FsHandle> {
+    pub fn open_volume<'h>(&self) -> Result<FsHandle<'h, 'table>> {
         let mut out = null_mut();
         // Safety: `file` is always valid, checked for null
         // anything else is the responsibility of firmware
@@ -74,19 +75,32 @@ use file_imp::FileImp;
 /// This will call [`FsHandle::close`] on [`Drop`]
 ///
 /// See [`SimpleFileSystem`]
-pub struct FsHandle<'table> {
-    raw: FileImp<'table>,
+// The `'this` lifetime is independent and under `'table`
+// because the `FsHandle` is independent of whatever created it,
+// only depending on the BootServices/SystemTable
+//
+// For example, just because `SimpleFileSystem` went out of scope does not
+// invalidate this handle.
+pub struct FsHandle<'this, 'table>
+where
+    'table: 'this,
+{
+    raw: FileImp<'this>,
     interface: *mut RawFsHandle,
     closed: Cell<bool>,
+
+    /// Holds the BootServices table lifetime
+    table: PhantomData<&'table mut ()>,
 }
 
 // interface hacks
-impl<'table> FsHandle<'table> {
+impl<'this, 'table> FsHandle<'this, 'table> {
     pub(crate) unsafe fn new(interface: *mut RawFsHandle) -> Self {
         Self {
             raw: FileImp::new(interface),
             interface,
             closed: Cell::new(false),
+            table: PhantomData,
         }
     }
 
@@ -99,8 +113,14 @@ impl<'table> FsHandle<'table> {
     }
 }
 
-impl<'table> FsHandle<'table> {
-    fn open_impl(&self, name: &str, mode: u64, flags: u64) -> Result<FsHandle> {
+impl<'this, 'table> FsHandle<'this, 'table> {
+    // Use a new lifetime because this is a new handle independent of ours.
+    fn open_impl<'new_this>(
+        &self,
+        name: &str,
+        mode: u64,
+        flags: u64,
+    ) -> Result<FsHandle<'new_this, 'table>> {
         let mut out = null_mut();
         let name: Vec<u16> = name.encode_utf16().chain(once(0)).collect();
 
@@ -125,14 +145,14 @@ impl<'table> FsHandle<'table> {
     ///
     /// Remember that UEFI paths use `\`, not `/`
     // FIXME: Provide a nice UEFI path type
-    pub fn open(&self, name: &str) -> Result<FsHandle> {
+    pub fn open<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
         let mode = 0x1;
         let flags = 0;
         self.open_impl(name, mode, flags)
     }
 
     /// Create a new [`FsHandle`] relative to this one
-    pub fn create(&self, name: &str) -> Result<FsHandle> {
+    pub fn create<'new_this>(&self, name: &str) -> Result<FsHandle<'new_this, 'table>> {
         todo!()
     }
 
@@ -378,7 +398,7 @@ impl<'table> FsHandle<'table> {
     }
 }
 
-impl<'table> Drop for FsHandle<'table> {
+impl<'this, 'table> Drop for FsHandle<'this, 'table> {
     fn drop(&mut self) {
         if !self.closed.get() {
             self.closed.set(true);
