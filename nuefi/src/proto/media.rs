@@ -235,6 +235,24 @@ impl<'this, 'table> FsHandle<'this, 'table> {
     pub fn exists(&self) -> bool {
         self.try_exists().unwrap_or_default()
     }
+
+    /// Read to `buf` until the end of the file,
+    /// returning how many bytes were read.
+    pub fn read_to_end(&self, buf: &mut Vec<u8>) -> Result<usize> {
+        let info = self.info()?;
+        if !info.directory() {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
+        let size: usize = info
+            .size()
+            .try_into()
+            .map_err(|_| EfiStatus::DEVICE_ERROR)?;
+
+        // Init the buffer for the size of the file
+        buf.resize(size, 0);
+
+        self.read(buf)
+    }
 }
 
 // Relatively direct UEFI wrappers
