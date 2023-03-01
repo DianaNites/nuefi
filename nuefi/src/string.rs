@@ -1,7 +1,7 @@
 //! UEFI String handling helpers
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use core::{fmt::Display, marker::PhantomData, mem::transmute, ops::Deref, slice::from_raw_parts};
 
 use log::{error, trace};
@@ -39,10 +39,39 @@ pub struct UefiString<'table> {
     /// Length in *characters*
     len: usize,
 
+    /// Lifetime erased UefiStr to ourselves
+    ///
+    /// This is a hack used for [`Deref::deref`] and [`AsRef::as_ref`], which
+    /// return *references*, when we dont have a DST.
+    ref_: UefiStr<'table>,
+
     _ghost: PhantomData<&'table mut u8>,
 }
 
 impl<'table> UefiString<'table> {
+    /// Create a new UEFI string
+    ///
+    /// # Panics
+    ///
+    /// If `s` has any internal nulls
+    pub fn new(s: &str) -> Self {
+        assert!(s.contains('\0'), "UefiString cannot have internal null");
+        let mut data: Vec<u16> = s.encode_utf16().chain([0]).collect();
+
+        let len = data.len();
+        let data = data.as_mut_ptr();
+        Self {
+            data,
+            len,
+            ref_: UefiStr {
+                data,
+                len,
+                _ghost: PhantomData,
+            },
+            _ghost: PhantomData,
+        }
+    }
+
     /// Create an owned [UefiString] from `data`
     ///
     /// This takes responsibility for freeing the memory using `free_pool`
@@ -51,11 +80,8 @@ impl<'table> UefiString<'table> {
     ///
     /// - Data must be a valid non-null pointer to a UEFI string ending in nul
     pub unsafe fn from_ptr(data: *mut u16) -> Self {
-        Self {
-            data,
-            len: string_len(data) + 1,
-            _ghost: PhantomData,
-        }
+        let len = string_len(data) + 1;
+        Self::from_ptr_len(data, len)
     }
 
     /// Create an owned [UefiString] from `data` and `len` *characters*,
@@ -68,8 +94,25 @@ impl<'table> UefiString<'table> {
         Self {
             data,
             len,
+            ref_: UefiStr {
+                data,
+                len,
+                _ghost: PhantomData,
+            },
             _ghost: PhantomData,
         }
+    }
+}
+
+impl<'table> AsRef<UefiStr<'table>> for UefiString<'table> {
+    fn as_ref(&self) -> &UefiStr<'table> {
+        &self.ref_
+    }
+}
+
+impl<'table> From<&str> for UefiString<'table> {
+    fn from(value: &str) -> Self {
+        Self::new(value)
     }
 }
 
@@ -77,8 +120,7 @@ impl<'table> Deref for UefiString<'table> {
     type Target = UefiStr<'table>;
 
     fn deref(&self) -> &Self::Target {
-        // Safety: UefiStr and UefiString have the same layout
-        unsafe { transmute(self) }
+        &self.ref_
     }
 }
 
@@ -86,7 +128,7 @@ impl<'table> Drop for UefiString<'table> {
     fn drop(&mut self) {
         trace!("Deallocating UefiString");
         if let Some(table) = get_boot_table() {
-            // Safety: self.data was allocated by UEFI
+            // Safety: self.data was allocated by allocate_pool
             let ret = unsafe { table.boot().free_pool(self.data as *mut u8) };
             if ret.is_err() {
                 error!("Failed to deallocate UefiString {:p}", self.data)
@@ -103,18 +145,21 @@ impl<'table> Drop for UefiString<'table> {
 /// An unowned UEFI string.
 ///
 /// See [UefiString] for more details.
+// This type is not unsized, and yet still should ONLY be created behind a reference.
+// Specifically, a reference to the owning [`UefiString`]
+// This is depended on for safety internally, to prevent UAF.
 #[derive(Debug)]
 #[repr(C)]
-pub struct UefiStr<'table> {
+pub struct UefiStr<'buf> {
     data: *mut u16,
 
     /// Length in *characters*
     len: usize,
 
-    _ghost: PhantomData<&'table mut u8>,
+    _ghost: PhantomData<&'buf mut u8>,
 }
 
-impl<'table> UefiStr<'table> {
+impl<'buf> UefiStr<'buf> {
     /// Create an unowned [UefiStr] from `data`
     ///
     /// # Safety
