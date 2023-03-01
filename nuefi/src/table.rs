@@ -1,6 +1,11 @@
 //! UEFI Tables
 
-use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
+use core::{
+    marker::PhantomData,
+    mem::size_of,
+    ptr::{null_mut, NonNull},
+    time::Duration,
+};
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
@@ -428,7 +433,7 @@ impl<'table> BootServices<'table> {
     /// Allocate `size` bytes of memory from pool of type `ty`
     ///
     /// This will fail if `ty` is [MemoryType::RESERVED]
-    pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<*mut u8> {
+    pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<NonNull<u8>> {
         if ty == MemoryType::RESERVED {
             return Err(EfiStatus::INVALID_PARAMETER.into());
         }
@@ -436,7 +441,7 @@ impl<'table> BootServices<'table> {
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
         if ret.is_success() {
-            Ok(out)
+            Ok(NonNull::new(out).unwrap())
         } else {
             Err(UefiError::new(ret))
         }

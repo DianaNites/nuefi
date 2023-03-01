@@ -144,6 +144,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         if let Some(table) = get_boot_table() {
             let ret = table.boot().allocate_pool(MemoryType::LOADER_DATA, size);
             if let Ok(ptr) = ret {
+                let ptr = ptr.as_ptr();
                 trace!(
                     "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
                     ptr.add(offset),
