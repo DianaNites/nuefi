@@ -126,6 +126,10 @@ impl<'table> DevicePath<'table> {
 
             // Append it
             let ret = self.append(&node)?;
+
+            // Free our data
+            boot.free_pool(data.as_ptr())?;
+
             Ok(ret)
         }
     }
