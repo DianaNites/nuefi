@@ -81,7 +81,10 @@ static TABLE: AtomicPtr<RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
-/// Handle to something in UEFI firmware
+/// Represents a handle in UEFI.
+///
+/// This type is transparent with C `void`, and may be null.
+// FIXME: Rework to guarantee NonNull, use Option?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct EfiHandle(*mut c_void);
