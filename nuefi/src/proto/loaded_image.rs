@@ -4,7 +4,12 @@ use core::mem::size_of;
 use raw::RawLoadedImage;
 
 use super::{device_path::DevicePath, Guid, Protocol};
-use crate::{string::Path, util::interface, EfiHandle, Protocol};
+use crate::{
+    string::{Path, UefiStr},
+    util::interface,
+    EfiHandle,
+    Protocol,
+};
 
 pub mod raw;
 
@@ -64,6 +69,26 @@ impl<'table> LoadedImage<'table> {
         let len: u32 = data.len().try_into().unwrap();
         let size: u32 = size_of::<T>().try_into().unwrap();
         self.interface_mut().options_size = len * size;
+    }
+
+    /// Set the image load options in Shell format,
+    /// as a UTF-16 null terminated string.
+    ///
+    /// # Panics
+    ///
+    /// - If `cmd` is bigger than [`u32::MAX`]
+    ///
+    /// # Safety
+    ///
+    /// - You must ensure this image is, in fact,
+    /// expecting arguments in this format.
+    /// - `cmd` MUST live until [`BootServices::start_image`][start_image] is
+    ///   called
+    ///
+    /// [start_image]: [crate::table::BootServices::start_image]
+    pub unsafe fn set_shell_options(&self, cmd: &UefiStr<'_>) {
+        // Safety: Always correct fot shell options
+        self.set_options::<u16>(cmd.as_slice());
     }
 
     /// Set the Device handle for this image
