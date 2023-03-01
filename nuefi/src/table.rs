@@ -371,7 +371,9 @@ impl<'table> BootServices<'table> {
     /// Unload an earlier loaded image
     pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
         // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().start_image.unwrap())(handle, &mut 0, null_mut()).into() }
+        // FIXME: We are responsible for freeing ExitData
+        let mut size = 0;
+        unsafe { (self.interface().start_image.unwrap())(handle, &mut size, null_mut()).into() }
     }
 
     /// Unload an earlier loaded image
