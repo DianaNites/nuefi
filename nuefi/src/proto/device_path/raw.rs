@@ -69,7 +69,7 @@ impl RawDevicePath {
         Self {
             ty: RawDevicePathType(ty),
             sub_ty: RawDevicePathSubType(sub_ty),
-            len: len.to_le_bytes(),
+            len: len.to_ne_bytes(),
         }
     }
 
@@ -78,7 +78,7 @@ impl RawDevicePath {
         Self {
             ty: RawDevicePathType::END,
             sub_ty: RawDevicePathSubType::END_ENTIRE,
-            len: 4u16.to_le_bytes(),
+            len: 4u16.to_ne_bytes(),
         }
     }
 }
