@@ -32,6 +32,7 @@ impl<'table> DevicePath<'table> {
     /// Duplicate/clone the path
     ///
     /// See [`DevicePathUtil::duplicate`]
+    // FIXME: These leak memory.
     pub fn duplicate(&self) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -61,6 +62,7 @@ impl<'table> DevicePath<'table> {
     }
 
     /// Append `node` to ourselves, returning a new path.
+    // FIXME: These leak memory.
     pub fn append(&self, node: &DevicePath) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
