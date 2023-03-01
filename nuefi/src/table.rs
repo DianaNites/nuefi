@@ -432,9 +432,11 @@ impl<'table> BootServices<'table> {
 
 /// Memory Allocation Services
 impl<'table> BootServices<'table> {
-    /// Allocate `size` bytes of memory from pool of type `ty`
+    /// Allocate `size` bytes of memory from pool of type `ty`.
+    /// Allocations are 8 byte aligned.
     ///
     /// This will fail if `ty` is [MemoryType::RESERVED]
+    #[inline]
     pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<NonNull<u8>> {
         if ty == MemoryType::RESERVED {
             return Err(EfiStatus::INVALID_PARAMETER.into());
@@ -449,12 +451,28 @@ impl<'table> BootServices<'table> {
         }
     }
 
+    /// Allocate [`size_of::<T>()`] bytes from pool of type `ty`.
+    /// Allocations are 8 byte aligned.
+    ///
+    /// This is a convenience method around [`BootServices::allocate_pool`]
+    /// and casting the pointer manually.
+    ///
+    /// # Safety
+    ///
+    /// Unlike [`BootServices::allocate_pool`], this is unsafe,
+    /// because `T` may not be 8-bytes aligned
+    #[inline]
+    pub unsafe fn allocate_pool_ty<T>(&self, ty: MemoryType) -> Result<NonNull<T>> {
+        self.allocate_pool(ty, size_of::<T>()).map(|n| n.cast())
+    }
+
     /// Free memory allocated by [BootServices::allocate_pool]
     ///
     /// # Safety
     ///
     /// - Must have been allocated by [BootServices::allocate_pool]
     /// - Must be non-null
+    #[inline]
     pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
         (self.interface().free_pool.unwrap())(memory).into()
     }
