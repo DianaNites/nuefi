@@ -466,6 +466,24 @@ impl<'table> BootServices<'table> {
         self.allocate_pool(ty, size_of::<T>()).map(|n| n.cast())
     }
 
+    /// The same as [`allocate_pool_ty`][alloc_ty], but allocates `len`
+    /// *elements* of `T`.
+    ///
+    /// # Safety
+    ///
+    /// See [`allocate_pool_ty`][alloc_ty]
+    ///
+    /// [alloc_ty]: BootServices::allocate_pool_ty
+    #[inline]
+    pub unsafe fn allocate_pool_ty_array<T>(
+        &self,
+        ty: MemoryType,
+        len: usize,
+    ) -> Result<NonNull<T>> {
+        self.allocate_pool(ty, len * size_of::<T>())
+            .map(|n| n.cast())
+    }
+
     /// Free memory allocated by [BootServices::allocate_pool]
     ///
     /// # Safety
