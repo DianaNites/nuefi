@@ -54,8 +54,10 @@ impl RawDevicePathSubType {
 #[repr(C, packed)]
 pub struct RawDevicePath {
     pub ty: RawDevicePathType,
+
     pub sub_ty: RawDevicePathSubType,
-    /// Length, including this header
+
+    /// Length, in ***bytes***, including this header
     pub len: [u8; 2],
 }
 
@@ -82,7 +84,7 @@ impl RawDevicePath {
         }
     }
 
-    /// Create a media filepath node for a null terminated path of size `len`
+    /// Create a media filepath node for a null terminated path of bytes `len`
     pub fn media_file(len: u16) -> Self {
         let len = len + 4;
         Self {
