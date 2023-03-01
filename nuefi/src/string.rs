@@ -214,6 +214,12 @@ impl<'buf> UefiStr<'buf> {
     }
 }
 
+impl<'buf> Display for UefiStr<'buf> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.into_string())
+    }
+}
+
 /// An unowned UEFI [DevicePath]
 #[derive(Debug)]
 pub struct Path<'table> {
