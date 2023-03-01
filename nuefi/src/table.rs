@@ -1,17 +1,17 @@
 //! UEFI Tables
 
-use core::{marker::PhantomData, ptr::null_mut, time::Duration};
+use core::{marker::PhantomData, mem::size_of, ptr::null_mut, time::Duration};
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
-    proto::{self, console::SimpleTextOutput, Scope},
+    proto::{self, console::SimpleTextOutput, Guid, Protocol, Scope},
     string::UefiStr,
     util::interface,
     EfiHandle,
 };
 
 pub mod raw;
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 
 use raw::*;
 
@@ -19,6 +19,69 @@ interface!(
     /// The UEFI Boot Services
     BootServices(RawBootServices),
 );
+
+// Internal
+impl<'table> BootServices<'table> {
+    /// Raw `locate_handle` wrapper
+    ///
+    /// # Safety
+    ///
+    /// Arguments must be correct for [`LocateSearch`]
+    unsafe fn locate_handle(
+        &self,
+        search: LocateSearch,
+        search_key: *mut u8,
+        guid: *const Guid,
+    ) -> Result<Vec<EfiHandle>> {
+        let lh = self.interface().locate_handle.unwrap();
+        let key = search_key;
+        // Note: This is in bytes.
+        let mut size = 0;
+        let mut out: Vec<EfiHandle> = Vec::new();
+        let guid_ptr = guid;
+
+        // Get buffer size
+        let ret = unsafe { (lh)(search, guid_ptr, key, &mut size, null_mut()) };
+        if ret == EfiStatus::NOT_FOUND {
+            // No handles matched the search
+            return Ok(out);
+        } else if ret != EfiStatus::BUFFER_TOO_SMALL {
+            return Err(EfiStatus::INVALID_PARAMETER.into());
+        }
+
+        // Reserve enough elements
+        let elems = size / size_of::<EfiHandle>();
+        out.resize(elems, EfiHandle(null_mut()));
+
+        // Fill our array
+        let ret = unsafe { (lh)(search, guid_ptr, key, &mut size, out.as_mut_ptr()) };
+        if ret.is_success() {
+            Ok(out)
+        } else if ret == EfiStatus::NOT_FOUND {
+            Ok(Vec::new())
+        } else {
+            Err(ret.into())
+        }
+    }
+}
+
+/// Protocol handling
+impl<'table> BootServices<'table> {
+    /// Get every handle on the system
+    pub fn all_handles(&self) -> Result<Vec<EfiHandle>> {
+        // Safety: Statically correct for this call
+        // All parameters are ignored for ALL_HANDLES
+        unsafe { self.locate_handle(LocateSearch::ALL_HANDLES, null_mut(), null_mut()) }
+    }
+
+    /// Get every handle that support the [`Protocol`]
+    pub fn handles_for_proto<Proto: Protocol<'table>>(&self) -> Result<Vec<EfiHandle>> {
+        let guid = Proto::GUID;
+        // Safety: Statically correct for this call
+        // `search_key` is ignored for BY_PROTOCOL
+        unsafe { self.locate_handle(LocateSearch::BY_PROTOCOL, null_mut(), &guid) }
+    }
+}
 
 impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`

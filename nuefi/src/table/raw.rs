@@ -226,6 +226,38 @@ impl RawSystemTable {
     }
 }
 
+/// Search type for
+/// [`RawBootServices::locate_handle`] and
+/// [`RawBootServices::locate_handle_buffer`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct LocateSearch(u32);
+
+impl LocateSearch {
+    /// Protocol and SearchKey are ignored, every handle in the system is
+    /// returned.
+    pub const ALL_HANDLES: Self = Self(0);
+
+    /// SearchKey supplies a Registration value from
+    /// [`RawBootServices::register_protocol_notify`].
+    ///
+    /// The next handle that is new for registration is returned.
+    /// Only one handle is returned at a time.
+    pub const BY_REGISTER_NOTIFY: Self = Self(1);
+
+    /// All handles that support protocol are returned
+    pub const BY_PROTOCOL: Self = Self(2);
+}
+
+/// Locate handles, determined by the parameters
+pub type LocateHandle = unsafe extern "efiapi" fn(
+    search_type: LocateSearch,
+    protocol: *const Guid,
+    search_key: *const u8,
+    buffer_size: *mut usize,
+    buffer: *mut EfiHandle,
+) -> EfiStatus;
+
 /// Raw structure of the UEFI Boot Services table
 /// NOTE: It is important for safety that all fields be nullable.
 /// In particular, this means fn pointers MUST be wrapped in [`Option`].
@@ -305,7 +337,9 @@ pub struct RawBootServices {
     >,
     pub _reserved: *mut u8,
     pub register_protocol_notify: *mut u8,
-    pub locate_handle: *mut u8,
+
+    pub locate_handle: Option<LocateHandle>,
+
     pub locate_device_path: *mut u8,
     pub install_configuration_table: *mut u8,
 
