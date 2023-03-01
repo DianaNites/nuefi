@@ -326,7 +326,7 @@ impl<'table> BootServices<'table> {
     ) -> Result<EfiHandle> {
         let mut out = EfiHandle(null_mut());
 
-        // Safety: Statically correct for these arguments
+        // Safety: Statically correct for this operation
         // - policy is always false
         // - Devpath is statically valid or null
         // - parent is statically valid
