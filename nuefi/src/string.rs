@@ -268,7 +268,7 @@ impl<'table> Path<'table> {
     /// Convert this path to a Rust String
     ///
     /// Invalid characters are mapped to [`char::REPLACEMENT_CHARACTER`]
-    pub fn to_string(&self) -> Result<String> {
+    pub fn to_string_lossy(&self) -> Result<String> {
         let table = table()?;
         let boot = table.boot();
         let text = boot
@@ -291,7 +291,7 @@ impl<'table> Path<'table> {
 
 impl<'table> Display for Path<'table> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if let Ok(s) = self.to_string() {
+        if let Ok(s) = self.to_string_lossy() {
             write!(f, "{s}")
         } else {
             write!(f, "Path (couldn't display, out of memory)")
