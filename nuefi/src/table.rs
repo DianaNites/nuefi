@@ -81,80 +81,6 @@ impl<'table> BootServices<'table> {
         // `search_key` is ignored for BY_PROTOCOL
         unsafe { self.locate_handle(LocateSearch::BY_PROTOCOL, null_mut(), &guid) }
     }
-}
-
-impl<'table> BootServices<'table> {
-    /// Exit the image represented by `handle` with `status`
-    pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
-        // Safety: Construction ensures safety
-        unsafe { (self.interface().exit.unwrap())(handle, status, 0, null_mut()) }.into()
-    }
-
-    /// Stall for [`Duration`]
-    ///
-    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
-    /// [usize]
-    pub fn stall(&self, dur: Duration) -> Result<()> {
-        let time = match dur
-            .as_micros()
-            .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
-        {
-            Ok(t) => t,
-            Err(e) => return e.into(),
-        };
-        // Safety: Construction ensures safety
-        unsafe { (self.interface().stall.unwrap())(time) }.into()
-    }
-
-    /// The next monotonic count
-    pub fn next_monotonic_count(&self) -> Result<u64> {
-        let mut out = 0;
-        // Safety: Construction ensures safety
-        let ret = unsafe { (self.interface().get_next_monotonic_count.unwrap())(&mut out) };
-        if ret.is_success() {
-            return Ok(out);
-        }
-        Err(UefiError::new(ret))
-    }
-
-    /// Set the watchdog timer. [`None`] disables the timer.
-    pub fn set_watchdog(&self, timeout: Option<Duration>) -> Result<()> {
-        let timeout = timeout.unwrap_or_default();
-        let secs = match timeout
-            .as_secs()
-            .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
-        {
-            Ok(t) => t,
-            Err(e) => return e.into(),
-        };
-        // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().set_watchdog_timer.unwrap())(secs, 0x10000, 0, null_mut()) }
-            .into()
-    }
-
-    /// Allocate `size` bytes of memory from pool of type `ty`
-    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
-        let mut out: *mut u8 = null_mut();
-        // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
-        if ret.is_success() {
-            Ok(out)
-        } else {
-            Err(UefiError::new(ret))
-        }
-    }
-
-    /// Free memory allocated by [BootServices::allocate_pool]
-    ///
-    /// # Safety
-    ///
-    /// - Must have been allocated by [BootServices::allocate_pool]
-    /// - Must be non-null
-    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
-        (self.interface().free_pool.unwrap())(memory).into()
-    }
 
     /// Find and return an arbitrary protocol instance from an arbitrary handle
     /// matching `guid`.
@@ -267,48 +193,6 @@ impl<'table> BootServices<'table> {
         .into()
     }
 
-    /// Load an image from memory `src`, returning its handle.
-    ///
-    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
-    ///
-    /// You will need to handle that case in [`BootServices::start_image`]
-    pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
-        let mut out = EfiHandle(null_mut());
-        // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe {
-            (self.interface().load_image.unwrap())(
-                false,
-                parent,
-                // TODO: Provide fake device path
-                // This makes nicer debugging?, and images may expect it
-                null_mut(),
-                // UEFI pls do not modify us.
-                src.as_ptr() as *mut _,
-                src.len(),
-                &mut out,
-            )
-        };
-
-        if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
-            assert_ne!(out, EfiHandle(null_mut()));
-            Ok(out)
-        } else {
-            Err(UefiError::new(ret))
-        }
-    }
-
-    /// Unload an earlier loaded image
-    pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
-        // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().start_image.unwrap())(handle, &mut 0, null_mut()).into() }
-    }
-
-    /// Unload an earlier loaded image
-    pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
-        // Safety: Construction ensures safety. Statically verified arguments.
-        unsafe { (self.interface().unload_image.unwrap())(handle).into() }
-    }
-
     /// Install an instance of [proto::Protocol] on `handle`
     pub fn install_protocol<'a, T: proto::Protocol<'a>>(
         &self,
@@ -374,6 +258,122 @@ impl<'table> BootServices<'table> {
         } else {
             Err(UefiError::new(ret))
         }
+    }
+}
+
+impl<'table> BootServices<'table> {
+    /// Exit the image represented by `handle` with `status`
+    pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
+        // Safety: Construction ensures safety
+        unsafe { (self.interface().exit.unwrap())(handle, status, 0, null_mut()) }.into()
+    }
+
+    /// Stall for [`Duration`]
+    ///
+    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
+    /// [usize]
+    pub fn stall(&self, dur: Duration) -> Result<()> {
+        let time = match dur
+            .as_micros()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        // Safety: Construction ensures safety
+        unsafe { (self.interface().stall.unwrap())(time) }.into()
+    }
+
+    /// The next monotonic count
+    pub fn next_monotonic_count(&self) -> Result<u64> {
+        let mut out = 0;
+        // Safety: Construction ensures safety
+        let ret = unsafe { (self.interface().get_next_monotonic_count.unwrap())(&mut out) };
+        if ret.is_success() {
+            return Ok(out);
+        }
+        Err(UefiError::new(ret))
+    }
+
+    /// Set the watchdog timer. [`None`] disables the timer.
+    pub fn set_watchdog(&self, timeout: Option<Duration>) -> Result<()> {
+        let timeout = timeout.unwrap_or_default();
+        let secs = match timeout
+            .as_secs()
+            .try_into()
+            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+        {
+            Ok(t) => t,
+            Err(e) => return e.into(),
+        };
+        // Safety: Construction ensures safety. Statically verified arguments.
+        unsafe { (self.interface().set_watchdog_timer.unwrap())(secs, 0x10000, 0, null_mut()) }
+            .into()
+    }
+
+    /// Allocate `size` bytes of memory from pool of type `ty`
+    pub fn allocate_pool(&self, ty: crate::mem::MemoryType, size: usize) -> Result<*mut u8> {
+        let mut out: *mut u8 = null_mut();
+        // Safety: Construction ensures safety. Statically verified arguments.
+        let ret = unsafe { (self.interface().allocate_pool.unwrap())(ty, size, &mut out) };
+        if ret.is_success() {
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Free memory allocated by [BootServices::allocate_pool]
+    ///
+    /// # Safety
+    ///
+    /// - Must have been allocated by [BootServices::allocate_pool]
+    /// - Must be non-null
+    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
+        (self.interface().free_pool.unwrap())(memory).into()
+    }
+
+    /// Load an image from memory `src`, returning its handle.
+    ///
+    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    ///
+    /// You will need to handle that case in [`BootServices::start_image`]
+    pub fn load_image(&self, parent: EfiHandle, src: &[u8]) -> Result<EfiHandle> {
+        let mut out = EfiHandle(null_mut());
+        // Safety: Construction ensures safety. Statically verified arguments.
+        let ret = unsafe {
+            (self.interface().load_image.unwrap())(
+                false,
+                parent,
+                // TODO: Provide fake device path
+                // This makes nicer debugging?, and images may expect it
+                null_mut(),
+                // UEFI pls do not modify us.
+                src.as_ptr() as *mut _,
+                src.len(),
+                &mut out,
+            )
+        };
+
+        if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
+            assert_ne!(out, EfiHandle(null_mut()));
+            Ok(out)
+        } else {
+            Err(UefiError::new(ret))
+        }
+    }
+
+    /// Unload an earlier loaded image
+    pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
+        // Safety: Construction ensures safety. Statically verified arguments.
+        unsafe { (self.interface().start_image.unwrap())(handle, &mut 0, null_mut()).into() }
+    }
+
+    /// Unload an earlier loaded image
+    pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
+        // Safety: Construction ensures safety. Statically verified arguments.
+        unsafe { (self.interface().unload_image.unwrap())(handle).into() }
     }
 }
 
