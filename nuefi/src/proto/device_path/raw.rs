@@ -81,6 +81,16 @@ impl RawDevicePath {
             len: 4u16.to_ne_bytes(),
         }
     }
+
+    /// Create a media filepath node for a null terminated path of size `len`
+    pub fn media_file(len: u16) -> Self {
+        let len = len + 4;
+        Self {
+            ty: RawDevicePathType::MEDIA,
+            sub_ty: RawDevicePathSubType::MEDIA_FILE,
+            len: len.to_ne_bytes(),
+        }
+    }
 }
 
 pub type GetDevicePathSize = unsafe extern "efiapi" fn(this: *mut RawDevicePath) -> usize;
