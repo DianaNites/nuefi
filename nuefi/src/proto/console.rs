@@ -219,23 +219,9 @@ impl<'table> SimpleTextOutput<'table> {
     }
 }
 
-/// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
-///
-/// Warnings are ignored. Ending Newlines are turned into \n\r.
-/// Interior newlines are not.
-// #[cfg(no)]
-impl<'t> Write for SimpleTextOutput<'t> {
-    // Rust does not thread `track_caller` through here
-    // #[track_caller]
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        // Make sure to select the right trait so we dont blow the stack
-        <&Self as Write>::write_str(&mut &*self, s)
-    }
-}
-
-impl<'t> Write for &SimpleTextOutput<'t> {
-    #[track_caller]
-    fn write_str(&mut self, s: &str) -> fmt::Result {
+// Internal
+impl<'table> SimpleTextOutput<'table> {
+    fn write_str_impl(&self, s: &str) -> fmt::Result {
         // If the input contains a nul byte, write up to the nul and then return an
         // error.
         let nul = s.split_once('\0');
@@ -260,6 +246,23 @@ impl<'t> Write for &SimpleTextOutput<'t> {
             let _ = self.output_string("\0");
             Err(fmt::Error)
         }
+    }
+}
+
+/// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
+///
+/// Warnings are ignored. Ending Newlines are turned into \n\r.
+/// Interior newlines are not.
+// #[cfg(no)]
+impl<'t> Write for SimpleTextOutput<'t> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_str_impl(s)
+    }
+}
+
+impl<'t> Write for &SimpleTextOutput<'t> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_str_impl(s)
     }
 }
 
