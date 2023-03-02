@@ -294,30 +294,54 @@ impl<'table> BootServices<'table> {
         &'boot self,
         handle: EfiHandle,
     ) -> Result<Option<Protocol>> {
+        fn inner(
+            guid: &Guid,
+            handle: EfiHandle,
+            hp: HandleProtocolFn,
+            p_name: &'static str,
+        ) -> Result<Option<NonNull<u8>>> {
+            let mut out: *mut u8 = null_mut();
+
+            // Safety: Arguments are statically valid for this call.
+            let ret = unsafe { (hp)(handle, guid, &mut out) };
+
+            if ret.is_success() {
+                assert!(
+                    !out.is_null(),
+                    "UEFI handle_protocol returned success, but the protocol was null. \
+                    The Protocol was \"{}\" with GUID `{}`",
+                    p_name,
+                    guid.to_uuid()
+                );
+                // Safety:
+                // - Success means `out` is valid
+                // - We assert its not null just in case
+                unsafe { Ok(Some(NonNull::new_unchecked(out))) }
+            } else if ret == EfiStatus::UNSUPPORTED {
+                Ok(None)
+            } else {
+                Err(UefiError::new(ret))
+            }
+        }
+
         let mut out: *mut u8 = null_mut();
         let guid = Protocol::GUID;
-        let lp = self
+        let hp = self
             .interface()
             .handle_protocol
             .ok_or(EfiStatus::UNSUPPORTED)?;
-        // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe { (lp)(handle, &guid, &mut out) };
-        if ret.is_success() {
-            assert!(
-                !out.is_null(),
-                "UEFI handle_protocol returned success, but the protocol was null. \
-                The Protocol was \"{}\" with GUID `{}`",
-                Protocol::NAME,
-                Protocol::GUID.to_uuid()
-            );
-            // Safety:
-            // - Success means `out` is valid
-            // - We assert its not null just in case.
-            unsafe { Ok(Some(Protocol::from_raw(out as *mut Protocol::Raw))) }
-        } else if ret == EfiStatus::UNSUPPORTED {
-            Ok(None)
-        } else {
-            Err(UefiError::new(ret))
+
+        let ret = inner(&guid, handle, hp, Protocol::NAME);
+
+        match ret {
+            Ok(Some(ret)) => {
+                // Safety: `ret` is NonNull and from firmware
+                unsafe { Ok(Some(Protocol::from_raw(ret.as_ptr() as *mut Protocol::Raw))) }
+            }
+
+            Ok(None) => Err(EfiStatus::UNSUPPORTED.into()),
+
+            Err(e) => Err(e),
         }
     }
 }
