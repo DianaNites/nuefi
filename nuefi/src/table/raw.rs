@@ -258,13 +258,13 @@ pub type LocateHandle = unsafe extern "efiapi" fn(
     buffer: *mut EfiHandle,
 ) -> EfiStatus;
 
-pub type HandleProtocol = unsafe extern "efiapi" fn(
+pub type HandleProtocolFn = unsafe extern "efiapi" fn(
     handle: EfiHandle,
     guid: *const Guid,
     interface: *mut *mut u8,
 ) -> EfiStatus;
 
-pub type LocateProtocol = unsafe extern "efiapi" fn(
+pub type LocateProtocolFn = unsafe extern "efiapi" fn(
     //
     guid: *mut proto::Guid,
     key: *mut u8,
@@ -341,7 +341,7 @@ pub struct RawBootServices {
     >,
     pub reinstall_protocol_interface: *mut u8,
     pub uninstall_protocol_interface: *mut u8,
-    pub handle_protocol: Option<HandleProtocol>,
+    pub handle_protocol: Option<HandleProtocolFn>,
     pub _reserved: *mut u8,
     pub register_protocol_notify: *mut u8,
 
@@ -429,7 +429,7 @@ pub struct RawBootServices {
     pub protocols_per_handle: *mut u8,
     pub locate_handle_buffer: *mut u8,
 
-    pub locate_protocol: Option<LocateProtocol>,
+    pub locate_protocol: Option<LocateProtocolFn>,
 
     pub install_multiple_protocol_interfaces: *mut u8,
     pub uninstall_multiple_protocol_interfaces: *mut u8,
