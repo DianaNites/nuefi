@@ -435,7 +435,7 @@ impl<'table> BootServices<'table> {
     /// This is only safe to call if you trust the application not to destroy
     /// the address space or be evil
     ///
-    /// Take care not to run untrusted applications for other security concerns
+    /// Take care not to run untrusted applications for other security reasons
     /// too.
     ///
     /// [loaded]: crate::proto::loaded_image::LoadedImage
