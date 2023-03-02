@@ -29,6 +29,7 @@ interface!(
 
 impl<'table> GraphicsOutput<'table> {
     /// Set the graphic mode to number `mode`
+    // FIXME: This needs to invalidate the `Framebuffer`
     pub fn set_mode(&self, mode: u32) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe { (self.interface().set_mode.unwrap())(self.interface, mode) }.into()
