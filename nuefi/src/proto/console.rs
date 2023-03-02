@@ -222,7 +222,7 @@ impl<'table> SimpleTextOutput<'table> {
 /// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
 ///
 /// Warnings are ignored. Ending Newlines are turned into \n\r.
-/// Interior newlines are not, yet.
+/// Interior newlines are not.
 // #[cfg(no)]
 impl<'t> Write for SimpleTextOutput<'t> {
     // Rust does not thread `track_caller` through here
