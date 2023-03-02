@@ -311,6 +311,11 @@ impl<'gop> Framebuffer<'gop> {
         // Safety:
         unsafe { from_raw_parts_mut(ptr, len) }
     }
+
+    /// Size in bytes of the framebuffer
+    fn size(&self) -> usize {
+        self.size
+    }
 }
 
 impl<'gop> Index<(u32, u32)> for Framebuffer<'gop> {
