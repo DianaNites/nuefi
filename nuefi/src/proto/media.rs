@@ -81,6 +81,7 @@ use file_imp::FileImp;
 //
 // For example, just because `SimpleFileSystem` went out of scope does not
 // invalidate this handle.
+#[derive(Debug)]
 pub struct FsHandle<'this, 'table>
 where
     'table: 'this,
@@ -285,35 +286,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
 
         let mut out: Vec<u8> = Vec::new();
 
-        Ok(from_fn(move || loop {
-            if stop {
-                return None;
-            }
-            out.clear();
-
-            let n = match self.read_impl(&mut out) {
-                Ok(s) => s,
-                Err(e) => return Some(Err(e)),
-            };
-            // Signals EOF
-            if n == 0 {
-                stop = true;
-                if let Err(e) = self.set_position(0) {
-                    return Some(Err(e));
-                };
-                return None;
-            }
-
-            let info = match FsInfo::from_bytes(out.clone()) {
-                Ok(i) => i,
-                Err(e) => return Some(Err(e)),
-            };
-            let name = info.name();
-            if name == "." || name == ".." {
-                continue;
-            }
-            break Some(Ok(info));
-        }))
+        Ok(self::iter::ReadDir::new(self))
     }
 
     /// Read bytes into `buf`, returning how many were actually read.
@@ -503,5 +476,66 @@ impl FsInfo {
     /// Entity device size in bytes
     pub fn dev_size(&self) -> u64 {
         self.info.physical_size
+    }
+}
+
+pub mod iter {
+    //! Iterator types
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct ReadDir<'fs, 'table> {
+        stop: bool,
+        buf: Vec<u8>,
+        // _ghost: PhantomData<&'fs mut u8>,
+        _ghost: &'fs FsHandle<'fs, 'table>,
+    }
+
+    impl<'fs, 't> ReadDir<'fs, 't> {
+        pub const fn new(par: &'fs FsHandle<'fs, 't>) -> Self {
+            Self {
+                stop: false,
+                buf: Vec::new(),
+                // _ghost: PhantomData,
+                _ghost: par,
+            }
+        }
+    }
+
+    impl<'fs, 't> Iterator for ReadDir<'fs, 't> {
+        type Item = Result<FsInfo>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.stop {
+                return None;
+            }
+            let out = &mut self.buf;
+            out.clear();
+
+            let n = match self._ghost.read_impl(out) {
+                Ok(s) => s,
+                Err(e) => return Some(Err(e)),
+            };
+            // Signals EOF
+            if n == 0 {
+                self.stop = true;
+                if let Err(e) = self._ghost.set_position(0) {
+                    return Some(Err(e));
+                };
+                return None;
+            }
+
+            let info = match FsInfo::from_bytes(out.clone()) {
+                Ok(i) => i,
+                Err(e) => return Some(Err(e)),
+            };
+            let name = info.name();
+
+            if name == "." || name == ".." {
+                self.next()
+            } else {
+                Some(Ok(info))
+            }
+        }
     }
 }
