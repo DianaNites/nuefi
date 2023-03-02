@@ -298,9 +298,11 @@ impl<'table> BootServices<'table> {
     /// Query `handle` to determine if it supports `Protocol`
     ///
     /// If no protocol is found, [`Ok(None)`] is returned.
-    // FIXME: This needs to be unsafe.
-    // Unless otherwise specified, Protocols are not reentrant
-    pub fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
+    ///
+    /// # Safety
+    ///
+    /// - The returned Protocol must not already be in use
+    pub unsafe fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
     ) -> Result<Option<Protocol>> {
