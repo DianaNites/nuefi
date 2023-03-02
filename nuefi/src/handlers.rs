@@ -12,6 +12,9 @@ use crate::get_boot_table;
 type AllocFn = fn(Layout) -> !;
 type PanicFn = fn(&PanicInfo) -> !;
 
+// TODO: The handlers need to not accidentally panic themselves
+// Everything they use, recursively, needs to ensure this property.
+
 /// Default panic handler
 #[doc(hidden)]
 pub fn panic(info: &PanicInfo) -> ! {
