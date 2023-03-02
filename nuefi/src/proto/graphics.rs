@@ -1,5 +1,5 @@
 //! UEFI Graphics related protocols
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::{
     fmt::{self, Write},
     iter::once,
@@ -392,6 +392,17 @@ impl Coord {
 }
 
 /// A double buffer for the framebuffer
-pub struct Double<'table> {
+#[derive(Debug)]
+struct Double<'table> {
     fb: Framebuffer<'table>,
+    buf: Vec<u8>,
+}
+
+impl<'table> Double<'table> {
+    pub fn new(fb: Framebuffer<'table>) -> Self {
+        Self {
+            buf: vec![0; fb.size()],
+            fb,
+        }
+    }
 }
