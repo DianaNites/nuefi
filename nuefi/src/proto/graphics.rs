@@ -272,9 +272,16 @@ impl From<BltOperation> for RawBltOperation {
 /// UEFI Framebuffer
 #[derive(Debug)]
 pub struct Framebuffer<'gop> {
+    /// Pointer to the framebuffer
     ptr: *mut u8,
+
+    /// Size of the framebuffer in bytes
     size: usize,
+
+    /// Stride of the framebuffer in bytes
     stride: u32,
+
+    /// Holds the lifetime of our parent [`GraphicsOutput`]
     phantom: PhantomData<&'gop u8>,
 }
 
