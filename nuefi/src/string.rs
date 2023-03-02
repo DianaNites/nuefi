@@ -58,7 +58,10 @@ impl<'table> UefiString<'table> {
     /// - Failure to allocate memory
     #[track_caller]
     pub fn new(s: &str) -> Self {
-        assert!(!s.contains('\0'), "UefiString cannot have internal null");
+        assert!(
+            !s.contains('\0'),
+            "Tried to create a UefiString with an internal null"
+        );
         let table = get_boot_table().unwrap();
         let boot = table.boot();
         // Length in UTF-16
