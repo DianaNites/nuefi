@@ -236,15 +236,29 @@ impl<'t> Write for SimpleTextOutput<'t> {
 impl<'t> Write for &SimpleTextOutput<'t> {
     #[track_caller]
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        // If the input contains a nul byte, write up to the nul and then return an
+        // error.
+        let nul = s.split_once('\0');
+        let s = if let Some((s, _)) = nul { s } else { s };
+
         let ret = match self.output_string(s) {
             Ok(()) => Ok(()),
             Err(e) if e.status() == EfiStatus::WARN_UNKNOWN_GLYPH => Ok(()),
             Err(_) => Err(fmt::Error),
         };
-        if s.ends_with('\n') {
+        let ret = if s.ends_with('\n') && nul.is_none() {
             ret.and_then(|_| self.output_string("\r").map_err(|_| fmt::Error))
         } else {
             ret
+        };
+
+        if nul.is_none() {
+            ret
+        } else {
+            // Write the offending null byte
+            // So it shows up in logs and etc
+            let _ = self.output_string("\0");
+            Err(fmt::Error)
         }
     }
 }
