@@ -102,6 +102,7 @@ fn get_boot_table() -> Option<SystemTable<Boot>> {
     table.as_boot()
 }
 
+/// Get the global Image [`EfiHandle`], if available
 fn get_image_handle() -> Option<EfiHandle> {
     let _table = TABLE.load(Ordering::Acquire);
     let handle_p = HANDLE.load(Ordering::Relaxed);
