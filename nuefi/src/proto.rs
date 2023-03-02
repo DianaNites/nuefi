@@ -129,6 +129,7 @@ impl Guid {
 
 /// A scope around a [Protocol] that will call
 /// [`crate::table::BootServices::close_protocol`] on [Drop]
+#[derive(Debug)]
 pub struct Scope<'table, Proto: Protocol<'table>> {
     proto: Proto,
     phantom: PhantomData<&'table mut Proto>,
