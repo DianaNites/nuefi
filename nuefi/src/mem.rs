@@ -4,8 +4,6 @@ use core::{
     ptr::null_mut,
 };
 
-use log::{error, trace};
-
 use crate::get_boot_table;
 
 /// UEFI always aligns to 8.
@@ -158,16 +156,16 @@ impl UefiAlloc {
 // Safety: We adhere to the contract of GlobalAlloc
 unsafe impl GlobalAlloc for UefiAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        trace!("UEFI allocating {layout:?}");
+        // trace!("UEFI allocating {layout:?}");
 
         let align = layout.align();
         let size = layout.size();
         let offset = if align > POOL_ALIGN {
             let o = align - POOL_ALIGN;
-            trace!(
-                "Allocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
-                o
-            );
+            // trace!(
+            //"Allocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
+            //     o
+            // );
             o
         } else {
             0
@@ -178,11 +176,11 @@ unsafe impl GlobalAlloc for UefiAlloc {
             let ret = table.boot().allocate_pool(MemoryType::LOADER_DATA, size);
             if let Ok(ptr) = ret {
                 let ptr = ptr.as_ptr();
-                trace!(
-                    "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
-                    ptr.add(offset),
-                    ptr as usize & (offset.saturating_sub(1)) == 0
-                );
+                // trace!(
+                //     "Old pointer {ptr:p} vs new pointer {:p} (aligned: {})",
+                //     ptr.add(offset),
+                //     ptr as usize & (offset.saturating_sub(1)) == 0
+                // );
                 ptr.add(offset)
             } else {
                 null_mut()
@@ -200,10 +198,10 @@ unsafe impl GlobalAlloc for UefiAlloc {
         let _size = layout.size();
         let offset = if align > POOL_ALIGN {
             let o = align - POOL_ALIGN;
-            trace!(
-                "Deallocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
-                o
-            );
+            // trace!(
+            //"Deallocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
+            //     o
+            // );
             o
         } else {
             0
@@ -214,7 +212,8 @@ unsafe impl GlobalAlloc for UefiAlloc {
             let ptr = ptr.sub(offset);
             let ret = table.boot().free_pool(ptr);
             if let Err(e) = ret {
-                error!("Error {e} while deallocating memory {ptr:p} with layout {layout:?}");
+                // error!("Error {e} while deallocating memory {ptr:p} with
+                // layout {layout:?}");
             }
         }
     }
