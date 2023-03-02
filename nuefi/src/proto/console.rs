@@ -73,6 +73,7 @@ interface!(
 );
 
 impl<'table> SimpleTextOutput<'table> {
+    #[track_caller]
     pub fn output_string(&self, string: &str) -> Result<()> {
         let out = self.interface().output_string.unwrap();
         let s = UefiString::new(string);
@@ -222,13 +223,18 @@ impl<'table> SimpleTextOutput<'table> {
 ///
 /// Warnings are ignored. Ending Newlines are turned into \n\r.
 /// Interior newlines are not, yet.
+// #[cfg(no)]
 impl<'t> Write for SimpleTextOutput<'t> {
+    // Rust does not thread `track_caller` through here
+    // #[track_caller]
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        (&*self).write_str(s)
+        // Make sure to select the right trait so we dont blow the stack
+        <&Self as Write>::write_str(&mut &*self, s)
     }
 }
 
 impl<'t> Write for &SimpleTextOutput<'t> {
+    #[track_caller]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         let ret = match self.output_string(s) {
             Ok(()) => Ok(()),
