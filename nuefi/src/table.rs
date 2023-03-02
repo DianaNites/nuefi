@@ -302,6 +302,7 @@ impl<'table> BootServices<'table> {
     /// # Safety
     ///
     /// - The returned Protocol must not already be in use
+    #[deprecated(note = "`BootServices::handle_protocol` is deprecated by UEFI")]
     pub unsafe fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
