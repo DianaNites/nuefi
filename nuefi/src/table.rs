@@ -426,12 +426,20 @@ impl<'table> BootServices<'table> {
 
     /// Start an image loaded from [`LoadedImage`][loaded] earlier loaded image
     ///
+    /// # Safety
+    ///
+    /// Because UEFI is not an OS, this is equivalent to a FFI call.
+    /// In particular, an evil image could corrupt the system table and
+    /// protocols we depend on as it pleases.
+    ///
+    /// This is only safe to call if you trust the application not to destroy
+    /// the address space or be evil
+    ///
+    /// Take care not to run untrusted applications for other security concerns
+    /// too.
+    ///
     /// [loaded]: crate::proto::loaded_image::LoadedImage
-    // FIXME: This should be unsafe?
-    // Because UEFI is not an OS, this is equivalent to a FFI call.
-    // In particular, an evil image could corrupt the system table and protocols
-    // we depend on as it pleases.
-    pub fn start_image(&self, handle: EfiHandle) -> Result<()> {
+    pub unsafe fn start_image(&self, handle: EfiHandle) -> Result<()> {
         let si = self.interface().start_image.ok_or(EfiStatus::UNSUPPORTED)?;
         // Safety: Construction ensures safety. Statically verified arguments.
         // FIXME: We are responsible for freeing ExitData
