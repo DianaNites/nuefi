@@ -9,6 +9,7 @@ use core::{
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
+    get_image_handle,
     mem::MemoryType,
     proto::{
         self,
@@ -110,6 +111,23 @@ impl<'table> BootServices<'table> {
             Err(UefiError::new(ret))
         }
     }
+
+    /// Open the protocol on `handle`, if it exists, on behalf of `agent`.
+    ///
+    /// For applications, `agent` is your image handle.
+    /// `controller` is [`None`].
+    ///
+    /// For drivers, `agent` is the handle with `EFI_DRIVER_BINDING_PROTOCOL`.
+    /// `controller` is the controller handle that requires `Proto`
+    ///
+    /// The protocol is opened in Exclusive mode
+    // TODO: / FIXME This method is actually incompatible with drivers. Have two separate
+    // ones
+    // TODO: Is this safe/sound to call with the same protocol twice?
+    // Do we need to test the protocol first?
+    // *Seems* to be fine, in qemu?
+    #[cfg(no)]
+    fn open_protocol() {}
 }
 
 /// Protocol handling
@@ -170,25 +188,16 @@ impl<'table> BootServices<'table> {
         }
     }
 
-    /// Open the protocol on `handle`, if it exists, on behalf of `agent`.
+    /// Exclusively open a protocol on `handle` if it exists,
+    /// returning a [`Scope`] over the requested protocol.
     ///
-    /// For applications, `agent` is your image handle.
-    /// `controller` is [`None`].
+    /// the [`Scope`] ensues the Protocol is closed whe it goes out of scope.
     ///
-    /// For drivers, `agent` is the handle with `EFI_DRIVER_BINDING_PROTOCOL`.
-    /// `controller` is the controller handle that requires `Proto`
-    ///
-    /// The protocol is opened in Exclusive mode
-    // FIXME: This method is actually incompatible with drivers. Have two separate
-    // ones
-    // TODO: Is this safe/sound to call with the same protocol twice?
-    // Do we need to test the protocol first?
-    // *Seems* to be fine, in qemu?
+    /// If the [`Scope`] is leaked, you will not be able to open this protocol
+    /// again, but is safe.
     pub fn open_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
-        agent: EfiHandle,
-        controller: Option<EfiHandle>,
     ) -> Result<Option<Scope<Proto>>> {
         let mut out: *mut u8 = null_mut();
         let mut guid = Proto::GUID;
@@ -196,6 +205,7 @@ impl<'table> BootServices<'table> {
             .interface()
             .open_protocol
             .ok_or(EfiStatus::UNSUPPORTED)?;
+        let agent = get_image_handle().expect("UEFI Image Handle was null in open_protocol");
 
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe {
@@ -204,7 +214,7 @@ impl<'table> BootServices<'table> {
                 &mut guid,
                 &mut out,
                 agent,
-                controller.unwrap_or(EfiHandle(null_mut())),
+                EfiHandle(null_mut()),
                 0x20,
             )
         };
@@ -215,7 +225,7 @@ impl<'table> BootServices<'table> {
                     Proto::from_raw(out as *mut Proto::Raw),
                     handle,
                     agent,
-                    controller,
+                    None,
                 )))
             }
         } else if ret == EfiStatus::UNSUPPORTED {
