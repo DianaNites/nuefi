@@ -313,7 +313,7 @@ impl<'gop> Framebuffer<'gop> {
     }
 
     /// Size in bytes of the framebuffer
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.size
     }
 }
@@ -405,4 +405,6 @@ impl<'table> Double<'table> {
             fb,
         }
     }
+
+    // pub fn swap(&self)
 }
