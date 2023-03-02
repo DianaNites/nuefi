@@ -1,4 +1,7 @@
 //! UEFI PI Security Protocols
+//!
+//! These are described in the UEFI Platform Initialization Specification
+//! Version 1.7, Volume 2, Section 12.9 Security Architectural Protocols
 
 use raw::{RawSecurityArch, RawSecurityArch2};
 
