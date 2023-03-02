@@ -258,6 +258,12 @@ pub type LocateHandle = unsafe extern "efiapi" fn(
     buffer: *mut EfiHandle,
 ) -> EfiStatus;
 
+pub type HandleProtocol = unsafe extern "efiapi" fn(
+    handle: EfiHandle,
+    guid: *const Guid,
+    interface: *mut *mut u8,
+) -> EfiStatus;
+
 /// Raw structure of the UEFI Boot Services table
 /// NOTE: It is important for safety that all fields be nullable.
 /// In particular, this means fn pointers MUST be wrapped in [`Option`].
@@ -328,13 +334,7 @@ pub struct RawBootServices {
     >,
     pub reinstall_protocol_interface: *mut u8,
     pub uninstall_protocol_interface: *mut u8,
-    pub handle_protocol: Option<
-        unsafe extern "efiapi" fn(
-            handle: EfiHandle,
-            guid: *const Guid,
-            interface: *mut *mut u8,
-        ) -> EfiStatus,
-    >,
+    pub handle_protocol: Option<HandleProtocol>,
     pub _reserved: *mut u8,
     pub register_protocol_notify: *mut u8,
 
