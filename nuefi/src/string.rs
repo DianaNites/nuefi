@@ -153,18 +153,9 @@ impl<'table> Deref for UefiString<'table> {
 
 impl<'table> Drop for UefiString<'table> {
     fn drop(&mut self) {
-        trace!("Deallocating UefiString");
         if let Some(table) = get_boot_table() {
             // Safety: self.data was allocated by allocate_pool
-            let ret = unsafe { table.boot().free_pool(self.data as *mut u8) };
-            if ret.is_err() {
-                error!("Failed to deallocate UefiString {:p}", self.data)
-            }
-        } else {
-            error!(
-                "Tried to deallocate UefiString {:p} while not in Boot mode",
-                self.data
-            )
+            let _ = unsafe { table.boot().free_pool(self.data as *mut u8) };
         }
     }
 }
