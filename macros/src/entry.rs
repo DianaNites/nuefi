@@ -310,6 +310,8 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
                     if delay(i, l, errors, opts) {
                     } else if log(i, l, errors, opts) {
                     } else if krate(i, l, errors, &mut opts.common) {
+                    } else {
+                        errors.push(l.span(), format!("Unexpected argument `{}`", i));
                     }
                 } else {
                     errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
