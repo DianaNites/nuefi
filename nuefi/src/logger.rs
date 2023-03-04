@@ -117,6 +117,7 @@ impl Log for UefiLogger {
         }
     }
 
+    #[inline]
     fn flush(&self) {}
 }
 
@@ -126,6 +127,7 @@ impl Log for UefiLogger {
 pub struct UefiColorLogger(UefiLogger);
 
 impl Log for UefiColorLogger {
+    #[inline]
     fn enabled(&self, metadata: &Metadata) -> bool {
         self.0.enabled(metadata)
     }
@@ -147,6 +149,7 @@ impl Log for UefiColorLogger {
         }
     }
 
+    #[inline]
     fn flush(&self) {
         self.0.flush()
     }
