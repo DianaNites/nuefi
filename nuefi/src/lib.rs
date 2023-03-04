@@ -154,28 +154,21 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
             table: SystemTable<Boot>,
         ) -> error::Result<()>;
         static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool>;
-        static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64>;
     }
     #[cfg(miri)]
-    let (ext, dur) = {
+    let (ext,) = {
         (
             Some(false), //
-            Some(30),    //
         )
     };
 
     #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
-    let (ext, dur) = unsafe {
-        if addr_of!(__INTERNAL_NUEFI_YOU_MUST_USE_MACRO).is_null()
-            || addr_of!(__INTERNAL_NUEFI_EXIT_DURATION).is_null()
-        {
+    let (ext,) = unsafe {
+        if addr_of!(__INTERNAL_NUEFI_YOU_MUST_USE_MACRO).is_null() {
             return EfiStatus::INVALID_PARAMETER;
         }
-        (
-            __INTERNAL_NUEFI_YOU_MUST_USE_MACRO,
-            __INTERNAL_NUEFI_EXIT_DURATION,
-        )
+        (__INTERNAL_NUEFI_YOU_MUST_USE_MACRO,)
     };
 
     if image.0.is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
@@ -194,22 +187,9 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     //
     // `system_table` is non-null, we trust it from firmware.
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
-
-    info!("Returned from user main with status {ret:?}");
     match ret {
         Ok(()) => EfiStatus::SUCCESS,
-        Err(e) => {
-            if let Some(table) = get_boot_table() {
-                error!("UEFI User main exited with error: {}", e);
-                if let Some(dur) = dur {
-                    error!("Waiting {dur} seconds");
-                    let _ = table.boot().stall(Duration::from_secs(dur));
-                }
-                // TODO: Exit prompt
-            }
-
-            e.status()
-        }
+        Err(e) => e.status(),
     }
 }
 

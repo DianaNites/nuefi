@@ -21,11 +21,6 @@ struct Config {
     /// Common macro arguments
     common: CommonOpts,
 
-    /// Exit to fw delay in seconds
-    ///
-    /// `entry(delay(30))`
-    delay: Option<u64>,
-
     /// Register global alloc
     ///
     /// `entry(alloc)`
@@ -52,7 +47,6 @@ impl Config {
     fn new() -> Self {
         Self {
             common: CommonOpts::new(),
-            delay: None,
             alloc: false,
             panic: false,
             alloc_error: false,
@@ -89,35 +83,6 @@ impl Log {
             targets: None,
             exclude: None,
         }
-    }
-}
-
-fn delay(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bool {
-    if i == "delay" {
-        if let Some(f) = list.nested.first() {
-            match f {
-                NestedMeta::Meta(_m) => {
-                    errors.push(list.span(), format!("Expected value: {:?}", list.nested));
-                }
-                NestedMeta::Lit(li) => match li {
-                    Lit::Int(lit) => {
-                        if let Ok(lit) = lit.base10_parse::<u64>() {
-                            if opts.delay.replace(lit).is_some() {
-                                errors.push(list.span(), "Duplicate attribute `delay`");
-                            }
-                        }
-                    }
-                    _v => {
-                        errors.push(li.span(), format!("Expected integer, got: {:?}", f));
-                    }
-                },
-            }
-        } else {
-            errors.push(list.span(), format!("Expected value: {:?}", list.nested));
-        }
-        true
-    } else {
-        false
     }
 }
 
@@ -242,21 +207,6 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
     }
 }
 
-// TODO: Do this but the other way around, got value when didn't expect,
-// try removing (args)
-// and for MetaNameValue
-fn unexpected_as_path(i: &Ident, path: &Path, errors: &mut Errors) -> bool {
-    if i == "delay" {
-        errors.push(
-            path.span(),
-            "Attribute `delay` expected value. Try `delay(VALUE)`",
-        );
-        true
-    } else {
-        false
-    }
-}
-
 fn simple_opts(i: &Ident, path: &Path, errors: &mut Errors, opts: &mut Config) -> bool {
     if i == "log" {
         let log = Log::new();
@@ -307,8 +257,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
             }
             NestedMeta::Meta(Meta::List(l)) => {
                 if let Some(i) = l.path.get_ident() {
-                    if delay(i, l, errors, opts) {
-                    } else if log(i, l, errors, opts) {
+                    if log(i, l, errors, opts) {
                     } else if krate(i, l, errors, &mut opts.common) {
                     } else {
                         errors.push(l.span(), format!("Unexpected argument `{}`", i));
@@ -320,7 +269,6 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
             NestedMeta::Meta(Meta::Path(p)) => {
                 if let Some(i) = p.get_ident() {
                     if simple_opts(i, p, errors, opts) {
-                    } else if unexpected_as_path(i, p, errors) {
                     } else {
                         errors.push(p.span(), format!("Unexpected argument `{}`", i));
                     }
@@ -396,16 +344,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
             }
         };
     }
-
-    let exit_dur = if let Some(d) = opts.delay {
-        quote! {
-            Some(#d)
-        }
-    } else {
-        quote! {
-            None
-        }
-    };
 
     let krate = opts.common.krate();
 
@@ -505,9 +443,6 @@ Try `fn {}(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()>`
 
             #[no_mangle]
             pub static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool> = Some(false);
-
-            #[no_mangle]
-            pub static __INTERNAL_NUEFI_EXIT_DURATION: Option<u64> = #exit_dur;
 
             #[no_mangle]
             pub fn __internal__nuefi__main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
