@@ -17,13 +17,16 @@ fn debug_log(args: core::fmt::Arguments) {
     }
 }
 
-/// UEFI Logger
+/// UEFI [Log][log::Log] implementation
 ///
-/// This logs to the UEFI `stdout`,
-/// if ExitBootServices has not been called, otherwise it does nothing.
+/// This implementation logs to UEFI's stdout and allows filtering based on
+/// path.
 ///
-/// This filters out logs from crates other than this one
-/// or the provided `target` in [`UefiLogger::new`]
+/// If `ExitBootServices` has been called, this does nothing.
+///
+/// The [log] macros automatically include information about what file they're
+/// from, so for example you can only see logs from crate::mem by setting
+/// targets to `crate_name::mem`
 pub struct UefiLogger {
     targets: Option<&'static [&'static str]>,
     excludes: Option<&'static [&'static str]>,
@@ -106,10 +109,13 @@ impl Log for UefiLogger {
         if let Some(table) = get_boot_table() {
             if self.enabled(record.metadata()) {
                 let mut stdout = table.stdout();
+                let level = record.level();
                 let _ = writeln!(
                     stdout,
-                    "[{}] {} - {}",
+                    "[{} - {}:{}] {} - {}",
                     record.target(),
+                    record.file().unwrap_or_default(),
+                    record.line().unwrap_or_default(),
                     record.level(),
                     record.args()
                 );
