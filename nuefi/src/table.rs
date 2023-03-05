@@ -3,7 +3,7 @@
 use core::{
     iter::from_fn,
     marker::PhantomData,
-    mem::size_of,
+    mem::{size_of, transmute},
     ptr::{null_mut, NonNull},
     slice::from_raw_parts,
     time::Duration,
@@ -823,8 +823,10 @@ impl SystemTable<Boot> {
     }
 
     /// Get the configuration table specified by `T`, or [`None`]
-    pub fn config_table<T: config::ConfigTable>(&self) -> Option<T::Out> {
-        None
+    pub fn config_table<T: config::ConfigTable>(&self) -> Option<T::Out<'_>> {
+        self.config_tables()
+            .find(|t| t.guid() == T::GUID)
+            .and_then(|t| t.as_table::<T>())
     }
 }
 
@@ -876,9 +878,16 @@ pub mod config {
         }
 
         /// If this generic table is `T`, then return
-        pub fn as_table<T: ConfigTable>(&self) -> Option<T::Out> {
-            let raw = self.as_ptr();
-            todo!()
+        pub fn as_table<'tbl, T: ConfigTable>(&self) -> Option<T::Out<'tbl>> {
+            if self.guid() == T::GUID {
+                let raw = self.as_ptr();
+                // Safety: We've just verified the GUID is correct
+                // `ConfigTable` is sealed and its trusted to have correct GUIDs and types
+                let o = unsafe { T::from_raw(raw) };
+                Some(o)
+            } else {
+                None
+            }
         }
     }
 
@@ -945,57 +954,59 @@ pub mod config {
     }
 
     pub trait ConfigTable: Entity + imp::Sealed {
-        type Out;
-        type Raw;
+        type Out<'tbl>;
 
         /// # Safety
         ///
         /// - `raw` must be valid for this table
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out;
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl>;
     }
 
     impl ConfigTable for AcpiTable10 {
-        type Out = Self;
-        type Raw = *mut u8;
+        type Out<'tbl> = Self;
 
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
-            Self { table: raw }
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
         }
     }
 
     impl ConfigTable for AcpiTable20 {
-        type Out = Self;
-        type Raw = *mut u8;
+        type Out<'tbl> = Self;
 
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
-            Self { table: raw }
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
         }
     }
 
     impl ConfigTable for SMBIOS {
-        type Out = Self;
-        type Raw = *mut u8;
+        type Out<'tbl> = Self;
 
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
-            Self { table: raw }
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
         }
     }
 
     impl ConfigTable for SMBIOS3 {
-        type Out = Self;
-        type Raw = *mut u8;
+        type Out<'tbl> = Self;
 
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
-            Self { table: raw }
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
         }
     }
 
     impl ConfigTable for RuntimeProperties {
-        type Out = Self;
-        type Raw = *mut RuntimeProperties;
+        type Out<'tbl> = Self;
 
-        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
-            *raw
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            *raw.cast::<RuntimeProperties>()
         }
     }
 }
