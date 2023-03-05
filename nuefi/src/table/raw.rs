@@ -140,7 +140,7 @@ impl Header {
 }
 
 /// A generic UEFI Configuration table
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RawConfigurationTable {
     pub guid: Guid,
