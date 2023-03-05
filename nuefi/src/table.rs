@@ -160,7 +160,12 @@ impl<'table> BootServices<'table> {
     /// TODO: Section about finding handles for protocols
     ///
     /// If no protocol is found, [None] is returned.
-    pub fn locate_protocol<'boot, Protocol: proto::Protocol<'boot>>(
+    ///
+    /// # Safety
+    ///
+    /// This is unsafe because, like [`BootServices::handle_protocol`],
+    /// they're not guaranteed to remain valid.
+    pub unsafe fn locate_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
     ) -> Result<Option<Protocol>> {
         let mut out: *mut u8 = null_mut();
@@ -193,7 +198,7 @@ impl<'table> BootServices<'table> {
     /// Exclusively open a protocol on `handle` if it exists,
     /// returning a [`Scope`] over the requested protocol.
     ///
-    /// the [`Scope`] ensues the Protocol is closed whe it goes out of scope.
+    /// The [`Scope`] ensues the Protocol is closed whe it goes out of scope.
     ///
     /// If the [`Scope`] is leaked, you will not be able to open this protocol
     /// again, but is safe.
@@ -301,10 +306,18 @@ impl<'table> BootServices<'table> {
     ///
     /// If no protocol is found, [`Ok(None)`] is returned.
     ///
+    /// # Note
+    ///
+    /// This is deprecated by UEFI, and [`BootServices::open_protocol`] should
+    /// be used in all new applications and drivers.
+    ///
+    /// This is because firmware is not notified that this protocol is in use,
+    /// and there is not necessarily a guarantee they remain valid.
+    ///
     /// # Safety
     ///
     /// - The returned Protocol must not already be in use
-    #[deprecated(note = "`BootServices::handle_protocol` is deprecated by UEFI")]
+    // #[deprecated(note = "`BootServices::handle_protocol` is deprecated by UEFI")]
     pub unsafe fn handle_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
