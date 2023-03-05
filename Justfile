@@ -31,7 +31,7 @@ export MIRIFLAGS := "\
 # -Zmiri-retag-fields \
 
 @miri *args='':
-    cargo +nightly miri nextest run {{args}}
+    cargo +nightly miri nextest run -p nuefi {{args}}
     # cargo +nightly miri {{args}}
 
 @test *args='':
