@@ -45,6 +45,7 @@ use crate::{get_boot_table, EfiHandle};
 
 pub mod console;
 pub mod device_path;
+pub mod edid;
 pub mod graphics;
 pub mod loaded_image;
 pub mod media;

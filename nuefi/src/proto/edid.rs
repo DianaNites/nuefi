@@ -1,0 +1,1 @@
+//! UEFI EDID Protocol services
