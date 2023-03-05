@@ -127,7 +127,7 @@ pub(crate) fn parse_guid(
                 }
             }
             Err(e) => {
-                errors.push(guid.span(), format!("Invalid GUID: {e}"));
+                errors.push(input.span(), format!("Invalid GUID: {e}"));
                 error_def
             }
         }

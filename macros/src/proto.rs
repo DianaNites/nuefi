@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{__private::Span, quote};
 use syn::{
     ext::IdentExt,
     parse_macro_input,
@@ -28,6 +28,8 @@ struct Opts {
     ///
     /// `GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")`
     guid: Guid,
+
+    guid_span: Span,
 }
 
 impl Opts {
@@ -35,6 +37,7 @@ impl Opts {
         Self {
             common: CommonOpts::new(),
             guid: None,
+            guid_span: Span::call_site(),
         }
     }
 }
@@ -66,6 +69,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
             }
             syn::NestedMeta::Lit(Lit::Str(lit)) => {
                 let s = lit.value();
+                opts.guid_span = lit.span();
                 // Don't check for UUID validity here, its checked later.
                 if opts.guid.replace(s).is_some() {
                     errors.push(lit.span(), "Duplicate GUID attribute");
@@ -176,7 +180,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let krate = opts.common.krate();
 
-    let guid = parse_guid(&opts.guid, &input, &krate, &mut errors);
+    let guid = parse_guid(&opts.guid, opts.guid_span, &krate, &mut errors);
 
     let name = imp_struct.unraw().to_string();
 
