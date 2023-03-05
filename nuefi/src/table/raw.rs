@@ -117,14 +117,14 @@ impl Header {
         //
         // TODO: Should we validate padding as zero, denying it as UB/broken otherwise,
         // or silently accept it if the CRC validates?
-        let bytes = unsafe {
+        unsafe {
             let len = (header.size as usize).saturating_sub(size_of::<Header>());
             let ptr = table.add(size_of::<Header>());
-            core::slice::from_raw_parts(ptr, len)
-        };
+            let bytes = core::slice::from_raw_parts(ptr, len);
 
-        // Calculate the remaining table, header digested above.
-        digest.update(bytes);
+            // Calculate the remaining table, header digested above.
+            digest.update(bytes);
+        };
 
         if expected != digest.finalize() {
             return EfiStatus::CRC_ERROR.into();
