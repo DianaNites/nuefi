@@ -17,7 +17,10 @@ use crate::{
 };
 
 pub mod raw;
-use alloc::{string::String, vec::Vec};
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
@@ -89,7 +92,6 @@ impl<'table> DevicePath<'table> {
     ///
     /// See [`DevicePathUtil::duplicate`]
     // FIXME: These leak memory.
-    #[must_use]
     pub fn duplicate(&self) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -104,23 +106,26 @@ impl<'table> DevicePath<'table> {
         }
     }
 
-    /// Get this DevicePath as a String using [`DevicePathToText`]
-    pub fn to_string(&self) -> Result<String> {
+    /// Get this DevicePath as a [`UefiString`] using [`DevicePathToText`]
+    pub fn to_uefi_string(&self) -> Result<UefiString> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
             let util = get_dev_text(self)?;
             let s = util.convert_device_path_to_text(self)?;
-            let s = s.into_string();
             Ok(s)
         } else {
             Err(EfiStatus::DEVICE_ERROR.into())
         }
     }
 
+    /// Get this DevicePath as a [`String`] using [`DevicePathToText`]
+    pub fn to_string(&self) -> Result<String> {
+        Ok(self.to_uefi_string()?.to_string())
+    }
+
     /// Append `node` to ourselves, returning a new path.
     // FIXME: These leak memory.
-    #[must_use]
     pub fn append(&self, node: &DevicePath) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -137,7 +142,6 @@ impl<'table> DevicePath<'table> {
 
     /// Append the UEFI file path, returning the new device path
     // FIXME: These leak memory.
-    #[must_use]
     pub fn append_file_path(&self, path: &str) -> Result<DevicePath<'table>> {
         let table = get_boot_table().ok_or(EfiStatus::UNSUPPORTED)?;
         let boot = table.boot();
