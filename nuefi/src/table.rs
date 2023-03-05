@@ -1,9 +1,11 @@
 //! UEFI Tables
 
 use core::{
+    iter::from_fn,
     marker::PhantomData,
     mem::size_of,
     ptr::{null_mut, NonNull},
+    slice::from_raw_parts,
     time::Duration,
 };
 
@@ -806,5 +808,194 @@ impl SystemTable<Boot> {
         assert!(!ptr.is_null(), "boot_services handle was null");
         // Safety: Construction ensures safety.
         unsafe { BootServices::new(ptr) }
+    }
+
+    /// Iterator over UEFI Configuration tables
+    pub fn config_tables(&self) -> impl Iterator<Item = config::GenericConfig> + '_ {
+        let data = self.table().configuration_table;
+        let len = self.table().number_of_table_entries;
+
+        // Safety: The pointer is valid for this many elements according
+        // to the UEFI spec
+        let tables = unsafe { from_raw_parts(data, len).iter().copied() };
+
+        tables.map(config::GenericConfig::new)
+    }
+
+    /// Get the configuration table specified by `T`, or [`None`]
+    pub fn config_table<T: config::ConfigTable>(&self) -> Option<T::Out> {
+        None
+    }
+}
+
+pub mod config {
+    use super::*;
+    use crate::{proto::Entity, GUID};
+
+    #[derive(Debug)]
+    #[repr(transparent)]
+    pub struct GenericConfig {
+        config: RawConfigurationTable,
+    }
+
+    impl GenericConfig {
+        pub(crate) fn new(config: RawConfigurationTable) -> Self {
+            Self { config }
+        }
+
+        /// GUID for the table
+        pub fn guid(&self) -> Guid {
+            self.config.guid
+        }
+
+        /// Raw untyped pointer to the table
+        pub fn as_ptr(&self) -> *mut u8 {
+            self.config.table
+        }
+
+        /// Name of this protocol, if known
+        pub fn name(&self) -> Option<&'static str> {
+            let guid = self.guid();
+            if guid == AcpiTable20::GUID {
+                Some(AcpiTable20::NAME)
+            } else if guid == AcpiTable10::GUID {
+                Some(AcpiTable10::NAME)
+            } else if guid == RuntimeProperties::GUID {
+                Some(RuntimeProperties::NAME)
+            } else if guid == SMBIOS::GUID {
+                Some(SMBIOS::NAME)
+            } else if guid == SMBIOS3::GUID {
+                Some(SMBIOS3::NAME)
+            } else if guid == SAL::GUID {
+                Some(SAL::NAME)
+            } else if guid == MPS::GUID {
+                Some(MPS::NAME)
+            } else {
+                None
+            }
+        }
+
+        /// If this generic table is `T`, then return
+        pub fn as_table<T: ConfigTable>(&self) -> Option<T::Out> {
+            let raw = self.as_ptr();
+            todo!()
+        }
+    }
+
+    /// Table for ACPI 2.0 and newer
+    #[GUID("8868E871-E4F1-11D3-BC22-0080C73C8881", crate("crate"))]
+    #[derive(Debug)]
+    pub struct AcpiTable20 {
+        table: *mut u8,
+    }
+
+    /// Table for ACPI 1.0
+    #[GUID("EB9D2D30-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+    #[derive(Debug)]
+    pub struct AcpiTable10 {
+        table: *mut u8,
+    }
+
+    /// Table for SMBIOS 3
+    #[GUID("F2FD1544-9794-4A2C-992E-E5BBCF20E394", crate("crate"))]
+    #[derive(Debug)]
+    pub struct SMBIOS3 {
+        table: *mut u8,
+    }
+
+    /// Table for SMBIOS
+    #[GUID("EB9D2D31-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+    #[derive(Debug)]
+    pub struct SMBIOS {
+        table: *mut u8,
+    }
+
+    /// Table for SAL
+    #[GUID("EB9D2D32-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+    #[derive(Debug)]
+    pub struct SAL {
+        table: *mut u8,
+    }
+
+    /// Table for MPS / MultiProcessor Specification
+    #[GUID("EB9D2D2F-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+    #[derive(Debug)]
+    pub struct MPS {
+        table: *mut u8,
+    }
+
+    /// Table for ACPI 2.0 and newer
+    #[GUID("EB66918A-7EEF-402A-842E-931D21C38AE9", crate("crate"))]
+    #[derive(Debug, Clone, Copy)]
+    #[repr(C)]
+    pub struct RuntimeProperties {
+        version: u16,
+        len: u16,
+        supported: u32,
+    }
+
+    mod imp {
+        use super::*;
+        pub trait Sealed {}
+        impl Sealed for AcpiTable10 {}
+        impl Sealed for AcpiTable20 {}
+        impl Sealed for RuntimeProperties {}
+        impl Sealed for SMBIOS {}
+        impl Sealed for SMBIOS3 {}
+    }
+
+    pub trait ConfigTable: Entity + imp::Sealed {
+        type Out;
+        type Raw;
+
+        /// # Safety
+        ///
+        /// - `raw` must be valid for this table
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out;
+    }
+
+    impl ConfigTable for AcpiTable10 {
+        type Out = Self;
+        type Raw = *mut u8;
+
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
+            Self { table: raw }
+        }
+    }
+
+    impl ConfigTable for AcpiTable20 {
+        type Out = Self;
+        type Raw = *mut u8;
+
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
+            Self { table: raw }
+        }
+    }
+
+    impl ConfigTable for SMBIOS {
+        type Out = Self;
+        type Raw = *mut u8;
+
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
+            Self { table: raw }
+        }
+    }
+
+    impl ConfigTable for SMBIOS3 {
+        type Out = Self;
+        type Raw = *mut u8;
+
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
+            Self { table: raw }
+        }
+    }
+
+    impl ConfigTable for RuntimeProperties {
+        type Out = Self;
+        type Raw = *mut RuntimeProperties;
+
+        unsafe fn from_raw(raw: Self::Raw) -> Self::Out {
+            *raw
+        }
     }
 }
