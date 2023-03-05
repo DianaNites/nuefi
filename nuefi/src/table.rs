@@ -157,15 +157,28 @@ impl<'table> BootServices<'table> {
             .ok_or(EfiStatus::NOT_FOUND.into())
     }
 
-    /// Find and return an arbitrary protocol instance from an arbitrary handle
-    /// matching `guid`.
+    /// Find and return the first protocol instance found
+    ///
+    /// This is a safe replacement for [`BootServices::locate_protocol`].
+    ///
+    /// This will exclusively open the protocol.
+    /// See [`BootServices::open_protocol`] for caveats.
+    pub fn get_protocol<'boot, Protocol: proto::Protocol<'boot>>(
+        &'boot self,
+    ) -> Result<Scope<'boot, Protocol>> {
+        self.open_protocol::<Protocol>(self.handle_for::<Protocol>()?)?
+            .ok_or(EfiStatus::NOT_FOUND.into())
+    }
+
+    /// Find and return the first protocol instance found
+    ///
+    /// This finds the first handle that supports the requested protocol,
+    /// and then unsafely returns an instance to it.
+    ///
+    /// See [`BootServices::get_protocol`] for the safe version of this.
     ///
     /// This is useful for protocols that don't care about where they're
     /// attached, or where only one handle is expected to exist.
-    ///
-    /// This is shorthand for
-    ///
-    /// TODO: Section about finding handles for protocols
     ///
     /// If no protocol is found, [None] is returned.
     ///
