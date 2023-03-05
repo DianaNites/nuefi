@@ -114,6 +114,13 @@ impl core::fmt::Debug for Guid {
     }
 }
 
+impl core::fmt::Display for Guid {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let uuid = Uuid::from_bytes_me(self.0);
+        uuid.fmt(f)
+    }
+}
+
 impl Guid {
     pub(crate) const fn to_uuid(self) -> Uuid {
         Uuid::from_bytes_me(self.0)
