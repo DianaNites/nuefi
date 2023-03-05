@@ -161,7 +161,7 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
     let guid_imp = quote! {
 
         // #[cfg(no)]
-        unsafe impl #krate::proto::Entity for #imp_struct #imp_generics {
+        unsafe impl #imp_generics #krate::proto::Entity for #imp_struct #imp_generics {
             #guid
 
             const NAME: &'static str = #name;

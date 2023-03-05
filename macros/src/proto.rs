@@ -188,7 +188,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         #input
 
         // #[cfg(no)]
-        unsafe impl<'table> #krate::proto::Protocol<'table> for #imp_struct #imp_generics {
+        unsafe impl #imp_generics #krate::proto::Protocol<'table> for #imp_struct #imp_generics {
             #guid
 
             const NAME: &'static str = #name;
