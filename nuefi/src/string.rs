@@ -344,17 +344,8 @@ impl<'table> Clone for PathBuf<'table> {
 
 impl<'table> Drop for PathBuf<'table> {
     fn drop(&mut self) {
-        trace!("Deallocating DevicePath");
         if let Some(table) = get_boot_table() {
-            let ret = self.data.free(&table.boot());
-            if ret.is_err() {
-                error!("Failed to deallocate DevicePath {:?}", self.data)
-            }
-        } else {
-            error!(
-                "Tried to deallocate DevicePath {:?} while not in Boot mode",
-                self
-            )
+            let _ = self.data.free(&table.boot());
         }
     }
 }
