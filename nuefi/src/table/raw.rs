@@ -139,6 +139,14 @@ impl Header {
     }
 }
 
+/// A generic UEFI Configuration table
+#[derive(Debug)]
+#[repr(C)]
+pub struct RawConfigurationTable {
+    pub guid: Guid,
+    pub table: *mut u8,
+}
+
 /// The EFI system table.
 ///
 /// After a call to ExitBootServices, some parts of this may become invalid.
@@ -188,11 +196,11 @@ pub struct RawSystemTable {
     /// Boot services table
     pub boot_services: *mut RawBootServices,
 
-    /// Number of entries, always valid
+    /// Number of entries in `configuration_table`
     pub number_of_table_entries: usize,
 
     /// Configuration table, always valid
-    pub configuration_table: *mut u8, // EFI_CONFIGURATION_TABLE
+    pub configuration_table: *mut RawConfigurationTable,
 }
 
 impl RawSystemTable {
@@ -269,6 +277,12 @@ pub type LocateProtocolFn = unsafe extern "efiapi" fn(
     guid: *mut proto::Guid,
     key: *mut u8,
     out: *mut *mut u8,
+) -> EfiStatus;
+
+pub type InstallConfigurationTable = unsafe extern "efiapi" fn(
+    //
+    guid: *mut proto::Guid,
+    table: *mut u8,
 ) -> EfiStatus;
 
 /// Raw structure of the UEFI Boot Services table
@@ -348,7 +362,7 @@ pub struct RawBootServices {
     pub locate_handle: Option<LocateHandle>,
 
     pub locate_device_path: *mut u8,
-    pub install_configuration_table: *mut u8,
+    pub install_configuration_table: Option<InstallConfigurationTable>,
 
     // Images
     pub load_image: Option<
