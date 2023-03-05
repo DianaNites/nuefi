@@ -19,15 +19,19 @@
 //!     // Get UEFI Boot Services
 //!     let boot = table.boot();
 //!
-//!     // Locate the `GraphicsOutput` Protocol
-//!     match boot.locate_protocol::<GraphicsOutput>() {
-//!         Ok(proto) => {
+//!     // Locate a handle for the `GraphicsOutput` Protocol
+//!     let gop = boot.handle_for::<GraphicsOutput>()?;
+//!
+//!     // And then try to open the protocol for it
+//!     let gop = boot.open_protocol::<GraphicsOutput>(gop)?;
+//!     match gop {
+//!         Some(proto) => {
 //!             // Do something
 //!         }
-//!         Err(e) => {
+//!         None => {
 //!             // Return an error if the Protocol does not exist.
 //!             // For example, if the device doesn't have a screen.
-//!             return Err(EfiStatus::INVALID_PARAMETER.into());
+//!             return Err(EfiStatus::UNSUPPORTED.into());
 //!         }
 //!     };
 //!     Ok(())
