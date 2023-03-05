@@ -8,15 +8,6 @@ use crate::{
     proto::console::{TextBackground, TextForeground},
 };
 
-/// Log from within the logger
-#[allow(dead_code)]
-fn debug_log(args: core::fmt::Arguments) {
-    if let Some(table) = get_boot_table() {
-        let mut stdout = table.stdout();
-        let _ = writeln!(stdout, "{args}",);
-    }
-}
-
 /// UEFI [Log][log::Log] implementation
 ///
 /// This implementation logs to UEFI's stdout and allows filtering based on
