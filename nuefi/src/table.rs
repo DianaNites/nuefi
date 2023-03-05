@@ -811,7 +811,7 @@ impl SystemTable<Boot> {
     }
 
     /// Iterator over UEFI Configuration tables
-    pub fn config_tables(&self) -> impl Iterator<Item = config::GenericConfig> + '_ {
+    pub fn config_tables(&self) -> impl Iterator<Item = config::GenericConfig<'_>> + '_ {
         let data = self.table().configuration_table;
         let len = self.table().number_of_table_entries;
 
@@ -836,13 +836,17 @@ pub mod config {
 
     #[derive(Debug)]
     #[repr(transparent)]
-    pub struct GenericConfig {
+    pub struct GenericConfig<'tbl> {
         config: RawConfigurationTable,
+        phantom: core::marker::PhantomData<&'tbl mut ()>,
     }
 
-    impl GenericConfig {
+    impl<'tbl> GenericConfig<'tbl> {
         pub(crate) fn new(config: RawConfigurationTable) -> Self {
-            Self { config }
+            Self {
+                config,
+                phantom: PhantomData,
+            }
         }
 
         /// GUID for the table
@@ -878,7 +882,9 @@ pub mod config {
         }
 
         /// If this generic table is `T`, then return
-        pub fn as_table<'tbl, T: ConfigTable>(&self) -> Option<T::Out<'tbl>> {
+        // This lives as long as `'tbl`, which can only come from
+        // the `SystemTable`.
+        pub fn as_table<T: ConfigTable>(&self) -> Option<T::Out<'tbl>> {
             if self.guid() == T::GUID {
                 let raw = self.as_ptr();
                 // Safety: We've just verified the GUID is correct
