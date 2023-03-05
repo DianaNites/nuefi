@@ -71,7 +71,8 @@ impl RawDevicePath {
         Self {
             ty: RawDevicePathType(ty),
             sub_ty: RawDevicePathSubType(sub_ty),
-            len: len.to_ne_bytes(),
+            // Note: These are always LE integers?
+            len: len.to_le_bytes(),
         }
     }
 
@@ -80,7 +81,8 @@ impl RawDevicePath {
         Self {
             ty: RawDevicePathType::END,
             sub_ty: RawDevicePathSubType::END_ENTIRE,
-            len: 4u16.to_ne_bytes(),
+            // Note: These are always LE integers?
+            len: 4u16.to_le_bytes(),
         }
     }
 
@@ -90,7 +92,8 @@ impl RawDevicePath {
         Self {
             ty: RawDevicePathType::MEDIA,
             sub_ty: RawDevicePathSubType::MEDIA_FILE,
-            len: len.to_ne_bytes(),
+            // Note: These are always LE integers?
+            len: len.to_le_bytes(),
         }
     }
 }
