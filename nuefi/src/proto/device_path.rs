@@ -89,6 +89,7 @@ impl<'table> DevicePath<'table> {
     ///
     /// See [`DevicePathUtil::duplicate`]
     // FIXME: These leak memory.
+    #[must_use]
     pub fn duplicate(&self) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -119,6 +120,7 @@ impl<'table> DevicePath<'table> {
 
     /// Append `node` to ourselves, returning a new path.
     // FIXME: These leak memory.
+    #[must_use]
     pub fn append(&self, node: &DevicePath) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -135,6 +137,7 @@ impl<'table> DevicePath<'table> {
 
     /// Append the UEFI file path, returning the new device path
     // FIXME: These leak memory.
+    #[must_use]
     pub fn append_file_path(&self, path: &str) -> Result<DevicePath<'table>> {
         let table = get_boot_table().ok_or(EfiStatus::UNSUPPORTED)?;
         let boot = table.boot();
