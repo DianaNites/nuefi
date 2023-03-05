@@ -134,12 +134,11 @@ fn get_image_handle() -> Option<EfiHandle> {
 /// /// - Rename the crate internally to `uefi2`
 /// /// - Enable some internal logging after startup/during exit
 /// ///     - This uses the `log` crate, and works if you set up a logger
-/// /// - `delay(n)` - Enable a 30 second delay if `e_main` returns `Err`, displaying the error for debugging.
 /// /// - `panic` - Enables a default panic handler implementation
 /// ///     - This implementation allows changing at runtime
 /// /// - `alloc` - Enables a default alloc error handler implementation
 /// ///     - This implementation allows changing at runtime
-/// #[entry(crate("uefi2"), log, delay(30))]
+/// #[entry(crate("uefi2"), log)]
 /// fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 ///     Ok(())
 /// }
