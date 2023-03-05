@@ -223,6 +223,18 @@ impl<'table> BootServices<'table> {
     ///
     /// If the [`Scope`] is leaked, you will not be able to open this protocol
     /// again, but is safe.
+    ///
+    /// # Warning
+    ///
+    /// This will cause firmware to attempt to **stop** any drivers
+    /// currently using this protocol, if they support doing so.
+    ///
+    /// This means, for example,
+    /// if you have a system with one serial port,
+    /// which the user is using to interact, and you exclusively open that port,
+    /// the user can no longer interact with the system.
+    /// The same applies for graphical devices and
+    /// [`GraphicsOutput`][crate::proto::graphics::GraphicsOutput].
     pub fn open_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
