@@ -91,13 +91,16 @@ pub unsafe trait Protocol<'table> {
     }
 }
 
-/// UEFI GUID
+/// UEFI GUID, 64-bit aligned
+///
+/// UEFI says this is a
+/// "128-bit buffer containing a unique identifier value. Unless otherwise
+/// specified, aligned on a 64-bit boundary."
+///
+/// The representation of this struct should be equivalent and FFI-safe with
+/// that definition.
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C, align(64))]
-// #[repr(transparent)]
-// FIXME: should be 64-bit aligned?
-// This should never be passed by value to UEFI, which means transparent does
-// nothing?
+#[repr(C, align(8))]
 #[allow(clippy::undocumented_unsafe_blocks)]
 pub struct Guid([u8; 16]);
 
