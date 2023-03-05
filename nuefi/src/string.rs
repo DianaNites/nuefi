@@ -10,7 +10,10 @@ use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
     mem::MemoryType,
-    proto::device_path::{DevicePath, DevicePathToText, DevicePathUtil},
+    proto::{
+        device_path::{DevicePath, DevicePathToText, DevicePathUtil},
+        Scope,
+    },
     Boot,
     SystemTable,
 };
@@ -265,56 +268,23 @@ impl<'table> Path<'table> {
 
     /// Convert [`Path`] to [`PathBuf`]
     pub fn to_path_buf(&self) -> Result<PathBuf<'table>> {
-        let table = table()?;
-        let boot = table.boot();
-        let util = boot
-            .locate_protocol::<DevicePathUtil>()?
-            .ok_or(EfiStatus::UNSUPPORTED)?;
-
-        let copy = util.duplicate(&self.data)?;
+        let copy = self.data.duplicate()?;
         let v = PathBuf::new(copy);
-        Ok(
-            // FIXME: EVIL
-            // Safety: Evil lifetime hack, turn our local borrow
-            // into a `'table` borrow
-            // This should be safe because the only way to call to_text is
-            // by having a valid lifetime
-            unsafe { transmute(v) },
-        )
+        Ok(v)
     }
 
     /// Convert this path to a UEFI String
     pub fn to_text(&'table self) -> Result<UefiString<'table>> {
-        let table = table()?;
-        let boot = table.boot();
-        let text = boot
-            .locate_protocol::<DevicePathToText>()?
-            .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
-
-        let s = text.convert_device_path_to_text(&self.data)?;
-        Ok(
-            // FIXME: EVIL
-            // Safety: Evil lifetime hack, turn our local borrow
-            // into a `'table` borrow
-            // This should be safe because the only way to call to_text is
-            // by having a valid lifetime
-            unsafe { transmute(s) },
-        )
+        self.data.to_uefi_string()
     }
 
     /// Convert this path to a Rust String
     ///
     /// Invalid characters are mapped to [`char::REPLACEMENT_CHARACTER`]
     pub fn to_string_lossy(&self) -> Result<String> {
-        let table = table()?;
-        let boot = table.boot();
-        let text = boot
-            .locate_protocol::<DevicePathToText>()?
-            .ok_or_else(|| UefiError::new(EfiStatus::UNSUPPORTED))?;
-
-        let s = text.convert_device_path_to_text(&self.data)?;
+        let s = self.data.to_uefi_string()?;
         let s = s.as_slice();
-        let s = char::decode_utf16(s.iter().cloned())
+        let s = char::decode_utf16(s.iter().copied())
             .map(|r| r.unwrap_or(char::REPLACEMENT_CHARACTER))
             .collect::<String>();
         Ok(s)
@@ -361,22 +331,7 @@ impl<'table> PathBuf<'table> {
     }
 
     pub fn try_clone(&self) -> Result<Self> {
-        let table = table()?;
-        let boot = table.boot();
-        let util = boot
-            .locate_protocol::<DevicePathUtil>()?
-            .ok_or(EfiStatus::UNSUPPORTED)?;
-
-        let copy = util.duplicate(&self.data)?;
-        let v = PathBuf::new(copy);
-        Ok(
-            // FIXME: EVIL
-            // Safety: Evil lifetime hack, turn our local borrow
-            // into a `'table` borrow
-            // This should be safe because the only way to call to_text is
-            // by having a valid lifetime
-            unsafe { transmute(v) },
-        )
+        Ok(PathBuf::new(self.data.duplicate()?))
     }
 }
 
