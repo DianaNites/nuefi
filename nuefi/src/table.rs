@@ -149,6 +149,14 @@ impl<'table> BootServices<'table> {
         unsafe { self.locate_handle(LocateSearch::BY_PROTOCOL, null_mut(), &guid) }
     }
 
+    /// Get an arbitrary handle that supports [`Protocol`]
+    pub fn handle_for<'boot, Proto: Protocol<'boot>>(&self) -> Result<EfiHandle> {
+        self.handles_for_protocol::<Proto>()?
+            .first()
+            .copied()
+            .ok_or(EfiStatus::NOT_FOUND.into())
+    }
+
     /// Find and return an arbitrary protocol instance from an arbitrary handle
     /// matching `guid`.
     ///
