@@ -5,7 +5,7 @@ use core::{
     slice::from_raw_parts,
 };
 
-use super::{Guid, Protocol};
+use super::{Guid, Protocol, Scope};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
@@ -20,6 +20,58 @@ pub mod raw;
 use alloc::{string::String, vec::Vec};
 
 use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
+
+/// Helper to get [`DevicePathUtil`]
+fn get_dev_util<'proto>(
+    _t: &'proto DevicePath<'_>,
+) -> Result<Scope<'proto, DevicePathUtil<'proto>>> {
+    if let Some(table) = get_boot_table() {
+        let boot = table.boot();
+        let util = boot
+            .handles_for_protocol::<DevicePathUtil>()?
+            .first()
+            .copied()
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let util = boot
+            .open_protocol::<DevicePathUtil>(util)?
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+
+        // Safety: This is required because our local table is an implementation
+        // detail.
+        //
+        // The correct lifetime is `'proto`,
+        // referencing the DevicePath calling us.
+        unsafe { Ok(transmute(util)) }
+    } else {
+        Err(EfiStatus::UNSUPPORTED.into())
+    }
+}
+
+/// Helper to get [`DevicePathToText`]
+fn get_dev_text<'proto>(
+    _t: &'proto DevicePath<'_>,
+) -> Result<Scope<'proto, DevicePathToText<'proto>>> {
+    if let Some(table) = get_boot_table() {
+        let boot = table.boot();
+        let util = boot
+            .handles_for_protocol::<DevicePathToText>()?
+            .first()
+            .copied()
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let util = boot
+            .open_protocol::<DevicePathToText>(util)?
+            .ok_or(EfiStatus::UNSUPPORTED)?;
+
+        // Safety: This is required because our local table is an implementation
+        // detail.
+        //
+        // The correct lifetime is `'proto`,
+        // referencing the DevicePath calling us.
+        unsafe { Ok(transmute(util)) }
+    } else {
+        Err(EfiStatus::UNSUPPORTED.into())
+    }
+}
 
 interface!(
     #[Protocol("09576E91-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
@@ -41,7 +93,7 @@ impl<'table> DevicePath<'table> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
-            let util = boot.locate_protocol::<DevicePathUtil>()?.unwrap();
+            let util = get_dev_util(self)?;
             let s = util.duplicate(self)?;
             // Safety: This is required because our local table is an implementation detail
             // The correct lifetime is `'table`
@@ -56,7 +108,7 @@ impl<'table> DevicePath<'table> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
-            let util = boot.locate_protocol::<DevicePathToText>()?.unwrap();
+            let util = get_dev_text(self)?;
             let s = util.convert_device_path_to_text(self)?;
             let s = s.into_string();
             Ok(s)
@@ -71,7 +123,7 @@ impl<'table> DevicePath<'table> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
             // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
-            let util = boot.locate_protocol::<DevicePathUtil>()?.unwrap();
+            let util = get_dev_util(self)?;
             let s = util.append(self, node);
             // Safety: This is required because our local table is an implementation detail
             // The correct lifetime is `'table`
