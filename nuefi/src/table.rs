@@ -140,6 +140,8 @@ impl<'table> BootServices<'table> {
     }
 
     /// Get every handle that support the [`Protocol`]
+    ///
+    /// [`EfiStatus::NOT_FOUND`] is treated as success with a empty `Vec`
     pub fn handles_for_protocol<'boot, Proto: Protocol<'boot>>(&self) -> Result<Vec<EfiHandle>> {
         let guid = Proto::GUID;
         // Safety: Statically correct for this call
