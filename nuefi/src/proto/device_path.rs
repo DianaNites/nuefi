@@ -30,14 +30,7 @@ fn get_dev_util<'proto>(
 ) -> Result<Scope<'proto, DevicePathUtil<'proto>>> {
     if let Some(table) = get_boot_table() {
         let boot = table.boot();
-        let util = boot
-            .handles_for_protocol::<DevicePathUtil>()?
-            .first()
-            .copied()
-            .ok_or(EfiStatus::UNSUPPORTED)?;
-        let util = boot
-            .open_protocol::<DevicePathUtil>(util)?
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let util = boot.get_protocol::<DevicePathUtil>()?;
 
         // Safety: This is required because our local table is an implementation
         // detail.
@@ -56,14 +49,7 @@ fn get_dev_text<'proto>(
 ) -> Result<Scope<'proto, DevicePathToText<'proto>>> {
     if let Some(table) = get_boot_table() {
         let boot = table.boot();
-        let util = boot
-            .handles_for_protocol::<DevicePathToText>()?
-            .first()
-            .copied()
-            .ok_or(EfiStatus::UNSUPPORTED)?;
-        let util = boot
-            .open_protocol::<DevicePathToText>(util)?
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let util = boot.get_protocol::<DevicePathToText>()?;
 
         // Safety: This is required because our local table is an implementation
         // detail.
