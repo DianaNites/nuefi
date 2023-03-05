@@ -359,11 +359,7 @@ mod tests {
         }
 
         pub fn mock() -> (Box<RawSystemTable>, Vec<Box<dyn Any>>) {
-            let mut vendor = MOCK_VENDOR
-                .encode_utf16()
-                .chain([0])
-                .collect::<Vec<u16>>()
-                .into_boxed_slice();
+            let mut vendor = MOCK_VENDOR.encode_utf16().chain([0]).collect::<Vec<u16>>();
             let mut system = Box::new(mock_system());
             let mut boot = Box::new(mock_boot());
             let mut run = Box::new(mock_run());
@@ -388,7 +384,8 @@ mod tests {
             system.boot_services = addr_of_mut!(*boot);
             system.runtime_services = addr_of_mut!(*run);
             system.con_out = addr_of_mut!(*out);
-            system.firmware_vendor = addr_of!(vendor[0]);
+            // system.firmware_vendor = addr_of!(vendor[0]);
+            system.firmware_vendor = vendor.as_ptr();
 
             system.header.crc32 = {
                 let mut digest = CRC.digest();
@@ -400,9 +397,10 @@ mod tests {
             (
                 system,
                 vec![
-                    Box::new(boot),
-                    Box::new(out),
-                    Box::new(run),
+                    //
+                    boot,
+                    out,
+                    run,
                     Box::new(vendor),
                 ],
             )
@@ -439,11 +437,11 @@ mod tests {
 
         let boot = table.boot();
 
-        let gop = boot.locate_protocol::<GraphicsOutput>()?.unwrap();
-        let gop2 = boot.locate_protocol::<GraphicsOutput>()?.unwrap();
-        let _ = gop.set_mode(69);
-        info!("{:?}", gop2.mode());
-        let _ = gop.set_mode(420);
+        // let gop = boot.handle_for::<GraphicsOutput>()?;
+        // let gop = boot
+        //     .open_protocol::<GraphicsOutput>(gop)?
+        //     .ok_or(EfiStatus::UNSUPPORTED)?;
+        // let _ = gop.set_mode(69);
         // panic!("{gop:?}");
 
         #[cfg(no)]
@@ -484,6 +482,8 @@ mod tests {
             // TODO: Try and come up with a minimal repro.
             // Might be this bug?
             // <https://github.com/rust-lang/miri/issues/2728>
+            // Re-boxing them causes the error but not directly??
+            // See: The commit that added this comment for details
             forget(_box);
         }
         Ok(())
