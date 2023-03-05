@@ -876,6 +876,16 @@ pub mod config {
                 Some(SAL::NAME)
             } else if guid == MPS::GUID {
                 Some(MPS::NAME)
+            } else if guid == JsonConfigData::GUID {
+                Some(JsonConfigData::NAME)
+            } else if guid == JsonCapsuleData::GUID {
+                Some(JsonCapsuleData::NAME)
+            } else if guid == JsonCapsuleResult::GUID {
+                Some(JsonCapsuleResult::NAME)
+            } else if guid == DeviceTree::GUID {
+                Some(DeviceTree::NAME)
+            } else if guid == MemoryAttributes::GUID {
+                Some(MemoryAttributes::NAME)
             } else {
                 None
             }
@@ -949,6 +959,40 @@ pub mod config {
         supported: u32,
     }
 
+    /// Table for JSON Config Data
+    #[GUID("87367F87-1119-41CE-AAEC-8BE0111F558A", crate("crate"))]
+    #[derive(Debug)]
+    pub struct JsonConfigData {
+        table: *mut u8,
+    }
+
+    /// Table for JSON Capsule Data
+    #[GUID("35E7A725-8DD2-4CAC-8011-33CDA8109056", crate("crate"))]
+    #[derive(Debug)]
+    pub struct JsonCapsuleData {
+        table: *mut u8,
+    }
+
+    /// Table for JSON Capsule Result
+    #[GUID("DBC461C3-B3DE-422A-B9B4-9886FD49A1E5", crate("crate"))]
+    #[derive(Debug)]
+    pub struct JsonCapsuleResult {
+        table: *mut u8,
+    }
+
+    /// Flattened DTB Device Tree
+    #[GUID("B1B621D5-F19C-41A5-830B-D9152C69AAE0", crate("crate"))]
+    #[derive(Debug)]
+    pub struct DeviceTree {
+        table: *mut u8,
+    }
+
+    #[GUID("DCFA911D-26EB-469F-A220-38B7DC461220", crate("crate"))]
+    #[derive(Debug)]
+    pub struct MemoryAttributes {
+        table: *mut u8,
+    }
+
     mod imp {
         use super::*;
         pub trait Sealed {}
@@ -957,6 +1001,13 @@ pub mod config {
         impl Sealed for RuntimeProperties {}
         impl Sealed for SMBIOS {}
         impl Sealed for SMBIOS3 {}
+        impl Sealed for SAL {}
+        impl Sealed for MPS {}
+        impl Sealed for JsonConfigData {}
+        impl Sealed for JsonCapsuleData {}
+        impl Sealed for JsonCapsuleResult {}
+        impl Sealed for DeviceTree {}
+        impl Sealed for MemoryAttributes {}
     }
 
     pub trait ConfigTable: Entity + imp::Sealed {
@@ -1013,6 +1064,56 @@ pub mod config {
 
         unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
             *raw.cast::<RuntimeProperties>()
+        }
+    }
+
+    impl ConfigTable for JsonConfigData {
+        type Out<'tbl> = Self;
+
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
+        }
+    }
+
+    impl ConfigTable for JsonCapsuleData {
+        type Out<'tbl> = Self;
+
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
+        }
+    }
+
+    impl ConfigTable for JsonCapsuleResult {
+        type Out<'tbl> = Self;
+
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
+        }
+    }
+
+    impl ConfigTable for DeviceTree {
+        type Out<'tbl> = Self;
+
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
+        }
+    }
+
+    impl ConfigTable for MemoryAttributes {
+        type Out<'tbl> = Self;
+
+        unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+            Self {
+                table: raw.cast_mut(),
+            }
         }
     }
 }
