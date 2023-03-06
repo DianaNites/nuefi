@@ -819,13 +819,14 @@ impl SystemTable<Boot> {
 
         // Safety: The pointer is valid for this many elements according
         // to the UEFI spec
+        // The returned lifetime will be tied to `self`, which is valid.
         let tables = unsafe { from_raw_parts(data, len).iter().copied() };
 
         tables.map(config::GenericConfig::new)
     }
 
     /// Get the configuration table specified by `T`, or [`None`]
-    pub fn config_table<T: config::ConfigTable>(&self) -> Option<T::Out<'_>> {
+    pub fn config_table<'tbl, T: config::ConfigTable<'tbl>>(&'tbl self) -> Option<T::Out<'tbl>> {
         self.config_tables()
             .find(|t| t.guid() == T::GUID)
             .and_then(|t| t.as_table::<T>())

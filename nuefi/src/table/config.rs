@@ -19,21 +19,23 @@ mod imp {
     impl<'tbl> Sealed for ConformanceProfile<'tbl> {}
 }
 
-pub trait ConfigTable: Entity + imp::Sealed {
-    type Out<'tbl>
+pub trait ConfigTable<'tbl>: Entity + imp::Sealed {
+    type Out<'cfg>
     where
-        Self: 'tbl;
+        'tbl: 'cfg;
 
     /// # Safety
     ///
     /// - `raw` must be valid for this table
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl>;
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl>;
 }
 
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct GenericConfig<'tbl> {
     config: RawConfigurationTable,
+
+    /// Lifetime of the `SystemTable`. All our data is valid for this long.
     phantom: core::marker::PhantomData<&'tbl mut ()>,
 }
 
@@ -121,8 +123,8 @@ impl<'tbl> GenericConfig<'tbl> {
 
     /// If this generic table is `T`, then return
     // This lives as long as `'tbl`, which can only come from
-    // the `SystemTable`.
-    pub fn as_table<T: ConfigTable>(&self) -> Option<T::Out<'tbl>> {
+    // the `SystemTable::config_tables`.
+    pub fn as_table<T: ConfigTable<'tbl>>(&self) -> Option<T::Out<'tbl>> {
         if self.guid() == T::GUID {
             let raw = self.as_ptr();
             // Safety: We've just verified the GUID is correct
@@ -363,100 +365,110 @@ pub struct MemoryStatus {
     table: *mut u8,
 }
 
-impl ConfigTable for AcpiTable10 {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for AcpiTable10 {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for AcpiTable20 {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for AcpiTable20 {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for SMBIOS {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for SMBIOS {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for SMBIOS3 {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for SMBIOS3 {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for RuntimeProperties {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for RuntimeProperties {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for JsonConfigData {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for JsonConfigData {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for JsonCapsuleData {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for JsonCapsuleData {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for JsonCapsuleResult {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for JsonCapsuleResult {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for DeviceTree {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for DeviceTree {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-impl ConfigTable for MemoryAttributes {
-    type Out<'tbl> = Self;
+impl<'tbl> ConfigTable<'tbl> for MemoryAttributes {
+    type Out<'cfg> = Self where
+        'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -465,7 +477,7 @@ impl ConfigTable for MemoryAttributes {
 
 #[cfg(no)]
 impl<'tbl> ConfigTable for ConformanceProfile<'tbl> {
-    type Out<'tbl2> = ConformanceProfile<'tbl2> where Self: 'tbl2;
+    type Out<'cfg> = ConformanceProfile<'cfg> where Self: 'cfg;
 
     unsafe fn from_raw<'tbl3>(raw: *const u8) -> Self::Out<'tbl3> {
         let raw = &*raw.cast::<RawConformanceProfile>();
