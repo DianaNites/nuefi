@@ -23,9 +23,9 @@ export MIRIFLAGS := "\
 -Zmiri-strict-provenance \
 -Zmiri-symbolic-alignment-check \
 -Zmiri-isolation-error=warn-nobacktrace \
--Zmiri-ignore-leaks \
 "
 
+# -Zmiri-ignore-leaks \
 # -Zmiri-disable-stacked-borrows \
 # -Zmiri-disable-isolation \
 # -Zmiri-retag-fields \
