@@ -114,18 +114,20 @@ impl Header {
     /// Specifically, it will, in order:
     ///
     /// - Verify that `table` is not null
-    /// - Verify the Signature matches `sig`
-    /// - Verify that `size` is at least [`size_of::<Header>`] because we're
-    ///   paranoid
-    /// - Ensure the UEFI major revision is 2, EFI 1.x is not supported, and a
-    ///   hypothetical UEFI 3.x is not
-    /// - Verify the CRC over `HeaderSize` bytes
+    /// - Verify that [`Header::signature`] matches `sig`
+    /// - Verify that [`Header::size`] is at least as expected by `sig` because
+    ///   we're paranoid
+    /// - Verify [`Header::revision`] is `2.x`. EFI `1.x` is not supported, and
+    ///   a hypothetical UEFI `3.x` is not
+    /// - Verify [`Header::crc32`] over [`Header::size`] bytes
     ///
     /// # Safety
     ///
-    /// - `table` must be valid for at least [`size_of::<Header>`] bytes
-    /// - `table` must contain a valid [`Header`]
-    /// - `table` must be valid for [`Header::size`] bytes
+    /// - If not null, `table` must:
+    ///   - Be valid for at least [`size_of::<Header>`] bytes
+    ///   - Contain a valid [`Header`]
+    ///   - Be valid for [`Header::size`] bytes
+    ///   - Contain a valid table as determined by `sig`
     pub unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
         if table.is_null() {
             return EfiStatus::INVALID_PARAMETER.into();
@@ -138,7 +140,22 @@ impl Header {
         let header = &*(table as *const Self);
         let len = header.size as usize;
 
-        if header.signature != sig || len < size_of::<Header>() {
+        if header.signature != sig {
+            return EfiStatus::INVALID_PARAMETER.into();
+        }
+
+        let expected_size = if sig == RawSystemTable::SIGNATURE {
+            size_of::<RawSystemTable>()
+        } else if sig == RawRuntimeServices::SIGNATURE {
+            size_of::<RawRuntimeServices>()
+        } else if sig == RawBootServices::SIGNATURE {
+            size_of::<RawBootServices>()
+        } else {
+            return EfiStatus::INVALID_PARAMETER.into();
+        };
+
+        // Make sure size is enough
+        if len < expected_size {
             return EfiStatus::INVALID_PARAMETER.into();
         }
 
