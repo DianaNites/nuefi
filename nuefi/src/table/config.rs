@@ -82,6 +82,38 @@ impl<'tbl> GenericConfig<'tbl> {
             Some(DeviceTree::NAME)
         } else if guid == MemoryAttributes::GUID {
             Some(MemoryAttributes::NAME)
+        } else if guid == ConformanceProfile::GUID {
+            Some(ConformanceProfile::NAME)
+        } else if guid == DebugImageInfo::GUID {
+            Some(DebugImageInfo::NAME)
+        } else if guid == ImageExecInfo::GUID {
+            Some(ImageExecInfo::NAME)
+        } else if guid == SystemResource::GUID {
+            Some(SystemResource::NAME)
+        } else if guid == MemoryRangeCapsule::GUID {
+            Some(MemoryRangeCapsule::NAME)
+        } else if guid == UserInformation::GUID {
+            Some(UserInformation::NAME)
+        } else if guid == HIIDatabaseExport::GUID {
+            Some(HIIDatabaseExport::NAME)
+        } else if guid == EfiProperties::GUID {
+            Some(EfiProperties::NAME)
+        } else if guid == TianoCompress::GUID {
+            Some(TianoCompress::NAME)
+        } else if guid == LZMACompress::GUID {
+            Some(LZMACompress::NAME)
+        } else if guid == BrotliCompress::GUID {
+            Some(BrotliCompress::NAME)
+        } else if guid == LZMAf86Compress::GUID {
+            Some(LZMAf86Compress::NAME)
+        } else if guid == DXEServices::GUID {
+            Some(DXEServices::NAME)
+        } else if guid == HOBlist::GUID {
+            Some(HOBlist::NAME)
+        } else if guid == MemoryTypeInfo::GUID {
+            Some(MemoryTypeInfo::NAME)
+        } else if guid == MemoryStatus::GUID {
+            Some(MemoryStatus::NAME)
         } else {
             None
         }
@@ -147,12 +179,10 @@ pub struct MPS {
 
 /// Table for ACPI 2.0 and newer
 #[GUID("EB66918A-7EEF-402A-842E-931D21C38AE9", crate("crate"))]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct RuntimeProperties {
-    version: u16,
-    len: u16,
-    supported: u32,
+    table: *mut u8,
 }
 
 /// Table for JSON Config Data
@@ -216,6 +246,123 @@ pub struct ConformanceProfile<'tbl> {
     phantom: PhantomData<&'tbl ()>,
 }
 
+#[GUID("49152E77-1ADA-4764-B7A2-7AFEFED95E8B", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct DebugImageInfo {
+    table: *mut u8,
+}
+
+#[GUID("D719B2CB-3D3A-4596-A3BC-DAD00E67656F", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct ImageExecInfo {
+    table: *mut u8,
+}
+
+#[GUID("B122A263-3661-4F68-9929-78F8B0D62180", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct SystemResource {
+    table: *mut u8,
+}
+
+#[GUID("0DE9F0EC-88B6-428F-977A-258F1D0E5E72", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct MemoryRangeCapsule {
+    table: *mut u8,
+}
+
+#[GUID("6FD5B00C-D426-4283-9887-6CF5CF1CB1FE", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct UserInformation {
+    table: *mut u8,
+}
+
+#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct HIIDatabaseExport {
+    table: *mut u8,
+}
+
+/// Deprecated Legacy EFI Properties
+#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct EfiProperties {
+    table: *mut u8,
+}
+
+pub mod vendor {
+    pub mod edk2 {
+        use crate::GUID;
+
+        #[GUID("A31280AD-481E-41B6-95E8-127F4C984779", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct TianoCompress {
+            table: *mut u8,
+        }
+
+        #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct LZMACompress {
+            table: *mut u8,
+        }
+
+        #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct BrotliCompress {
+            table: *mut u8,
+        }
+
+        #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct LZMAf86Compress {
+            table: *mut u8,
+        }
+    }
+}
+use vendor::edk2::*;
+
+// Defined in the UEFI Platform Init spec Volume 2 Appendix B
+#[GUID("05AD34BA-6F02-4214-952E-4DA0398E2BB9", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct DXEServices {
+    table: *mut u8,
+}
+
+// Defined in the UEFI Platform Init spec Volume 2 Appendix B
+#[GUID("7739F24C-93D7-11D4-9A3A-0090273FC14D", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct HOBlist {
+    table: *mut u8,
+}
+
+// <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L211-L213>
+#[GUID("4C19049F-4137-4DD3-9C10-8B97A83FFDFA", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct MemoryTypeInfo {
+    table: *mut u8,
+}
+
+// <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L259-L261>
+#[GUID("060CC026-4C0D-4DDA-8F41-595FEF00A502", crate("crate"))]
+#[derive(Debug)]
+#[repr(C)]
+pub struct MemoryStatus {
+    table: *mut u8,
+}
+
 impl ConfigTable for AcpiTable10 {
     type Out<'tbl> = Self;
 
@@ -260,7 +407,9 @@ impl ConfigTable for RuntimeProperties {
     type Out<'tbl> = Self;
 
     unsafe fn from_raw<'tbl>(raw: *const u8) -> Self::Out<'tbl> {
-        *raw.cast::<RuntimeProperties>()
+        Self {
+            table: raw.cast_mut(),
+        }
     }
 }
 
@@ -314,6 +463,7 @@ impl ConfigTable for MemoryAttributes {
     }
 }
 
+#[cfg(no)]
 impl<'tbl> ConfigTable for ConformanceProfile<'tbl> {
     type Out<'tbl2> = ConformanceProfile<'tbl2> where Self: 'tbl2;
 
