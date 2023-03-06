@@ -815,6 +815,7 @@ impl SystemTable<Boot> {
     pub fn config_tables(&self) -> impl Iterator<Item = config::GenericConfig<'_>> + '_ {
         let data = self.table().configuration_table;
         let len = self.table().number_of_table_entries;
+        assert!(!data.is_null(), "UEFI Configuration table pointer was null");
 
         // Safety: The pointer is valid for this many elements according
         // to the UEFI spec
