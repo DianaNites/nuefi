@@ -32,13 +32,6 @@ pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 #[repr(transparent)]
 pub struct Revision(pub u32);
 
-impl PartialEq<(u32, u32)> for Revision {
-    #[inline]
-    fn eq(&self, other: &(u32, u32)) -> bool {
-        (self.major(), self.minor()).eq(other)
-    }
-}
-
 impl Revision {
     /// Create a new revision for `major.minor`
     pub const fn new(major: u16, minor: u16) -> Self {
@@ -53,6 +46,13 @@ impl Revision {
     /// The minor part of the revision
     pub const fn minor(self) -> u32 {
         self.0 as u16 as u32
+    }
+}
+
+impl PartialEq<(u32, u32)> for Revision {
+    #[inline]
+    fn eq(&self, other: &(u32, u32)) -> bool {
+        (self.major(), self.minor()).eq(other)
     }
 }
 
