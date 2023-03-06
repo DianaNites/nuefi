@@ -30,7 +30,7 @@ pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 /// The lower 16 bits are the minor version
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
-pub struct Revision(u32);
+pub struct Revision(pub u32);
 
 impl PartialEq<(u32, u32)> for Revision {
     #[inline]
