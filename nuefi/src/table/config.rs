@@ -16,7 +16,7 @@ mod imp {
     impl Sealed for JsonCapsuleResult {}
     impl Sealed for DeviceTree {}
     impl Sealed for MemoryAttributes {}
-    impl<'tbl> Sealed for ConformanceProfile<'tbl> {}
+    impl Sealed for ConformanceProfile {}
 }
 
 pub trait ConfigTable<'tbl>: Entity + imp::Sealed {
@@ -240,12 +240,9 @@ pub struct RawConformanceProfile {
 #[GUID("36122546-F7E7-4C8F-BD9B-EB8525B50C0B", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
-pub struct ConformanceProfile<'tbl> {
+pub struct ConformanceProfile {
     ver: u16,
     profiles: Vec<Guid>,
-
-    /// Lifetime of the SystemTable
-    phantom: PhantomData<&'tbl ()>,
 }
 
 #[GUID("49152E77-1ADA-4764-B7A2-7AFEFED95E8B", crate("crate"))]
@@ -475,17 +472,22 @@ impl<'tbl> ConfigTable<'tbl> for MemoryAttributes {
     }
 }
 
-#[cfg(no)]
-impl<'tbl> ConfigTable for ConformanceProfile<'tbl> {
-    type Out<'cfg> = ConformanceProfile<'cfg> where Self: 'cfg;
+// #[cfg(no)]
+impl<'tbl> ConfigTable<'tbl> for ConformanceProfile {
+    type Out<'cfg> = Self  where
+    'tbl: 'cfg;
 
-    unsafe fn from_raw<'tbl3>(raw: *const u8) -> Self::Out<'tbl3> {
-        let raw = &*raw.cast::<RawConformanceProfile>();
-        let profiles = from_raw_parts(raw.profiles.cast::<Guid>(), raw.size).to_vec();
+    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+        // let raw = &*raw.cast::<RawConformanceProfile>();
+        // let profiles = from_raw_parts(raw.profiles.cast::<Guid>(),
+        // raw.size.into()).to_vec();
         ConformanceProfile {
-            ver: raw.ver,
-            profiles,
-            phantom: PhantomData,
+            ver: todo!(),
+            profiles: todo!(),
+            // inner: unsafe { &*raw },
+            // ver: raw.ver,
+            // profiles,
+            // phantom: PhantomData,
         }
     }
 }

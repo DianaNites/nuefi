@@ -826,7 +826,10 @@ impl SystemTable<Boot> {
     }
 
     /// Get the configuration table specified by `T`, or [`None`]
-    pub fn config_table<'tbl, T: config::ConfigTable<'tbl>>(&'tbl self) -> Option<T::Out<'tbl>> {
+    pub fn config_table<'tbl, T: config::ConfigTable<'tbl>>(&'tbl self) -> Option<T::Out<'tbl>>
+    where
+        Self: 'tbl,
+    {
         self.config_tables()
             .find(|t| t.guid() == T::GUID)
             .and_then(|t| t.as_table::<T>())
