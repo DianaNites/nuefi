@@ -269,6 +269,23 @@ pub struct RawSystemTable {
 impl RawSystemTable {
     pub const SIGNATURE: u64 = 0x5453595320494249;
 
+    pub const REVISION: Revision = Self::REVISION_2_100;
+    pub const REVISION_2_100: Revision = Revision::new(2, 100);
+    pub const REVISION_2_90: Revision = Revision::new(2, 90);
+    pub const REVISION_2_80: Revision = Revision::new(2, 80);
+    pub const REVISION_2_70: Revision = Revision::new(2, 70);
+    pub const REVISION_2_60: Revision = Revision::new(2, 60);
+    pub const REVISION_2_50: Revision = Revision::new(2, 50);
+    pub const REVISION_2_40: Revision = Revision::new(2, 40);
+    pub const REVISION_2_31: Revision = Revision::new(2, 31);
+    pub const REVISION_2_30: Revision = Revision::new(2, 30);
+    pub const REVISION_2_20: Revision = Revision::new(2, 20);
+    pub const REVISION_2_00: Revision = Revision::new(2, 00);
+    pub const REVISION_1_10: Revision = Revision::new(1, 10);
+    pub const REVISION_1_02: Revision = Revision::new(1, 2);
+
+    pub const SPECIFICATION: Revision = Self::REVISION;
+
     /// Validate the table
     ///
     ///
