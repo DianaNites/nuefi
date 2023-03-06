@@ -154,12 +154,10 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         ) -> error::Result<()>;
         static __INTERNAL_NUEFI_YOU_MUST_USE_MACRO: Option<bool>;
     }
+
+    // Miri cannot yet read extern statics like ours
     #[cfg(miri)]
-    let (ext,) = {
-        (
-            Some(false), //
-        )
-    };
+    let (ext,) = { (Some(false),) };
 
     #[cfg(not(miri))]
     // Safety: Unsure how it can be unsafe tbh.
