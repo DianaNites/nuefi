@@ -144,6 +144,13 @@ pub struct AcpiTable20 {
     table: *mut u8,
 }
 
+impl AcpiTable20 {
+    #[inline]
+    pub fn table(&self) -> *mut u8 {
+        self.table
+    }
+}
+
 /// Table for ACPI 1.0
 #[GUID("EB9D2D30-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
 #[derive(Debug)]
