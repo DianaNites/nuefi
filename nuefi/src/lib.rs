@@ -204,7 +204,7 @@ pub mod handlers;
 mod tests {
     #![allow(unreachable_code, unused_mut)]
     use alloc::{boxed::Box, vec::Vec};
-    use core::mem::forget;
+    use core::mem::{forget, size_of};
 
     use mock::{mock, MOCK_VENDOR};
 
@@ -213,6 +213,7 @@ mod tests {
         entry,
         error::Result,
         proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
+        table::raw::{Header, CRC},
     };
 
     mod mock {
@@ -476,6 +477,31 @@ mod tests {
             // info!("{ret:?}");
 
             if !ret.is_success() {
+                panic!("{:#?}", ret);
+            }
+
+            let mut evil = Header {
+                signature: RawSystemTable::SIGNATURE,
+                revision: RawSystemTable::REVISION,
+                size: 24,
+                crc32: 0,
+                reserved: 0,
+            };
+
+            let mut digest = CRC.digest();
+
+            digest.update(&evil.signature.to_ne_bytes());
+            digest.update(&evil.revision.0.to_ne_bytes());
+            digest.update(&evil.size.to_ne_bytes());
+            digest.update(&0u32.to_ne_bytes());
+            digest.update(&evil.reserved.to_ne_bytes());
+            evil.crc32 = digest.finalize();
+
+            let st = (&mut evil) as *mut _ as *mut _;
+
+            let ret = efi_main(IMAGE, st);
+
+            if !ret.is_error() {
                 panic!("{:#?}", ret);
             }
 
