@@ -278,7 +278,7 @@ impl RawSystemTable {
     /// - `this` must contain a valid [`RawSystemTable`]
     ///
     /// See [`Header::validate`] for details
-    pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
+    pub unsafe fn validate(this: *mut Self) -> Result<()> {
         // Safety: Validating ourself, callers responsibility
         Header::validate(this as *const u8, Self::SIGNATURE)?;
 
