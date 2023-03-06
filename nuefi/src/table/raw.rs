@@ -56,16 +56,43 @@ impl Revision {
     }
 }
 
+/// The common header of the 3 UEFI tables, System, Boot, and Runtime.
+///
+/// This structure precedes the UEFI defined tables. UEFI tables are dynamically
+/// sized, but we only need to care about the fields defined here.
+///
+/// # Safety
+///
+/// While the header is always the same size, the tables are `size` bytes in
+/// memory and it is important this size be used when copying or validating
+/// memory.
+///
+/// As such, these headers and tables, when used from UEFI, *must* only be
+/// used via pointers or references.
+///
+/// It is assumed that memory is valid for all of `size`, and is a single
+/// "object" in memory. We trust that this is the case from firmware
+/// within [`Header::validate`].
+///
+/// There is no guarantee the static definitions do not contain
+/// padding which must still be initialized from the Rust side if used in, say,
+/// mocking. [`RawSystemTable`] is an example of this.
+///
+/// If you are using this structure manually, be sure to take note of
+/// this. You will need to make sure your entire memory allocation is zeroed.
+///
+/// See <https://github.com/rust-lang/unsafe-code-guidelines/issues/395>
+/// for some more details on the rules around padding in Rust.
 #[derive(Debug)]
 #[repr(C)]
 pub struct Header {
     /// Unique signature identifying the table
     pub signature: u64,
 
-    /// UEFI Revision
+    /// The UEFI specification revision which this table claims conformance to
     pub revision: Revision,
 
-    /// Size of the entire table, including this header
+    /// Size of the entire table, including this header (24)
     pub size: u32,
 
     /// 32-bit CRC for the table.
@@ -79,55 +106,69 @@ pub struct Header {
 }
 
 impl Header {
-    /// Validate the header
+    /// Validate the header for a table with signature `sig`
+    ///
+    /// This does some basic sanity checks on the UEFI system table,
+    /// to ensure this is in fact a proper SystemTable.
+    ///
+    /// Specifically, it will, in order:
+    ///
+    /// - Verify that `table` is not null
+    /// - Verify the Signature matches `sig`
+    /// - Verify that `size` is at least [`size_of::<Header>`] because we're
+    ///   paranoid
+    /// - Ensure the UEFI major revision is 2, EFI 1.x is not supported, and a
+    ///   hypothetical UEFI 3.x is not
+    /// - Verify the CRC over `HeaderSize` bytes
     ///
     /// # Safety
     ///
-    /// - Must be called with a valid pointed to a UEFI table
-    /// - `table` is implicitly trusted as valid/sensible where it is not
-    ///   possible to verify.
-    ///     - Broken/buggy UEFI implementations will be able to cause the
-    ///       following UB:
-    ///         - Uninitialized padding readings from system tables
-    ///         - Arbitrary pointer reads
-    ///             - Through `table`, `boot_services`, and `runtime_services`.
-    ///             - The size reported in the headers is blindly trusted and we
-    ///               will try to read and crc that many bytes.
-    unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
-        assert!(!table.is_null(), "Table Header ({sig:#X}) was null");
+    /// - `table` must be valid for at least [`size_of::<Header>`] bytes
+    /// - `table` must contain a valid [`Header`]
+    /// - `table` must be valid for [`Header::size`] bytes
+    pub unsafe fn validate(table: *const u8, sig: u64) -> Result<()> {
+        if table.is_null() {
+            return EfiStatus::INVALID_PARAMETER.into();
+        }
 
-        // Safety: `table` is non-null and trusted by firmware
+        // Safety:
+        // - `table` is not null
+        // - valid UEFI tables contain a `Header`
+        // - Callers responsibility
         let header = &*(table as *const Self);
+        let len = header.size as usize;
+
+        if header.signature != sig || len < size_of::<Header>() {
+            return EfiStatus::INVALID_PARAMETER.into();
+        }
+
+        if header.revision.major() != 2 {
+            return EfiStatus::INCOMPATIBLE_VERSION.into();
+        }
+
         let expected = header.crc32;
-        let len = header.size;
+
         // Calculate the CRC
         let mut digest = CRC.digest();
+        // Native endian because these aren't arrays, we're just viewing them as such
         digest.update(&header.signature.to_ne_bytes());
         digest.update(&header.revision.0.to_ne_bytes());
         digest.update(&header.size.to_ne_bytes());
         digest.update(&0u32.to_ne_bytes());
         digest.update(&header.reserved.to_ne_bytes());
 
-        // Safety: `table` is subject to caller.
-        // Slice lifetime is limited.
-        //
-        // In miri, this relies on all our table definitions having
-        // defined padding fields, or else we get UB with uninit padding.
-        // Whether this is or can be a problem in practice, I dont know.
-        //
-        // The problem is the CRC is defined over `header.size` bytes,
-        // in memory, where in memory and the (current) size is a UEFI Table structure,
-        // but some of these structures have padding between fields.
-        // Can this be uninit? Do we have to worry?
-        // Can it be UB/cause bugs/exploits in our library if firmware gives
-        // out a pointer to such a struct?
-        //
-        // TODO: Should we validate padding as zero, denying it as UB/broken otherwise,
-        // or silently accept it if the CRC validates?
+        // Safety:
+        // - `table` is subject to caller and earlier validation checks
+        // - See [`Header`]
         unsafe {
-            let len = (header.size as usize).saturating_sub(size_of::<Header>());
+            let rem = len
+                .checked_sub(size_of::<Header>())
+                .ok_or(EfiStatus::INVALID_PARAMETER)?;
+            // This is always in bounds or 1 past the end because
+            // we check the size after the signature
+            // `rem` will be valid or the function returned
             let ptr = table.add(size_of::<Header>());
-            let bytes = core::slice::from_raw_parts(ptr, len);
+            let bytes = core::slice::from_raw_parts(ptr, rem);
 
             // Calculate the remaining table, header digested above.
             digest.update(bytes);
@@ -135,12 +176,6 @@ impl Header {
 
         if expected != digest.finalize() {
             return EfiStatus::CRC_ERROR.into();
-        }
-        if !(header.revision.major() == 2 && header.revision.minor() >= 70) {
-            return EfiStatus::UNSUPPORTED.into();
-        }
-        if header.signature != sig {
-            return EfiStatus::INVALID_PARAMETER.into();
         }
         Ok(())
     }
@@ -156,7 +191,18 @@ pub struct RawConfigurationTable {
 
 /// The EFI system table.
 ///
-/// After a call to ExitBootServices, some parts of this may become invalid.
+/// After a call to [`ExitBootServices`], only the following fields are valid:
+///
+/// - [`RawSystemTable::header`]
+/// - [`RawSystemTable::firmware_vendor`]
+/// - [`RawSystemTable::firmware_revision`]
+/// - [`RawSystemTable::runtime_services`]
+/// - [`RawSystemTable::number_of_table_entries`]
+/// - [`RawSystemTable::configuration_table`]
+///
+/// The other fields will be set to null by firmware according to UEFI 7.4.6
+// Only valid on x86_64 for now, for safety
+#[cfg(target_arch = "x86_64")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct RawSystemTable {
@@ -176,7 +222,17 @@ pub struct RawSystemTable {
     /// Padding inherent in the layout.
     /// We rely on initialized data here for safety.
     ///
-    /// This padding is only? on 64-bit because `EfiHandle` is a a pointer
+    /// See [`Header`]
+    ///
+    /// FIXME: Figure out what padding is like on 32-bit, if any
+    ///
+    /// FIXME: Figure out if its actually 100% ABI equivalent to add this
+    /// I initially considered removing this and having a utility function that
+    /// returns `Self` in a `Box`, but then I remembered: COMPOSING!
+    /// This wouldn't compose well at all.
+    ///
+    /// The safety of this is justified under assuming C zeros it
+    /// and this is ABI equiv, or we created it and zeroed it.
     pub _pad1: [u8; 4],
 
     /// Console input handle
@@ -215,19 +271,20 @@ impl RawSystemTable {
 
     /// Validate the table
     ///
-    /// Validation fails if CRC validation fails, or the UEFI revision is
-    /// unsupported
     ///
     /// # Safety
     ///
-    /// - Must be a valid pointer
-    /// - Must only be called before running user code.
+    /// - `this` must be valid for [`size_of::<RawSystemTable>`] bytes
+    /// - `this` must contain a valid [`RawSystemTable`]
+    ///
+    /// See [`Header::validate`] for details
     pub(crate) unsafe fn validate(this: *mut Self) -> Result<()> {
-        // Safety: Pointer to first C struct member
+        // Safety: Validating ourself, callers responsibility
         Header::validate(this as *const u8, Self::SIGNATURE)?;
 
         let header = &(*this);
 
+        // Safety: Callers responsibility
         Header::validate(
             header.boot_services as *const u8,
             RawBootServices::SIGNATURE,

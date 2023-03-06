@@ -701,7 +701,8 @@ impl<T> SystemTable<T> {
     ///
     /// # Safety
     ///
-    /// - Must be valid non-null pointer
+    /// - `this` must be a valid `RawSystemTable`
+    /// - `this` must have been validated [`RawSystemTable::validate`]
     pub(crate) unsafe fn new(this: *mut RawSystemTable) -> Self {
         Self {
             table: this,
@@ -711,11 +712,9 @@ impl<T> SystemTable<T> {
 
     fn table(&self) -> &RawSystemTable {
         // Safety:
-        // - Never null
-        // - Pointer will always be valid in the `Boot` state
-        // In the `Runtime` state it becomes the users responsibility?
-        // Or out of scope since it depends on CPU execution environment?
-        // Specifics figured out later
+        // - `Self::new` verifies this pointer is valid
+        // - The system table is always valid unless we remap it
+        // - Remapping is not currently implemented, so it cannot safely be done.
         unsafe { &*self.table }
     }
 }

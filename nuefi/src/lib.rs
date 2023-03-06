@@ -174,17 +174,24 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         return EfiStatus::INVALID_PARAMETER;
     }
 
-    // SAFETY: Pointer is valid from firmware
+    // Safety:
+    // - Assured pointer wasn't null above
+    // - Firmware assures us this is a fully valid system table
     let valid = unsafe { RawSystemTable::validate(system_table) };
     if let Err(e) = valid {
         return e.status();
     }
+
+    // Store a copy of the pointer to the image handle and system table
     HANDLE.store(image.0, Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
-    // Safety: Main must exist or won't link.
-    // Signature is verified by `__INTERNAL_NUEFI_YOU_MUST_USE_MACRO` above
+
+    // Safety:
+    // - Must exist or won't link
+    // - Signature was verified by proc macro based on the existence of
+    //   `__INTERNAL_NUEFI_YOU_MUST_USE_MACRO`
     //
-    // `system_table` is non-null, we trust it from firmware.
+    // - `system_table` was validated earlier
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
     match ret {
         Ok(()) => EfiStatus::SUCCESS,
