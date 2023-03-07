@@ -736,22 +736,6 @@ impl SystemTable<Internal> {
             None
         }
     }
-
-    /// Get the SystemTable if not in boot mode.
-    ///
-    /// This is useful for the logging, panic, and alloc error handlers
-    ///
-    /// If ExitBootServices has NOT been called,
-    /// return [`SystemTable<Runtime>`], otherwise [`None`]
-    pub(crate) fn _as_runtime(&self) -> Option<SystemTable<Boot>> {
-        if !self.table().boot_services.is_null() {
-            // Safety:
-            // - Above check verifies ExitBootServices has not been called.
-            Some(unsafe { SystemTable::new(self.table) })
-        } else {
-            None
-        }
-    }
 }
 
 /// Available during Boot Services
