@@ -83,6 +83,8 @@ impl PartialEq<(u32, u32)> for Revision {
 ///
 /// See <https://github.com/rust-lang/unsafe-code-guidelines/issues/395>
 /// for some more details on the rules around padding in Rust.
+///
+/// Also see <https://users.rust-lang.org/t/is-it-possible-to-read-uninitialized-memory-without-invoking-ub/63092/17>
 #[derive(Debug)]
 #[repr(C)]
 pub struct Header {
@@ -383,10 +385,9 @@ pub type InstallConfigurationTable = unsafe extern "efiapi" fn(
     table: *mut u8,
 ) -> EfiStatus;
 
+/// The UEFI Boot Services Table
+///
 /// Raw structure of the UEFI Boot Services table
-/// NOTE: It is important for safety that all fields be nullable.
-/// In particular, this means fn pointers MUST be wrapped in [`Option`].
-// #[derive(Debug)]
 #[repr(C)]
 pub struct RawBootServices {
     /// Table header
