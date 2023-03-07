@@ -650,8 +650,8 @@ impl<'table> BootServices<'table> {
 impl<'table> BootServices<'table> {}
 
 interface!(
-    // /// The UEFI Runtime Services
-    // RuntimeServices(RawRuntimeServices),
+    /// The UEFI Runtime Services
+    RuntimeServices(RawRuntimeServices),
 );
 
 /// Type marker for [`SystemTable`] representing before ExitBootServices is
@@ -679,6 +679,41 @@ pub(crate) struct Internal;
 // Existing RuntimeServices and pointers might become invalid though?
 //
 // Defining lifetimes this way should be fine either way though
+//
+// --
+//
+// The idea around the design and safety of this structure is that
+// the only safe way to obtain an instance of this structure is get it from
+// your entry point, after its been validated by our entry point.
+//
+// Ownership of this value represents access to the table resource,
+// and lifetimes are derived from the lifetime of this owned value passed to.
+// The SystemTable is mutable and can potentially be changed between uses,
+// so no long term references are created to it.
+//
+// Instead, this is a wrapper around the *pointer* to Table, and performs
+// all access anew on-demand. Note that this pointer is a physical pointer, not
+// virtual.
+//
+// This table is notably modified by firmware when ExitBootServices is called,
+// some fields become invalid, and all memory not of type
+// [`MemoryType::RUNTIME_*`] is deallocated.
+// The [`BootServices`] table, and all protocols, become invalid.
+//
+// The system table is still valid after this call, and we now own all memory.
+//
+// The lifetime of this table is technically valid for the rest of the life of
+// the system, all the way until shutdown, with the above caveats, though its
+// pointer is not stable.
+//
+// We use type states and lifetimes derived from ownership of this value to
+// attempt to encode this logic.
+//
+// In the [`Boot`] state, it is valid to use [`BootServices`] and
+// [`RuntimeServices`] at the same time.
+//
+// In the [`Runtime`] state, it is only valid to use [`RuntimeServices`] and
+// the fields specified by [`RawSystemTable`]
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct SystemTable<State> {
@@ -795,6 +830,8 @@ impl SystemTable<Boot> {
     }
 
     /// Iterator over UEFI Configuration tables
+    ///
+    /// See [`config`] and [`config::GenericConfig`] for details
     pub fn config_tables(&self) -> impl Iterator<Item = config::GenericConfig<'_>> + '_ {
         let data = self.table().configuration_table;
         let len = self.table().number_of_table_entries;
@@ -809,6 +846,8 @@ impl SystemTable<Boot> {
     }
 
     /// Get the configuration table specified by `T`, or [`None`]
+    ///
+    /// See [`config`] and [`config::ConfigTable`] for details
     pub fn config_table<'tbl, T: config::ConfigTable<'tbl>>(&'tbl self) -> Option<T::Out<'tbl>>
     where
         Self: 'tbl,

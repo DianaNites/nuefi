@@ -1,3 +1,13 @@
+//! UEFI Configuration Tables
+//!
+//! UEFI Configuration tables are entries in an array within the
+//! [`crate::SystemTable`].
+//!
+//! They are completely arbitrary data, identified by and whose type is
+//! determined by a [`Guid`].
+//!
+//! Several standard and vendor-specific tables are defined and known about
+//! here. Unknown tables can be used through [`GenericConfig`]
 use super::*;
 use crate::{proto::Entity, GUID};
 
@@ -19,7 +29,60 @@ mod imp {
     impl Sealed for ConformanceProfile {}
 }
 
+pub mod vendor {
+    //! Vendor Specific Configuration tables
+
+    pub mod edk2 {
+        //! Configuration tables specific to the common TianoCore EDK2 UEFI
+        //! Implementation.
+        use crate::GUID;
+
+        #[GUID("A31280AD-481E-41B6-95E8-127F4C984779", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct TianoCompress {
+            table: *mut u8,
+        }
+
+        #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct LZMACompress {
+            table: *mut u8,
+        }
+
+        #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct BrotliCompress {
+            table: *mut u8,
+        }
+
+        #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889", crate("crate"))]
+        #[derive(Debug)]
+        #[repr(C)]
+        pub struct LZMAf86Compress {
+            table: *mut u8,
+        }
+    }
+}
+use vendor::edk2::*;
+
+/// Identifies a UEFI Configuration Table
+///
+/// Specifically, this is a sealed trait that identifies a table definition
+/// we statically *trust*. This has safety implications, an incorrect GUID
+/// can result in type confusion and thus unsoundness.
+///
+/// Any type that implements this is thus guaranteed to be sound.
+///
+/// [`GenericConfig`] exposes a generic method for unsafely handling arbitrary
+/// configuration tables if you need this.
+// `'tbl` represents the lifetime of the [`SystemTable`]
 pub trait ConfigTable<'tbl>: Entity + imp::Sealed {
+    /// The lifetime `'cfg` represents the configuration table
+    ///
+    /// FIXME: I dont really get this honestly.
     type Out<'cfg>
     where
         'tbl: 'cfg;
@@ -30,12 +93,13 @@ pub trait ConfigTable<'tbl>: Entity + imp::Sealed {
     unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl>;
 }
 
+/// A generic UEFI configuration table, identified by a [`Guid`]
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct GenericConfig<'tbl> {
     config: RawConfigurationTable,
 
-    /// Lifetime of the `SystemTable`. All our data is valid for this long.
+    /// Lifetime of the [`SystemTable`]. All our data is valid for this long.
     phantom: core::marker::PhantomData<&'tbl mut ()>,
 }
 
@@ -57,8 +121,10 @@ impl<'tbl> GenericConfig<'tbl> {
         self.config.table
     }
 
-    /// Name of this protocol, if known
+    /// Name of this table, if known
     pub fn name(&self) -> Option<&'static str> {
+        // NOTE: Manually keep up to date.
+        // TODO: Find better way?
         let guid = self.guid();
         if guid == AcpiTable20::GUID {
             Some(AcpiTable20::NAME)
@@ -121,9 +187,11 @@ impl<'tbl> GenericConfig<'tbl> {
         }
     }
 
-    /// If this generic table is `T`, then return
+    /// If this generic table is [`ConfigTable`] `T`,
+    /// then return its typed value.
+    /// See the specific table for details
     // This lives as long as `'tbl`, which can only come from
-    // the `SystemTable::config_tables`.
+    // the [`SystemTable::config_tables`].
     pub fn as_table<T: ConfigTable<'tbl>>(&self) -> Option<T::Out<'tbl>> {
         if self.guid() == T::GUID {
             let raw = self.as_ptr();
@@ -146,7 +214,7 @@ pub struct AcpiTable20 {
 
 impl AcpiTable20 {
     #[inline]
-    pub fn table(&self) -> *mut u8 {
+    pub const fn table(&self) -> *mut u8 {
         self.table
     }
 }
@@ -301,41 +369,6 @@ pub struct HIIDatabaseExport {
 pub struct EfiProperties {
     table: *mut u8,
 }
-
-pub mod vendor {
-    pub mod edk2 {
-        use crate::GUID;
-
-        #[GUID("A31280AD-481E-41B6-95E8-127F4C984779", crate("crate"))]
-        #[derive(Debug)]
-        #[repr(C)]
-        pub struct TianoCompress {
-            table: *mut u8,
-        }
-
-        #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF", crate("crate"))]
-        #[derive(Debug)]
-        #[repr(C)]
-        pub struct LZMACompress {
-            table: *mut u8,
-        }
-
-        #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB", crate("crate"))]
-        #[derive(Debug)]
-        #[repr(C)]
-        pub struct BrotliCompress {
-            table: *mut u8,
-        }
-
-        #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889", crate("crate"))]
-        #[derive(Debug)]
-        #[repr(C)]
-        pub struct LZMAf86Compress {
-            table: *mut u8,
-        }
-    }
-}
-use vendor::edk2::*;
 
 // Defined in the UEFI Platform Init spec Volume 2 Appendix B
 #[GUID("05AD34BA-6F02-4214-952E-4DA0398E2BB9", crate("crate"))]

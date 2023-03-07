@@ -31,6 +31,18 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! # Environment
+//!
+//! UEFI on x86_64 is Uniprocessor, 64-bit, with 1:1 paging according to
+//! the memory map, and no interrupts except for one timer.
+//!
+//! Note that it is legal for the user to, unsafely, change paging,
+//! per [the spec][alt_page].
+//! The application is required to restore the expected paging before using any
+//! UEFI services, though.
+//!
+//! [alt_page]: <https://uefi.org/specs/UEFI/2.10/02_Overview.html#enabling-paging-or-alternate-translations-in-an-application>
 #![allow(
     unused_imports,
     unused_variables,
