@@ -145,6 +145,8 @@ fn get_image_handle() -> Option<EfiHandle> {
 ///
 /// # fn main() {}
 /// ```
+// # Safety: UEFI Guarantees these are valid, and is the only one capable of doing so
+// This is *the* UEFI entry point, and the only supported way to use this library.
 #[no_mangle]
 extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> EfiStatus {
     extern "Rust" {
