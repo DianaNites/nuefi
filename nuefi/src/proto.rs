@@ -56,9 +56,6 @@ pub mod media;
 pub mod platform_init;
 pub mod vendor;
 
-#[allow(dead_code)]
-type Void = *mut [u8; 0];
-
 pub type Str16 = *const u16;
 
 /// Defines a UEFI Protocol
