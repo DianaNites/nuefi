@@ -115,7 +115,7 @@ pub(crate) fn parse_guid(
                 let lol = format!("{:?}", guid.to_bytes_me());
                 if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
                     quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
-                        #krate::nuefi_core::proto::Guid::from_bytes(#lol)
+                        #krate::nuefi_core::base::Guid::from_bytes(#lol)
                     };}
                 } else {
                     quote! {
