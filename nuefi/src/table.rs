@@ -181,7 +181,7 @@ impl<'table> BootServices<'table> {
     /// This will exclusively open the protocol.
     /// See [`BootServices::open_protocol`] for caveats.
     ///
-    /// If no protocol is found, [`None`] is returned.
+    /// If the protocol is unsupported, [`None`] is returned.
     pub fn get_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
     ) -> Result<Option<Scope<'boot, Protocol>>> {
@@ -236,6 +236,8 @@ impl<'table> BootServices<'table> {
 
     /// Exclusively open a protocol on `handle` if it exists,
     /// returning a [`Scope`] over the requested protocol.
+    ///
+    /// If the protocol is unsupported, [`None`] is returned.
     ///
     /// The [`Scope`] ensues the Protocol is closed whe it goes out of scope.
     ///
