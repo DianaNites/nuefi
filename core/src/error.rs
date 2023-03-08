@@ -13,6 +13,7 @@
 pub type Result<T> = core::result::Result<T, UefiError>;
 // FIXME: Remove this
 pub use crate::base::Status as EfiStatus;
+use crate::base::Status;
 
 /// Represents a UEFI [`Status`][st]
 ///
@@ -20,7 +21,7 @@ pub use crate::base::Status as EfiStatus;
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct UefiError {
-    inner: EfiStatus,
+    inner: Status,
 }
 
 impl UefiError {
@@ -28,9 +29,9 @@ impl UefiError {
     ///
     /// # Panics
     ///
-    /// - If `inner` is [`EfiStatus::SUCCESS`]
+    /// - If `inner` is [`Status::SUCCESS`]
     #[inline]
-    pub const fn new(inner: EfiStatus) -> Self {
+    pub const fn new(inner: Status) -> Self {
         assert!(
             !inner.is_success(),
             "Tried to use UefiError with a Success status code"
@@ -38,16 +39,16 @@ impl UefiError {
         Self { inner }
     }
 
-    /// The [`EfiStatus`] for this error
+    /// The [`Status`] for this error
     #[inline]
-    pub const fn status(self) -> EfiStatus {
+    pub const fn status(self) -> Status {
         self.inner
     }
 }
 
-impl From<EfiStatus> for Result<()> {
+impl From<Status> for Result<()> {
     #[inline]
-    fn from(value: EfiStatus) -> Self {
+    fn from(value: Status) -> Self {
         if value.is_success() {
             Ok(())
         } else {
@@ -56,12 +57,12 @@ impl From<EfiStatus> for Result<()> {
     }
 }
 
-/// Convert [`EfiStatus`] to [`UefiError`]
+/// Convert [`Status`] to [`UefiError`]
 ///
-/// Panics if [`EfiStatus`] is [`EfiStatus::SUCCESS`]
-impl From<EfiStatus> for UefiError {
+/// Panics if [`Status`] is [`Status::SUCCESS`]
+impl From<Status> for UefiError {
     #[inline]
-    fn from(value: EfiStatus) -> Self {
+    fn from(value: Status) -> Self {
         assert!(
             !value.is_success(),
             "Tried to construct a successful UefiError"
@@ -77,7 +78,7 @@ impl From<EfiStatus> for UefiError {
 impl From<core::fmt::Error> for UefiError {
     #[inline]
     fn from(_: core::fmt::Error) -> Self {
-        UefiError::new(EfiStatus::DEVICE_ERROR)
+        UefiError::new(Status::DEVICE_ERROR)
     }
 }
 
@@ -93,5 +94,55 @@ impl core::fmt::Debug for UefiError {
             .field("inner", &self.inner)
             .field("[Display]", &format_args!("{}", self.inner))
             .finish()
+    }
+}
+
+mod imp {
+    use super::UefiError;
+    pub trait Sealed
+    where
+        Self: Sized,
+    {
+    }
+
+    impl<T> Sealed for core::result::Result<Option<T>, UefiError> {}
+}
+
+/// Helpful trait to work with [`Result<Option<T>>`]
+///
+/// This trait is sealed
+pub trait ResultOptExt<T>: imp::Sealed {
+    /// Ensure this [`Result<Option<T>>`] is [`Ok(None)`] when
+    /// [`Status`] is `code`
+    fn match_self(self, code: Status) -> core::result::Result<Option<T>, UefiError>;
+
+    /// Ensure this [`Result<Option<T>>`] is [`Ok(None)`] when
+    /// [`Status`] is [`Status::UNSUPPORTED`]
+    #[inline]
+    fn unsupported_opt(self) -> core::result::Result<Option<T>, UefiError> {
+        self.match_self(Status::UNSUPPORTED)
+    }
+
+    /// Ensure this [`Result<Option<T>>`] is [`Ok(None)`] when
+    /// [`Status`] is [`Status::NOT_FOUND`]
+    #[inline]
+    fn not_found_opt(self) -> core::result::Result<Option<T>, UefiError> {
+        self.match_self(Status::NOT_FOUND)
+    }
+}
+
+impl<T> ResultOptExt<T> for core::result::Result<Option<T>, UefiError> {
+    #[inline]
+    fn match_self(self, code: Status) -> core::result::Result<Option<T>, UefiError> {
+        match self {
+            Ok(p) => Ok(p),
+            Err(e) => {
+                if e.status() == code {
+                    Ok(None)
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
