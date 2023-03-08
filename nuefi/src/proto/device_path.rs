@@ -8,7 +8,7 @@ use core::{
 
 use super::{Guid, Protocol, Scope};
 use crate::{
-    error::{EfiStatus, Result, UefiError},
+    error::{Result, Status},
     get_boot_table,
     mem::MemoryType,
     string::UefiString,
@@ -40,7 +40,7 @@ fn get_dev_util<'proto>(
         // referencing the DevicePath calling us.
         unsafe { Ok(transmute(util)) }
     } else {
-        Err(EfiStatus::UNSUPPORTED.into())
+        Err(Status::UNSUPPORTED.into())
     }
 }
 
@@ -59,7 +59,7 @@ fn get_dev_text<'proto>(
         // referencing the DevicePath calling us.
         unsafe { Ok(transmute(util)) }
     } else {
-        Err(EfiStatus::UNSUPPORTED.into())
+        Err(Status::UNSUPPORTED.into())
     }
 }
 
@@ -89,7 +89,7 @@ impl<'table> DevicePath<'table> {
             // The correct lifetime is `'table`
             unsafe { Ok(transmute(s)) }
         } else {
-            Err(EfiStatus::DEVICE_ERROR.into())
+            Err(Status::DEVICE_ERROR.into())
         }
     }
 
@@ -102,7 +102,7 @@ impl<'table> DevicePath<'table> {
             let s = util.convert_device_path_to_text(self)?;
             Ok(s)
         } else {
-            Err(EfiStatus::DEVICE_ERROR.into())
+            Err(Status::DEVICE_ERROR.into())
         }
     }
 
@@ -123,14 +123,14 @@ impl<'table> DevicePath<'table> {
             // The correct lifetime is `'table`
             unsafe { Ok(transmute(s)) }
         } else {
-            Err(EfiStatus::DEVICE_ERROR.into())
+            Err(Status::DEVICE_ERROR.into())
         }
     }
 
     /// Append the UEFI file path, returning the new device path
     // FIXME: These leak memory.
     pub fn append_file_path(&self, path: &str) -> Result<DevicePath<'table>> {
-        let table = get_boot_table().ok_or(EfiStatus::UNSUPPORTED)?;
+        let table = get_boot_table().ok_or(Status::UNSUPPORTED)?;
         let boot = table.boot();
         // log::trace!("Path: {path}");
 
@@ -145,9 +145,7 @@ impl<'table> DevicePath<'table> {
             .allocate_pool(MemoryType::LOADER_DATA, cap)?
             .cast::<u8>();
 
-        let path_len = path_len
-            .try_into()
-            .map_err(|_| EfiStatus::BAD_BUFFER_SIZE)?;
+        let path_len = path_len.try_into().map_err(|_| Status::BAD_BUFFER_SIZE)?;
 
         let media = RawDevicePath::media_file(path_len);
         let end = RawDevicePath::end();
@@ -210,7 +208,7 @@ impl<'table> DevicePathUtil<'table> {
             // Safety: ret is non-null
             unsafe { Ok(DevicePath::from_raw(ret)) }
         } else {
-            Err(EfiStatus::OUT_OF_RESOURCES.into())
+            Err(Status::OUT_OF_RESOURCES.into())
         }
     }
 
@@ -250,7 +248,7 @@ impl<'table> DevicePathToText<'table> {
             // Safety: `ret` is a non-null owned UEFI string
             Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
-            Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
+            Err(Status::OUT_OF_RESOURCES.into())
         }
     }
 
@@ -269,7 +267,7 @@ impl<'table> DevicePathToText<'table> {
             // Safety: `ret` is a non-null owned UEFI string
             Ok(unsafe { UefiString::from_ptr(ret) })
         } else {
-            Err(UefiError::new(EfiStatus::OUT_OF_RESOURCES))
+            Err(Status::OUT_OF_RESOURCES.into())
         }
     }
 }

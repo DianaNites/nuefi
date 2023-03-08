@@ -1,5 +1,5 @@
 use crate::{
-    error::EfiStatus,
+    nuefi_core::base::Status,
     proto::{device_path::raw::RawDevicePath, Guid, Time},
 };
 
@@ -9,7 +9,7 @@ pub type LoadFile2Fn = unsafe extern "efiapi" fn(
     boot: bool,
     buf_size: *mut usize,
     buf: *mut u8,
-) -> EfiStatus;
+) -> Status;
 
 /// UEFI LoadFile2 protocol
 #[repr(C)]
@@ -30,7 +30,7 @@ pub type OpenVolume = unsafe extern "efiapi" fn(
     //
     this: *mut RawSimpleFileSystem,
     root: *mut *mut RawFsHandle,
-) -> EfiStatus;
+) -> Status;
 
 /// UEFI Simple File System protocol
 #[repr(C)]
@@ -50,42 +50,42 @@ pub type Open = unsafe extern "efiapi" fn(
     name: *const u16,
     mode: u64,
     attributes: u64,
-) -> EfiStatus;
+) -> Status;
 
 pub type GetInfo = unsafe extern "efiapi" fn(
     this: *mut RawFsHandle,
     info_type: *const Guid,
     buffer_size: *mut usize,
     buffer: *mut u8,
-) -> EfiStatus;
+) -> Status;
 
 pub type SetInfo = unsafe extern "efiapi" fn(
     this: *const RawFsHandle,
     info_type: *const Guid,
     buffer_size: usize,
     buffer: *const u8,
-) -> EfiStatus;
+) -> Status;
 
-pub type Close = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
+pub type Close = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> Status;
 
-pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
+pub type Flush = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> Status;
 
 pub type Read = unsafe extern "efiapi" fn(
     this: *mut RawFsHandle,
     buffer_size: *mut usize,
     buffer: *mut u8,
-) -> EfiStatus;
+) -> Status;
 
-pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: *mut u64) -> EfiStatus;
-pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: u64) -> EfiStatus;
+pub type GetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: *mut u64) -> Status;
+pub type SetPos = unsafe extern "efiapi" fn(this: *mut RawFsHandle, pos: u64) -> Status;
 
-pub type Delete = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> EfiStatus;
+pub type Delete = unsafe extern "efiapi" fn(this: *mut RawFsHandle) -> Status;
 
 pub type Write = unsafe extern "efiapi" fn(
     this: *mut RawFsHandle,
     buffer_size: *mut usize,
     buffer: *const u8,
-) -> EfiStatus;
+) -> Status;
 
 /// UEFI File protocol
 #[repr(C)]

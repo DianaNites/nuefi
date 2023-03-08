@@ -2,7 +2,7 @@
 
 use core::{fmt, ptr::null_mut};
 
-use crate::error::EfiStatus;
+use crate::nuefi_core::base::Status;
 
 /// EFI Physical Address
 ///
@@ -115,10 +115,10 @@ pub struct RawGraphicsOutput {
             mode: u32,
             info_size: *mut usize,
             info: *mut *const RawGraphicsInfo,
-        ) -> EfiStatus,
+        ) -> Status,
     >,
 
-    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> EfiStatus>,
+    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: u32) -> Status>,
 
     pub blt: Option<
         unsafe extern "efiapi" fn(
@@ -133,7 +133,7 @@ pub struct RawGraphicsOutput {
             width: usize,
             height: usize,
             delta: usize,
-        ) -> EfiStatus,
+        ) -> Status,
     >,
 
     pub mode: *mut RawGraphicsMode,

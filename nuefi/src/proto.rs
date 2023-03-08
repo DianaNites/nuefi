@@ -10,7 +10,7 @@
 //! Locate a protocol
 //!
 //! ```rust
-//! use nuefi::{entry, EfiHandle, SystemTable, Boot, error, error::EfiStatus};
+//! use nuefi::{entry, EfiHandle, SystemTable, Boot, error, error::Status};
 //! use nuefi::proto::graphics::GraphicsOutput;
 //!
 //! // Generate the UEFI entry point
@@ -31,7 +31,7 @@
 //!         None => {
 //!             // Return an error if the Protocol does not exist.
 //!             // For example, if the device doesn't have a screen.
-//!             return Err(EfiStatus::UNSUPPORTED.into());
+//!             return Err(Status::UNSUPPORTED.into());
 //!         }
 //!     };
 //!     Ok(())

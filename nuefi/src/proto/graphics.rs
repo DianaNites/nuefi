@@ -14,7 +14,7 @@ use raw::{RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawP
 
 use self::raw::RawGraphicsMode;
 use crate::{
-    error::{EfiStatus, Result, UefiError},
+    error::{Result, Status},
     get_boot_table,
     util::interface,
     Protocol,
@@ -57,9 +57,9 @@ impl<'table> GraphicsOutput<'table> {
             }
             Ok(mode)
         } else if !ret.is_success() {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         } else {
-            Err(UefiError::new(EfiStatus::BUFFER_TOO_SMALL))
+            Err(Status::BUFFER_TOO_SMALL.into())
         }
     }
 
@@ -112,7 +112,7 @@ impl<'table> GraphicsOutput<'table> {
         delta: usize,
     ) -> Result<()> {
         if buffer.len() < (res.0 * res.1) {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+            return Err(Status::INVALID_PARAMETER.into());
         }
         // Safety: Construction ensures these are valid
         unsafe {

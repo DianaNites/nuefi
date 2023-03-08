@@ -30,7 +30,7 @@ pub fn panic(info: &PanicInfo) -> ! {
             let boot = table.boot();
             // Just in case?
             if !handle.0.is_null() {
-                let _ = boot.exit(handle, EfiStatus::ABORTED);
+                let _ = boot.exit(handle, Status::ABORTED);
             }
             let _ = writeln!(
                 stdout,

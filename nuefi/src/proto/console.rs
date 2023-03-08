@@ -6,7 +6,7 @@ use core::{
 };
 
 use crate::{
-    error::{EfiStatus, Result},
+    error::{Result, Status},
     string::UefiString,
     util::interface,
 };
@@ -74,10 +74,7 @@ interface!(
 impl<'table> SimpleTextOutput<'table> {
     #[track_caller]
     pub fn output_string(&self, string: &str) -> Result<()> {
-        let out = self
-            .interface()
-            .output_string
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let out = self.interface().output_string.ok_or(Status::UNSUPPORTED)?;
         let s = UefiString::new(string);
         // Safety: s is a nul terminated string
         unsafe { out(self.interface, s.as_ptr()) }.into()
@@ -130,10 +127,10 @@ impl<'table> SimpleTextOutput<'table> {
     pub fn set_attributes(&self, fore: TextForeground, back: TextBackground) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe {
-            (self
-                .interface()
-                .set_attribute
-                .ok_or(EfiStatus::UNSUPPORTED)?)(self.interface, fore.0 | back.0 << 4)
+            (self.interface().set_attribute.ok_or(Status::UNSUPPORTED)?)(
+                self.interface,
+                fore.0 | back.0 << 4,
+            )
         }
         .into()
     }
@@ -143,30 +140,22 @@ impl<'table> SimpleTextOutput<'table> {
     /// Clears the screen, resets cursor position.
     pub fn reset(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { (self.interface().reset.ok_or(EfiStatus::UNSUPPORTED)?)(self.interface, false) }
+        unsafe { (self.interface().reset.ok_or(Status::UNSUPPORTED)?)(self.interface, false) }
             .into()
     }
 
     /// Clears the screen, resets cursor position.
     pub fn clear(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe {
-            (self
-                .interface()
-                .clear_screen
-                .ok_or(EfiStatus::UNSUPPORTED)?)(self.interface)
-        }
-        .into()
+        unsafe { (self.interface().clear_screen.ok_or(Status::UNSUPPORTED)?)(self.interface) }
+            .into()
     }
 
     /// Enables the cursor
     pub fn enable_cursor(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe {
-            (self
-                .interface()
-                .enable_cursor
-                .ok_or(EfiStatus::UNSUPPORTED)?)(self.interface, true)
+            (self.interface().enable_cursor.ok_or(Status::UNSUPPORTED)?)(self.interface, true)
         }
         .into()
     }
@@ -175,10 +164,7 @@ impl<'table> SimpleTextOutput<'table> {
     pub fn disable_cursor(&self) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe {
-            (self
-                .interface()
-                .enable_cursor
-                .ok_or(EfiStatus::UNSUPPORTED)?)(self.interface, false)
+            (self.interface().enable_cursor.ok_or(Status::UNSUPPORTED)?)(self.interface, false)
         }
         .into()
     }
@@ -187,10 +173,7 @@ impl<'table> SimpleTextOutput<'table> {
     pub fn set_mode(&self, mode: u32) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe {
-            (self.interface().set_mode.ok_or(EfiStatus::UNSUPPORTED)?)(
-                self.interface,
-                mode as usize,
-            )
+            (self.interface().set_mode.ok_or(Status::UNSUPPORTED)?)(self.interface, mode as usize)
         }
         .into()
     }
@@ -209,7 +192,7 @@ impl<'table> SimpleTextOutput<'table> {
         let mut rows = 0;
         // Safety: Construction ensures these are valid
         let ret = unsafe {
-            (self.interface().query_mode.ok_or(EfiStatus::UNSUPPORTED)?)(
+            (self.interface().query_mode.ok_or(Status::UNSUPPORTED)?)(
                 self.interface,
                 mode as usize,
                 &mut cols,
@@ -261,7 +244,7 @@ impl<'table> SimpleTextOutput<'table> {
 
         let ret = match self.output_string(s) {
             Ok(()) => Ok(()),
-            Err(e) if e.status() == EfiStatus::WARN_UNKNOWN_GLYPH => Ok(()),
+            Err(e) if e.status() == Status::WARN_UNKNOWN_GLYPH => Ok(()),
             Err(_) => Err(fmt::Error),
         };
         let ret = if s.ends_with('\n') && nul.is_none() {
@@ -281,7 +264,7 @@ impl<'table> SimpleTextOutput<'table> {
     }
 }
 
-/// All failures are treated as [`EfiStatus::DEVICE_ERROR`].
+/// All failures are treated as [`Status::DEVICE_ERROR`].
 ///
 /// Warnings are ignored. Ending Newlines are turned into \n\r.
 /// Interior newlines are not.

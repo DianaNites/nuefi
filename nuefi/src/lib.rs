@@ -72,12 +72,12 @@ use core::{
     time::Duration,
 };
 
-use error::EfiStatus;
 use log::{error, info};
 pub use macros::{entry, Protocol, GUID};
 pub use nuefi_core::error;
 use table::raw::RawSystemTable;
 
+use crate::nuefi_core::base::Status;
 pub use crate::table::{Boot, SystemTable};
 pub mod logger;
 pub mod mem;
@@ -157,7 +157,7 @@ fn get_image_handle() -> Option<EfiHandle> {
 // # Safety: UEFI Guarantees these are valid, and is the only one capable of doing so
 // This is *the* UEFI entry point, and the only supported way to use this library.
 #[no_mangle]
-extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> EfiStatus {
+extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable) -> Status {
     extern "Rust" {
         fn __internal__nuefi__main(
             handle: EfiHandle,
@@ -174,13 +174,13 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     // Safety: Unsure how it can be unsafe tbh.
     let (ext,) = unsafe {
         if addr_of!(__INTERNAL_NUEFI_YOU_MUST_USE_MACRO).is_null() {
-            return EfiStatus::INVALID_PARAMETER;
+            return Status::INVALID_PARAMETER;
         }
         (__INTERNAL_NUEFI_YOU_MUST_USE_MACRO,)
     };
 
     if image.as_ptr().is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
-        return EfiStatus::INVALID_PARAMETER;
+        return Status::INVALID_PARAMETER;
     }
 
     // Safety:
@@ -203,7 +203,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     // - `system_table` was validated earlier
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
     match ret {
-        Ok(()) => EfiStatus::SUCCESS,
+        Ok(()) => Status::SUCCESS,
         Err(e) => e.status(),
     }
 }
@@ -223,7 +223,7 @@ mod tests {
     use super::*;
     use crate::{
         entry,
-        error::Result,
+        error::{Result, Status},
         proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
     };
 
@@ -241,7 +241,7 @@ mod tests {
         };
 
         use crate::{
-            error::EfiStatus,
+            error::Status,
             proto::{
                 self,
                 console::raw::RawSimpleTextOutput,
@@ -292,19 +292,19 @@ mod tests {
             unsafe extern "efiapi" fn reset(
                 this: *mut RawSimpleTextOutput,
                 extended: bool,
-            ) -> EfiStatus {
-                EfiStatus::SUCCESS
+            ) -> Status {
+                Status::SUCCESS
             }
 
             unsafe extern "efiapi" fn output_string(
                 this: *mut RawSimpleTextOutput,
                 string: *const Char16,
-            ) -> EfiStatus {
-                EfiStatus::SUCCESS
+            ) -> Status {
+                Status::SUCCESS
             }
 
-            unsafe extern "efiapi" fn clear_screen(this: *mut RawSimpleTextOutput) -> EfiStatus {
-                EfiStatus::SUCCESS
+            unsafe extern "efiapi" fn clear_screen(this: *mut RawSimpleTextOutput) -> Status {
+                Status::SUCCESS
             }
 
             RawSimpleTextOutput {
@@ -322,11 +322,8 @@ mod tests {
         }
 
         const fn mock_gop() -> RawGraphicsOutput {
-            unsafe extern "efiapi" fn set_mode(
-                this: *mut RawGraphicsOutput,
-                mode: u32,
-            ) -> EfiStatus {
-                EfiStatus::DEVICE_ERROR
+            unsafe extern "efiapi" fn set_mode(this: *mut RawGraphicsOutput, mode: u32) -> Status {
+                Status::DEVICE_ERROR
             }
 
             RawGraphicsOutput {
@@ -432,14 +429,14 @@ mod tests {
                 guid: *mut proto::Guid,
                 key: *mut c_void,
                 out: *mut *mut c_void,
-            ) -> EfiStatus {
+            ) -> Status {
                 let guid = *guid;
                 if guid == GraphicsOutput::GUID {
                     out.write(addr_of_mut!(MOCK_GOP) as *mut _);
-                    EfiStatus::SUCCESS
+                    Status::SUCCESS
                 } else {
                     out.write(null_mut());
-                    EfiStatus::NOT_FOUND
+                    Status::NOT_FOUND
                 }
             }
         }
@@ -456,7 +453,7 @@ mod tests {
         // let gop = boot.handle_for::<GraphicsOutput>()?;
         // let gop = boot
         //     .open_protocol::<GraphicsOutput>(gop)?
-        //     .ok_or(EfiStatus::UNSUPPORTED)?;
+        //     .ok_or(Status::UNSUPPORTED)?;
         // let _ = gop.set_mode(69);
         // panic!("{gop:?}");
 
@@ -469,7 +466,7 @@ mod tests {
                     img
                 })
                 .and_then(|f| f.device())
-                .ok_or(EfiStatus::INVALID_PARAMETER)?;
+                .ok_or(Status::INVALID_PARAMETER)?;
         }
         Ok(())
     }

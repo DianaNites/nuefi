@@ -2,9 +2,7 @@
 
 use core::{fmt, ptr::null_mut};
 
-use nuefi_core::base::Char16;
-
-use crate::error::EfiStatus;
+use crate::nuefi_core::base::{Char16, Status};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -27,13 +25,13 @@ pub struct RawTextMode {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawSimpleTextOutput {
-    pub reset: Option<unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus>,
+    pub reset: Option<unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> Status>,
 
     pub output_string:
-        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> EfiStatus>,
+        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> Status>,
 
     pub test_string:
-        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> EfiStatus>,
+        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> Status>,
 
     pub query_mode: Option<
         unsafe extern "efiapi" fn(
@@ -41,19 +39,18 @@ pub struct RawSimpleTextOutput {
             mode: usize,
             cols: *mut usize,
             rows: *mut usize,
-        ) -> EfiStatus,
+        ) -> Status,
     >,
 
-    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> EfiStatus>,
+    pub set_mode: Option<unsafe extern "efiapi" fn(this: *mut Self, mode: usize) -> Status>,
 
-    pub set_attribute: Option<unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> EfiStatus>,
+    pub set_attribute: Option<unsafe extern "efiapi" fn(this: *mut Self, attr: usize) -> Status>,
 
-    pub clear_screen: Option<unsafe extern "efiapi" fn(this: *mut Self) -> EfiStatus>,
+    pub clear_screen: Option<unsafe extern "efiapi" fn(this: *mut Self) -> Status>,
 
     pub set_cursor_position:
-        Option<unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> EfiStatus>,
+        Option<unsafe extern "efiapi" fn(this: *mut Self, cols: usize, rows: usize) -> Status>,
 
-    pub enable_cursor:
-        Option<unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> EfiStatus>,
+    pub enable_cursor: Option<unsafe extern "efiapi" fn(this: *mut Self, visible: bool) -> Status>,
     pub mode: *mut RawTextMode,
 }

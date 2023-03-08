@@ -14,7 +14,7 @@ use core::{
 pub use nuefi_core::table::config;
 
 use crate::{
-    error::{EfiStatus, Result, UefiError},
+    error::{Result, Status},
     get_image_handle,
     mem::MemoryType,
     proto::{
@@ -63,10 +63,7 @@ impl<'table> BootServices<'table> {
         search_key: *mut c_void,
         guid: *const Guid,
     ) -> Result<Vec<EfiHandle>> {
-        let lh = self
-            .interface()
-            .locate_handle
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let lh = self.interface().locate_handle.ok_or(Status::UNSUPPORTED)?;
         let key = search_key;
         // Note: This is in bytes.
         let mut size = 0;
@@ -75,11 +72,11 @@ impl<'table> BootServices<'table> {
 
         // Get buffer size
         let ret = unsafe { (lh)(search, guid_ptr, key, &mut size, null_mut()) };
-        if ret == EfiStatus::NOT_FOUND {
+        if ret == Status::NOT_FOUND {
             // No handles matched the search
             return Ok(out);
-        } else if ret != EfiStatus::BUFFER_TOO_SMALL {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+        } else if ret != Status::BUFFER_TOO_SMALL {
+            return Err(Status::INVALID_PARAMETER.into());
         }
 
         // Reserve enough elements
@@ -90,7 +87,7 @@ impl<'table> BootServices<'table> {
         let ret = unsafe { (lh)(search, guid_ptr, key, &mut size, out.as_mut_ptr()) };
         if ret.is_success() {
             Ok(out)
-        } else if ret == EfiStatus::NOT_FOUND {
+        } else if ret == Status::NOT_FOUND {
             Ok(Vec::new())
         } else {
             Err(ret.into())
@@ -99,7 +96,7 @@ impl<'table> BootServices<'table> {
 
     /// Load an image from memory `src`, returning its handle.
     ///
-    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    /// Note that this will return [`Ok`] on a [`Status::SECURITY_VIOLATION`].
     ///
     /// This case will need to be handled in [`BootServices::start_image`]
     ///
@@ -115,17 +112,17 @@ impl<'table> BootServices<'table> {
         src_len: usize,
     ) -> Result<EfiHandle> {
         let mut out = EfiHandle::null();
-        let li = self.interface().load_image.ok_or(EfiStatus::UNSUPPORTED)?;
+        let li = self.interface().load_image.ok_or(Status::UNSUPPORTED)?;
 
         // Safety: Callers responsibility
         // FIXME: void
         let ret = (li)(policy, parent, devpath as _, src, src_len, &mut out);
 
-        if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
+        if ret.is_success() || ret == Status::SECURITY_VIOLATION {
             assert_ne!(out, EfiHandle::null());
             Ok(out)
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -158,7 +155,7 @@ impl<'table> BootServices<'table> {
 
     /// Get every handle that support the [`Protocol`]
     ///
-    /// [`EfiStatus::NOT_FOUND`] is treated as success with a empty `Vec`
+    /// [`Status::NOT_FOUND`] is treated as success with a empty `Vec`
     pub fn handles_for_protocol<'boot, Proto: Protocol<'boot>>(&self) -> Result<Vec<EfiHandle>> {
         let guid = Proto::GUID;
         // Safety: Statically correct for this call
@@ -171,7 +168,7 @@ impl<'table> BootServices<'table> {
         self.handles_for_protocol::<Proto>()?
             .first()
             .copied()
-            .ok_or(EfiStatus::NOT_FOUND.into())
+            .ok_or(Status::NOT_FOUND.into())
     }
 
     /// Find and return the first protocol instance found
@@ -212,7 +209,7 @@ impl<'table> BootServices<'table> {
         let lp = self
             .interface()
             .locate_protocol
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+            .ok_or(Status::UNSUPPORTED)?;
         // Safety: Construction ensures safety. Statically verified arguments.
         let ret = unsafe { (lp)(&mut guid, null_mut(), &mut out) };
         if ret.is_success() {
@@ -227,10 +224,10 @@ impl<'table> BootServices<'table> {
             // - Success means `out` is valid
             // - We assert its not null just in case.
             unsafe { Ok(Some(Protocol::from_raw(out as *mut Protocol::Raw))) }
-        } else if ret == EfiStatus::NOT_FOUND {
+        } else if ret == Status::NOT_FOUND {
             Ok(None)
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -261,10 +258,7 @@ impl<'table> BootServices<'table> {
     ) -> Result<Option<Scope<Proto>>> {
         let mut out: *mut c_void = null_mut();
         let mut guid = Proto::GUID;
-        let op = self
-            .interface()
-            .open_protocol
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let op = self.interface().open_protocol.ok_or(Status::UNSUPPORTED)?;
         let agent = get_image_handle().expect("UEFI Image Handle was null in open_protocol");
 
         // Safety: Construction ensures safety. Statically verified arguments.
@@ -279,10 +273,10 @@ impl<'table> BootServices<'table> {
                     None,
                 )))
             }
-        } else if ret == EfiStatus::UNSUPPORTED {
+        } else if ret == Status::UNSUPPORTED {
             Ok(None)
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -297,10 +291,7 @@ impl<'table> BootServices<'table> {
         controller: Option<EfiHandle>,
     ) -> Result<()> {
         let mut guid = Proto::GUID;
-        let cp = self
-            .interface()
-            .close_protocol
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let cp = self.interface().close_protocol.ok_or(Status::UNSUPPORTED)?;
 
         // Safety: Construction ensures safety. Statically verified arguments.
         unsafe {
@@ -341,7 +332,7 @@ impl<'table> BootServices<'table> {
         let ipi = self
             .interface()
             .install_protocol_interface
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+            .ok_or(Status::UNSUPPORTED)?;
 
         (ipi)(&mut h, &mut guid, 0, interface as *mut c_void).into()
     }
@@ -389,10 +380,10 @@ impl<'table> BootServices<'table> {
                 // - Success means `out` is valid
                 // - We assert its not null just in case
                 unsafe { Ok(Some(NonNull::new_unchecked(out))) }
-            } else if ret == EfiStatus::UNSUPPORTED {
+            } else if ret == Status::UNSUPPORTED {
                 Ok(None)
             } else {
-                Err(UefiError::new(ret))
+                Err(ret.into())
             }
         }
 
@@ -401,7 +392,7 @@ impl<'table> BootServices<'table> {
         let hp = self
             .interface()
             .handle_protocol
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+            .ok_or(Status::UNSUPPORTED)?;
 
         let ret = inner(&guid, handle, hp, Protocol::NAME);
 
@@ -411,7 +402,7 @@ impl<'table> BootServices<'table> {
                 unsafe { Ok(Some(Protocol::from_raw(ret.as_ptr() as *mut Protocol::Raw))) }
             }
 
-            Ok(None) => Err(EfiStatus::UNSUPPORTED.into()),
+            Ok(None) => Err(Status::UNSUPPORTED.into()),
 
             Err(e) => Err(e),
         }
@@ -421,8 +412,8 @@ impl<'table> BootServices<'table> {
 /// Image Services
 impl<'table> BootServices<'table> {
     /// Exit the image represented by `handle` with `status`
-    pub fn exit(&self, handle: EfiHandle, status: EfiStatus) -> Result<()> {
-        let e = self.interface().exit.ok_or(EfiStatus::UNSUPPORTED)?;
+    pub fn exit(&self, handle: EfiHandle, status: Status) -> Result<()> {
+        let e = self.interface().exit.ok_or(Status::UNSUPPORTED)?;
         // Safety: Construction ensures safety
         unsafe { (e)(handle, status, 0, null_mut()) }.into()
     }
@@ -435,7 +426,7 @@ impl<'table> BootServices<'table> {
     /// If the image was from a device, you should set `devpath` to the
     /// [`DevicePath`] for the image on that device.
     ///
-    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    /// Note that this will return [`Ok`] on a [`Status::SECURITY_VIOLATION`].
     ///
     /// You will need to handle that case in [`BootServices::start_image`]
     pub fn load_image(
@@ -472,7 +463,7 @@ impl<'table> BootServices<'table> {
     /// If the image was from a device, you should set `devpath` to the
     /// [`DevicePath`] for the image on that device.
     ///
-    /// Note that this will return [Ok] on a [`EfiStatus::SECURITY_VIOLATION`].
+    /// Note that this will return [`Ok`] on a [`Status::SECURITY_VIOLATION`].
     ///
     /// You will need to handle that case in [`BootServices::start_image`]
     pub fn load_image_fs(&self, parent: EfiHandle, devpath: &DevicePath) -> Result<EfiHandle> {
@@ -505,7 +496,7 @@ impl<'table> BootServices<'table> {
     ///
     /// [loaded]: crate::proto::loaded_image::LoadedImage
     pub unsafe fn start_image(&self, handle: EfiHandle) -> Result<()> {
-        let si = self.interface().start_image.ok_or(EfiStatus::UNSUPPORTED)?;
+        let si = self.interface().start_image.ok_or(Status::UNSUPPORTED)?;
         // Safety: Construction ensures safety. Statically verified arguments.
         // FIXME: We are responsible for freeing ExitData
         let mut size = 0;
@@ -514,10 +505,7 @@ impl<'table> BootServices<'table> {
 
     /// Unload an earlier loaded image
     pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
-        let ui = self
-            .interface()
-            .unload_image
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let ui = self.interface().unload_image.ok_or(Status::UNSUPPORTED)?;
         // Safety: Construction ensures safety. Statically verified arguments.
         unsafe { (ui)(handle).into() }
     }
@@ -527,18 +515,18 @@ impl<'table> BootServices<'table> {
 impl<'table> BootServices<'table> {
     /// Stall for [`Duration`]
     ///
-    /// Returns [`EfiStatus::INVALID_PARAMETER`] if `dur` does not fit in
+    /// Returns [`Status::INVALID_PARAMETER`] if `dur` does not fit in
     /// [usize]
     pub fn stall(&self, dur: Duration) -> Result<()> {
         let time = match dur
             .as_micros()
             .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+            .map_err(|_| Status::INVALID_PARAMETER)
         {
             Ok(t) => t,
             Err(e) => return e.into(),
         };
-        let s = self.interface().stall.ok_or(EfiStatus::UNSUPPORTED)?;
+        let s = self.interface().stall.ok_or(Status::UNSUPPORTED)?;
 
         // Safety: Construction ensures safety
         unsafe { (s)(time) }.into()
@@ -550,14 +538,14 @@ impl<'table> BootServices<'table> {
         let gn = self
             .interface()
             .get_next_monotonic_count
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+            .ok_or(Status::UNSUPPORTED)?;
 
         // Safety: Construction ensures safety
         let ret = unsafe { (gn)(&mut out) };
         if ret.is_success() {
             return Ok(out);
         }
-        Err(UefiError::new(ret))
+        Err(ret.into())
     }
 
     /// Set the watchdog timer. [`None`] disables the timer.
@@ -566,12 +554,12 @@ impl<'table> BootServices<'table> {
         let swt = self
             .interface()
             .set_watchdog_timer
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+            .ok_or(Status::UNSUPPORTED)?;
 
         let secs = match timeout
             .as_secs()
             .try_into()
-            .map_err(|_| EfiStatus::INVALID_PARAMETER)
+            .map_err(|_| Status::INVALID_PARAMETER)
         {
             Ok(t) => t,
             Err(e) => return e.into(),
@@ -590,14 +578,11 @@ impl<'table> BootServices<'table> {
     #[inline]
     pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<NonNull<c_void>> {
         if ty == MemoryType::RESERVED {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+            return Err(Status::INVALID_PARAMETER.into());
         }
         let mut out: *mut c_void = null_mut();
 
-        let ap = self
-            .interface()
-            .allocate_pool
-            .ok_or(EfiStatus::UNSUPPORTED)?;
+        let ap = self.interface().allocate_pool.ok_or(Status::UNSUPPORTED)?;
 
         // Safety: Always valid for these arguments
         // - `ap` checked above
@@ -610,7 +595,7 @@ impl<'table> BootServices<'table> {
             // Safety: assert
             unsafe { Ok(NonNull::new_unchecked(out)) }
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -655,7 +640,7 @@ impl<'table> BootServices<'table> {
     /// - Must be non-null
     #[inline]
     pub unsafe fn free_pool(&self, memory: *mut c_void) -> Result<()> {
-        let fp = self.interface().free_pool.ok_or(EfiStatus::UNSUPPORTED)?;
+        let fp = self.interface().free_pool.ok_or(Status::UNSUPPORTED)?;
         (fp)(memory).into()
     }
 }

@@ -7,7 +7,7 @@ use core::{fmt::Display, marker::PhantomData, mem::transmute, ops::Deref, slice:
 use log::{error, trace};
 
 use crate::{
-    error::{EfiStatus, Result, UefiError},
+    error::{Result, Status},
     get_boot_table,
     mem::MemoryType,
     proto::{
@@ -23,7 +23,7 @@ fn table() -> Result<SystemTable<Boot>> {
         Ok(table)
     } else {
         error!("Tried to use `SystemTable` while not in `Boot` mode");
-        Err(UefiError::new(EfiStatus::UNSUPPORTED))
+        Err(Status::UNSUPPORTED.into())
     }
 }
 

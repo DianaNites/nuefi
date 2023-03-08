@@ -10,10 +10,11 @@
 //!
 //! [st]: crate::base::Status
 
+/// UEFI Friendly Rust Result
 pub type Result<T> = core::result::Result<T, UefiError>;
-// FIXME: Remove this
-pub use crate::base::Status as EfiStatus;
-use crate::base::Status;
+
+/// UEFI Status code re-export for convenience
+pub use crate::base::Status;
 
 /// Represents a UEFI [`Status`][st]
 ///

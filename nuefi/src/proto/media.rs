@@ -14,7 +14,7 @@ use macros::GUID;
 use raw::*;
 
 use crate::{
-    error::{EfiStatus, Result, UefiError},
+    error::{Result, Status},
     proto::{Entity, Guid, Protocol},
     util::interface,
     Protocol,
@@ -55,7 +55,7 @@ impl<'table> SimpleFileSystem<'table> {
             // Safety: `FsHandle` isn't a Protocol
             unsafe { Ok(FsHandle::new(out)) }
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 }
@@ -139,7 +139,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
             // Safety: `FsHandle` isn't a Protocol
             unsafe { Ok(FsHandle::new(out)) }
         } else {
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -157,11 +157,11 @@ impl<'this, 'table> FsHandle<'this, 'table> {
         if size == 0 && ret.is_success() {
             // End of Directories/File
             Ok(size)
-        } else if ret == EfiStatus::BUFFER_TOO_SMALL {
+        } else if ret == Status::BUFFER_TOO_SMALL {
             let _ = return Ok(size);
         } else {
             // Anything other than `BUFFER_TOO_SMALL` here is an error
-            Err(UefiError::new(ret))
+            Err(ret.into())
         }
     }
 
@@ -223,7 +223,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
         match ret {
             Ok(_) => Ok(true),
             Err(e) => {
-                if e.status() == EfiStatus::NOT_FOUND {
+                if e.status() == Status::NOT_FOUND {
                     Ok(false)
                 } else {
                     Err(e)
@@ -242,12 +242,9 @@ impl<'this, 'table> FsHandle<'this, 'table> {
     pub fn read_to_end(&self, buf: &mut Vec<u8>) -> Result<usize> {
         let info = self.info()?;
         if info.directory() {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+            return Err(Status::INVALID_PARAMETER.into());
         }
-        let size: usize = info
-            .size()
-            .try_into()
-            .map_err(|_| EfiStatus::DEVICE_ERROR)?;
+        let size: usize = info.size().try_into().map_err(|_| Status::DEVICE_ERROR)?;
 
         // Init the buffer for the size of the file
         buf.resize(size, 0);
@@ -279,7 +276,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
     pub fn read_dir(&self) -> Result<impl Iterator<Item = Result<FsInfo>> + '_> {
         let info = self.info()?;
         if !info.directory() {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+            return Err(Status::INVALID_PARAMETER.into());
         }
 
         let mut stop = false;
@@ -297,7 +294,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
     pub fn read(&self, out: &mut [u8]) -> Result<usize> {
         let info = self.info()?;
         if info.directory() {
-            return Err(EfiStatus::INVALID_PARAMETER.into());
+            return Err(Status::INVALID_PARAMETER.into());
         }
         let size = out.len();
         unsafe { self.read_impl_write(size, out) }
@@ -319,12 +316,12 @@ impl<'this, 'table> FsHandle<'this, 'table> {
             let info = (fp)(self.interface, &guid, &mut size, null_mut());
 
             // It should be `BUFFER_TOO_SMALL`
-            if info != EfiStatus::BUFFER_TOO_SMALL {
-                return Err(UefiError::new(info));
+            if info != Status::BUFFER_TOO_SMALL {
+                return Err(info.into());
             }
             // Sanity check
             if size == 0 {
-                return Err(UefiError::new(EfiStatus::INVALID_PARAMETER));
+                return Err(Status::INVALID_PARAMETER.into());
             }
 
             // Reserve enough memory for `size`, initializing to `0`.
@@ -349,7 +346,7 @@ impl<'this, 'table> FsHandle<'this, 'table> {
                 let info = FsInfo::from_bytes(out).unwrap();
                 Ok(info)
             } else {
-                Err(UefiError::new(info))
+                Err(info.into())
             }
         }
     }
@@ -434,7 +431,7 @@ impl FsInfo {
 
             // If `raw` is empty, error
             if raw.len() < f_size {
-                return Err(EfiStatus::BUFFER_TOO_SMALL.into());
+                return Err(Status::BUFFER_TOO_SMALL.into());
             }
 
             // Initialize the new info struct

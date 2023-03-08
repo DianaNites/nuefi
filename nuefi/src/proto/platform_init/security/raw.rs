@@ -1,11 +1,11 @@
-use crate::{error::EfiStatus, proto::device_path::raw::RawDevicePath};
+use crate::{nuefi_core::base::Status, proto::device_path::raw::RawDevicePath};
 
 pub type AuthStateFn = unsafe extern "efiapi" fn(
     //
     this: *mut RawSecurityArch,
     status: u32,
     file: *mut RawDevicePath,
-) -> EfiStatus;
+) -> Status;
 
 pub type AuthFn = unsafe extern "efiapi" fn(
     //
@@ -14,7 +14,7 @@ pub type AuthFn = unsafe extern "efiapi" fn(
     file: *mut u8,
     file_size: usize,
     boot: bool,
-) -> EfiStatus;
+) -> Status;
 
 /// Security Arch Protocol
 #[repr(C)]
