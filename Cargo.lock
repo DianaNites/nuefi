@@ -135,9 +135,17 @@ dependencies = [
  "bitflags",
  "crc",
  "log",
+ "nuefi_core",
  "nuefi_macros",
  "nuuid",
  "sha-1",
+]
+
+[[package]]
+name = "nuefi_core"
+version = "0.1.0"
+dependencies = [
+ "nuuid",
 ]
 
 [[package]]

@@ -27,7 +27,7 @@ impl RawInitrdMediaGuid {
             // Safety: Statically valid
             // TODO: We can create a nicer safe API on this.
             path: unsafe { RawDevicePath::create(4, 3, 20) },
-            guid: InitrdMediaGuid::GUID.0,
+            guid: InitrdMediaGuid::GUID.to_bytes(),
             end: RawDevicePath::end(),
         }
     }

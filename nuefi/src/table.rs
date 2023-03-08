@@ -71,7 +71,7 @@ impl<'table> BootServices<'table> {
 
         // Reserve enough elements
         let elems = size / size_of::<EfiHandle>();
-        out.resize(elems, EfiHandle(null_mut()));
+        out.resize(elems, EfiHandle::null());
 
         // Fill our array
         let ret = unsafe { (lh)(search, guid_ptr, key, &mut size, out.as_mut_ptr()) };
@@ -101,14 +101,14 @@ impl<'table> BootServices<'table> {
         src: *mut u8,
         src_len: usize,
     ) -> Result<EfiHandle> {
-        let mut out = EfiHandle(null_mut());
+        let mut out = EfiHandle::null();
         let li = self.interface().load_image.ok_or(EfiStatus::UNSUPPORTED)?;
 
         // Safety: Callers responsibility
         let ret = (li)(policy, parent, devpath, src, src_len, &mut out);
 
         if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
-            assert_ne!(out, EfiHandle(null_mut()));
+            assert_ne!(out, EfiHandle::null());
             Ok(out)
         } else {
             Err(UefiError::new(ret))
@@ -206,7 +206,7 @@ impl<'table> BootServices<'table> {
                 "UEFI locate_protocol returned success, but the protocol was null. \
                 The Protocol was \"{}\" with GUID `{}`",
                 Protocol::NAME,
-                Protocol::GUID.to_uuid()
+                Protocol::GUID
             );
             // Safety:
             // - Success means `out` is valid
@@ -251,16 +251,7 @@ impl<'table> BootServices<'table> {
         let agent = get_image_handle().expect("UEFI Image Handle was null in open_protocol");
 
         // Safety: Construction ensures safety. Statically verified arguments.
-        let ret = unsafe {
-            (op)(
-                handle,
-                &mut guid,
-                &mut out,
-                agent,
-                EfiHandle(null_mut()),
-                0x20,
-            )
-        };
+        let ret = unsafe { (op)(handle, &mut guid, &mut out, agent, EfiHandle::null(), 0x20) };
         if ret.is_success() {
             // Safety: Success means out is valid
             unsafe {
@@ -300,7 +291,7 @@ impl<'table> BootServices<'table> {
                 handle,
                 &mut guid,
                 agent,
-                controller.unwrap_or(EfiHandle(null_mut())),
+                controller.unwrap_or(EfiHandle::null()),
             )
         }
         .into()
@@ -375,7 +366,7 @@ impl<'table> BootServices<'table> {
                     "UEFI handle_protocol returned success, but the protocol was null. \
                     The Protocol was \"{}\" with GUID `{}`",
                     p_name,
-                    guid.to_uuid()
+                    guid
                 );
                 // Safety:
                 // - Success means `out` is valid
@@ -436,7 +427,7 @@ impl<'table> BootServices<'table> {
         devpath: Option<&DevicePath>,
         src: &[u8],
     ) -> Result<EfiHandle> {
-        let mut out = EfiHandle(null_mut());
+        let mut out = EfiHandle::null();
 
         // Safety: Statically correct for this operation
         // - policy is always false
@@ -462,7 +453,7 @@ impl<'table> BootServices<'table> {
     ///
     /// You will need to handle that case in [`BootServices::start_image`]
     pub fn load_image_fs(&self, parent: EfiHandle, devpath: &DevicePath) -> Result<EfiHandle> {
-        let mut out = EfiHandle(null_mut());
+        let mut out = EfiHandle::null();
 
         // Safety: Statically correct for this operation
         // - policy is always false

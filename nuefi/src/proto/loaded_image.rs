@@ -44,7 +44,7 @@ impl<'table> LoadedImage<'table> {
 
     /// The device handle that the EFI Image was loaded from, or [None]
     pub fn device(&self) -> Option<EfiHandle> {
-        if !self.interface().device.0.is_null() {
+        if !self.interface().device.as_ptr().is_null() {
             Some(self.interface().device)
         } else {
             None

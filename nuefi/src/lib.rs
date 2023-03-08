@@ -75,11 +75,10 @@ use core::{
 use error::EfiStatus;
 use log::{error, info};
 pub use macros::{entry, Protocol, GUID};
+pub use nuefi_core::error;
 use table::raw::RawSystemTable;
 
 pub use crate::table::{Boot, SystemTable};
-
-pub mod error;
 pub mod logger;
 pub mod mem;
 pub mod proto;
@@ -93,13 +92,7 @@ static TABLE: AtomicPtr<RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
 /// Handle to the images [`EfiHandle`]. Uses Relaxed, sync with [`TABLE`]
 static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
-/// Represents a handle in UEFI.
-///
-/// This type is transparent with C `void`, and may be null.
-// FIXME: Rework to guarantee NonNull, use Option?
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct EfiHandle(*mut c_void);
+pub use nuefi_core::base::Handle as EfiHandle;
 
 /// Get the global [`SystemTable<Boot>`], if available
 fn get_boot_table() -> Option<SystemTable<Boot>> {
@@ -119,7 +112,8 @@ fn get_image_handle() -> Option<EfiHandle> {
     let _table = TABLE.load(Ordering::Acquire);
     let handle_p = HANDLE.load(Ordering::Relaxed);
     if !handle_p.is_null() {
-        Some(EfiHandle(handle_p))
+        // Safety: `handle_p` was set in `efi_main` to our handle
+        unsafe { Some(EfiHandle::new(handle_p)) }
     } else {
         None
     }
@@ -182,7 +176,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
         (__INTERNAL_NUEFI_YOU_MUST_USE_MACRO,)
     };
 
-    if image.0.is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
+    if image.as_ptr().is_null() || system_table.is_null() || !matches!(ext, Some(false)) {
         return EfiStatus::INVALID_PARAMETER;
     }
 
@@ -195,7 +189,7 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     }
 
     // Store a copy of the pointer to the image handle and system table
-    HANDLE.store(image.0, Ordering::Relaxed);
+    HANDLE.store(image.as_ptr(), Ordering::Relaxed);
     TABLE.store(system_table, Ordering::Release);
 
     // Safety:
@@ -355,11 +349,11 @@ mod tests {
                 header: MOCK_HEADER,
                 firmware_vendor: null_mut(),
                 firmware_revision: MOCK_FW_REVISION,
-                console_in_handle: EfiHandle(null_mut()),
+                console_in_handle: EfiHandle::new(null_mut()),
                 con_in: null_mut(),
-                console_out_handle: EfiHandle(null_mut()),
+                console_out_handle: EfiHandle::new(null_mut()),
                 con_out: null_mut(),
-                console_err_handle: EfiHandle(null_mut()),
+                console_err_handle: EfiHandle::new(null_mut()),
                 con_err: null_mut(),
                 runtime_services: null_mut(),
                 boot_services: null_mut(),

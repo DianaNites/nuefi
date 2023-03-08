@@ -56,7 +56,9 @@ pub mod media;
 pub mod platform_init;
 pub mod vendor;
 
-pub type Str16 = *const u16;
+pub use nuefi_core::base::{Char16, Guid};
+
+pub type Str16 = *const Char16;
 
 /// Defines a UEFI Protocol
 ///
@@ -85,57 +87,6 @@ pub unsafe trait Protocol<'table> {
 
     fn guid(&self) -> Guid {
         Self::GUID
-    }
-}
-
-/// UEFI GUID, 64-bit aligned
-///
-/// UEFI says this is a
-/// "128-bit buffer containing a unique identifier value. Unless otherwise
-/// specified, aligned on a 64-bit boundary."
-///
-/// The representation of this struct should be equivalent and FFI-safe with
-/// that definition.
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C, align(8))]
-#[allow(clippy::undocumented_unsafe_blocks)]
-pub struct Guid([u8; 16]);
-
-impl core::fmt::Debug for Guid {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let uuid = Uuid::from_bytes_me(self.0);
-        f.debug_tuple("Guid") //.
-            .field(&self.0)
-            .field(&format_args!("[Guid] {uuid}"))
-            .finish()
-    }
-}
-
-impl core::fmt::Display for Guid {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let uuid = Uuid::from_bytes_me(self.0);
-        uuid.fmt(f)
-    }
-}
-
-impl Guid {
-    pub(crate) const fn to_uuid(self) -> Uuid {
-        Uuid::from_bytes_me(self.0)
-    }
-
-    /// # Safety
-    ///
-    /// - MUST be a valid protocol GUID
-    pub const unsafe fn from_bytes(bytes: [u8; 16]) -> Self {
-        Self(nuuid::Uuid::from_bytes_me(bytes).to_bytes())
-    }
-
-    /// # Safety
-    ///
-    /// - MUST only be called by the [`crate::Protocol`] macro
-    #[doc(hidden)]
-    pub const unsafe fn to_bytes(self) -> [u8; 16] {
-        self.0
     }
 }
 
