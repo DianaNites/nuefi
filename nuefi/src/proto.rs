@@ -53,38 +53,6 @@ pub mod media;
 pub mod platform_init;
 pub mod vendor;
 
-pub use nuefi_core::base::Guid;
-
-/// Defines a UEFI Protocol
-///
-/// See [`crate::Protocol`] for how to implement this.
-/// This is the only safe way to implement this trait.
-///
-/// # Safety
-///
-/// This trait is unsafe because an incorrect GUID will
-/// lead to type confusion and unsafety for both Rust and UEFI.
-pub unsafe trait Protocol<'table> {
-    /// Protocol GUID
-    const GUID: Guid;
-
-    /// Protocol Name
-    const NAME: &'static str;
-
-    /// Raw type of this Protocol
-    type Raw;
-
-    /// # Safety
-    ///
-    /// - Must be a valid, non-null, pointer to an instance of Self::Raw
-    #[doc(hidden)]
-    unsafe fn from_raw(this: *mut Self::Raw) -> Self;
-
-    fn guid(&self) -> Guid {
-        Self::GUID
-    }
-}
-
 /// A scope around a [Protocol] that will call
 /// [`crate::table::BootServices::close_protocol`] on [Drop]
 #[derive(Debug)]
@@ -180,4 +148,4 @@ pub struct Time {
     pub _pad2: u8,
 }
 
-pub use nuefi_core::extra::Entity;
+pub use nuefi_core::{base::Guid, extra::Entity, proto::Protocol};
