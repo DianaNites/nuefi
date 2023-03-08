@@ -180,11 +180,12 @@ impl<'table> BootServices<'table> {
     ///
     /// This will exclusively open the protocol.
     /// See [`BootServices::open_protocol`] for caveats.
+    ///
+    /// If no protocol is found, [`None`] is returned.
     pub fn get_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
-    ) -> Result<Scope<'boot, Protocol>> {
-        self.open_protocol::<Protocol>(self.handle_for::<Protocol>()?)?
-            .ok_or(EfiStatus::NOT_FOUND.into())
+    ) -> Result<Option<Scope<'boot, Protocol>>> {
+        self.open_protocol::<Protocol>(self.handle_for::<Protocol>()?)
     }
 
     /// Find and return the first protocol instance found
@@ -197,7 +198,7 @@ impl<'table> BootServices<'table> {
     /// This is useful for protocols that don't care about where they're
     /// attached, or where only one handle is expected to exist.
     ///
-    /// If no protocol is found, [None] is returned.
+    /// If no protocol is found, [`None`] is returned.
     ///
     /// # Safety
     ///
