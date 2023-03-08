@@ -215,13 +215,13 @@ mod tests {
     use core::mem::{forget, size_of};
 
     use mock::{mock, MOCK_VENDOR};
+    use nuefi_core::table::{Header, CRC};
 
     use super::*;
     use crate::{
         entry,
         error::Result,
         proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
-        table::raw::{Header, CRC},
     };
 
     mod mock {
@@ -232,6 +232,11 @@ mod tests {
             ptr::{addr_of, addr_of_mut, null_mut},
         };
 
+        use nuefi_core::{
+            base::Char16,
+            table::{Header, CRC},
+        };
+
         use crate::{
             error::EfiStatus,
             proto::{
@@ -239,16 +244,8 @@ mod tests {
                 console::raw::RawSimpleTextOutput,
                 graphics::{raw::RawGraphicsOutput, GraphicsOutput},
                 Protocol,
-                Str16,
             },
-            table::raw::{
-                Header,
-                RawBootServices,
-                RawRuntimeServices,
-                RawSystemTable,
-                Revision,
-                CRC,
-            },
+            table::raw::{RawBootServices, RawRuntimeServices, RawSystemTable, Revision},
             EfiHandle,
         };
 
@@ -298,7 +295,7 @@ mod tests {
 
             unsafe extern "efiapi" fn output_string(
                 this: *mut RawSimpleTextOutput,
-                string: Str16,
+                string: *const Char16,
             ) -> EfiStatus {
                 EfiStatus::SUCCESS
             }
@@ -349,11 +346,11 @@ mod tests {
                 header: MOCK_HEADER,
                 firmware_vendor: null_mut(),
                 firmware_revision: MOCK_FW_REVISION,
-                console_in_handle: EfiHandle::new(null_mut()),
+                console_in_handle: EfiHandle::null(),
                 con_in: null_mut(),
-                console_out_handle: EfiHandle::new(null_mut()),
+                console_out_handle: EfiHandle::null(),
                 con_out: null_mut(),
-                console_err_handle: EfiHandle::new(null_mut()),
+                console_err_handle: EfiHandle::null(),
                 con_err: null_mut(),
                 runtime_services: null_mut(),
                 boot_services: null_mut(),
@@ -395,11 +392,11 @@ mod tests {
                 digest.finalize()
             };
 
-            system.boot_services = addr_of_mut!(*boot);
-            system.runtime_services = addr_of_mut!(*run);
-            system.con_out = addr_of_mut!(*out);
+            system.boot_services = addr_of_mut!(*boot).cast();
+            system.runtime_services = addr_of_mut!(*run).cast();
+            system.con_out = addr_of_mut!(*out).cast();
             // system.firmware_vendor = addr_of!(vendor[0]);
-            system.firmware_vendor = vendor.as_ptr();
+            system.firmware_vendor = vendor.as_ptr().cast_mut();
 
             system.header.crc32 = {
                 let mut digest = CRC.digest();
@@ -422,14 +419,16 @@ mod tests {
 
         use imps::*;
         mod imps {
+            use core::ffi::c_void;
+
             use super::*;
 
             pub static mut MOCK_GOP: RawGraphicsOutput = mock_gop();
 
             pub unsafe extern "efiapi" fn locate_protocol(
                 guid: *mut proto::Guid,
-                key: *mut u8,
-                out: *mut *mut u8,
+                key: *mut c_void,
+                out: *mut *mut c_void,
             ) -> EfiStatus {
                 let guid = *guid;
                 if guid == GraphicsOutput::GUID {
@@ -472,7 +471,7 @@ mod tests {
         Ok(())
     }
 
-    const IMAGE: EfiHandle = EfiHandle(69420 as *mut _);
+    const IMAGE: EfiHandle = unsafe { EfiHandle::new(69420 as *mut _) };
 
     /// This test sets up a mock UEFI environment for the purposes of running
     /// our wrappers and unsafe code through MIRI where possible, in as

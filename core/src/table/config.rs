@@ -1,15 +1,17 @@
-//! UEFI Configuration Tables
+//! UEFI Configuration tables
 //!
 //! UEFI Configuration tables are entries in an array within the
-//! [`crate::SystemTable`].
+//! [`SystemTable`][`crate::table::SystemTable`].
 //!
 //! They are completely arbitrary data, identified by and whose type is
-//! determined by a [`Guid`].
+//! determined by a [`Guid`][`crate::base::Guid`].
 //!
 //! Several standard and vendor-specific tables are defined and known about
 //! here. Unknown tables can be used through [`GenericConfig`]
-use super::*;
-use crate::{proto::Entity, GUID};
+#![allow(dead_code)]
+use core::{ffi::c_void, marker::PhantomData};
+
+use crate::{base::*, extra::Entity, GUID};
 
 mod imp {
     use super::*;
@@ -35,38 +37,50 @@ pub mod vendor {
     pub mod edk2 {
         //! Configuration tables specific to the common TianoCore EDK2 UEFI
         //! Implementation.
+        use core::ffi::c_void;
+
         use crate::GUID;
 
         #[GUID("A31280AD-481E-41B6-95E8-127F4C984779", crate("crate"))]
         #[derive(Debug)]
         #[repr(C)]
         pub struct TianoCompress {
-            table: *mut u8,
+            table: *mut c_void,
         }
 
         #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF", crate("crate"))]
         #[derive(Debug)]
         #[repr(C)]
         pub struct LZMACompress {
-            table: *mut u8,
+            table: *mut c_void,
         }
 
         #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB", crate("crate"))]
         #[derive(Debug)]
         #[repr(C)]
         pub struct BrotliCompress {
-            table: *mut u8,
+            table: *mut c_void,
         }
 
         #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889", crate("crate"))]
         #[derive(Debug)]
         #[repr(C)]
         pub struct LZMAf86Compress {
-            table: *mut u8,
+            table: *mut c_void,
         }
     }
 }
+use alloc::vec::Vec;
+
 use vendor::edk2::*;
+
+/// A generic UEFI Configuration table
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct ConfigurationTable {
+    pub guid: Guid,
+    pub table: *mut c_void,
+}
 
 /// Identifies a UEFI Configuration Table
 ///
@@ -90,21 +104,27 @@ pub trait ConfigTable<'tbl>: Entity + imp::Sealed {
     /// # Safety
     ///
     /// - `raw` must be valid for this table
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl>;
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl>;
 }
 
 /// A generic UEFI configuration table, identified by a [`Guid`]
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct GenericConfig<'tbl> {
-    config: RawConfigurationTable,
+    config: ConfigurationTable,
 
-    /// Lifetime of the [`SystemTable`]. All our data is valid for this long.
-    phantom: core::marker::PhantomData<&'tbl mut ()>,
+    /// Lifetime of the [`SystemTable`][crate::table::SystemTable]. All our data
+    /// is valid for this long.
+    phantom: PhantomData<&'tbl mut ()>,
 }
 
 impl<'tbl> GenericConfig<'tbl> {
-    pub(crate) fn new(config: RawConfigurationTable) -> Self {
+    /// Create a new [`GenericConfig`]
+    ///
+    /// # Safety
+    ///
+    /// You assert the data in `config` will outlive `'tbl`
+    pub fn new(config: ConfigurationTable) -> Self {
         Self {
             config,
             phantom: PhantomData,
@@ -117,7 +137,8 @@ impl<'tbl> GenericConfig<'tbl> {
     }
 
     /// Raw untyped pointer to the table
-    pub fn as_ptr(&self) -> *mut u8 {
+    pub fn as_ptr(&self) -> *mut c_void {
+        // FIXME: void
         self.config.table
     }
 
@@ -209,12 +230,12 @@ impl<'tbl> GenericConfig<'tbl> {
 #[GUID("8868E871-E4F1-11D3-BC22-0080C73C8881", crate("crate"))]
 #[derive(Debug)]
 pub struct AcpiTable20 {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 impl AcpiTable20 {
     #[inline]
-    pub const fn table(&self) -> *mut u8 {
+    pub const fn table(&self) -> *mut c_void {
         self.table
     }
 }
@@ -223,35 +244,35 @@ impl AcpiTable20 {
 #[GUID("EB9D2D30-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
 #[derive(Debug)]
 pub struct AcpiTable10 {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for SMBIOS 3
 #[GUID("F2FD1544-9794-4A2C-992E-E5BBCF20E394", crate("crate"))]
 #[derive(Debug)]
 pub struct SMBIOS3 {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for SMBIOS
 #[GUID("EB9D2D31-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
 #[derive(Debug)]
 pub struct SMBIOS {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for SAL
 #[GUID("EB9D2D32-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
 #[derive(Debug)]
 pub struct SAL {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for MPS / MultiProcessor Specification
 #[GUID("EB9D2D2F-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
 #[derive(Debug)]
 pub struct MPS {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for ACPI 2.0 and newer
@@ -259,41 +280,41 @@ pub struct MPS {
 #[derive(Debug)]
 #[repr(C)]
 pub struct RuntimeProperties {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for JSON Config Data
 #[GUID("87367F87-1119-41CE-AAEC-8BE0111F558A", crate("crate"))]
 #[derive(Debug)]
 pub struct JsonConfigData {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for JSON Capsule Data
 #[GUID("35E7A725-8DD2-4CAC-8011-33CDA8109056", crate("crate"))]
 #[derive(Debug)]
 pub struct JsonCapsuleData {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Table for JSON Capsule Result
 #[GUID("DBC461C3-B3DE-422A-B9B4-9886FD49A1E5", crate("crate"))]
 #[derive(Debug)]
 pub struct JsonCapsuleResult {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Flattened DTB Device Tree
 #[GUID("B1B621D5-F19C-41A5-830B-D9152C69AAE0", crate("crate"))]
 #[derive(Debug)]
 pub struct DeviceTree {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("DCFA911D-26EB-469F-A220-38B7DC461220", crate("crate"))]
 #[derive(Debug)]
 pub struct MemoryAttributes {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// UEFI Conformance profile
@@ -306,7 +327,7 @@ pub struct RawConformanceProfile {
     size: u16,
 
     /// Array of profiles
-    profiles: *const u8,
+    profiles: *const c_void,
 }
 
 /// UEFI Conformance profile
@@ -324,42 +345,42 @@ pub struct ConformanceProfile {
 #[derive(Debug)]
 #[repr(C)]
 pub struct DebugImageInfo {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("D719B2CB-3D3A-4596-A3BC-DAD00E67656F", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
 pub struct ImageExecInfo {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("B122A263-3661-4F68-9929-78F8B0D62180", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
 pub struct SystemResource {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("0DE9F0EC-88B6-428F-977A-258F1D0E5E72", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryRangeCapsule {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("6FD5B00C-D426-4283-9887-6CF5CF1CB1FE", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
 pub struct UserInformation {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 #[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042", crate("crate"))]
 #[derive(Debug)]
 #[repr(C)]
 pub struct HIIDatabaseExport {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 /// Deprecated Legacy EFI Properties
@@ -367,7 +388,7 @@ pub struct HIIDatabaseExport {
 #[derive(Debug)]
 #[repr(C)]
 pub struct EfiProperties {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 // Defined in the UEFI Platform Init spec Volume 2 Appendix B
@@ -375,7 +396,7 @@ pub struct EfiProperties {
 #[derive(Debug)]
 #[repr(C)]
 pub struct DXEServices {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 // Defined in the UEFI Platform Init spec Volume 2 Appendix B
@@ -383,7 +404,7 @@ pub struct DXEServices {
 #[derive(Debug)]
 #[repr(C)]
 pub struct HOBlist {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 // <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L211-L213>
@@ -391,7 +412,7 @@ pub struct HOBlist {
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryTypeInfo {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 // <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L259-L261>
@@ -399,14 +420,14 @@ pub struct MemoryTypeInfo {
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryStatus {
-    table: *mut u8,
+    table: *mut c_void,
 }
 
 impl<'tbl> ConfigTable<'tbl> for AcpiTable10 {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -417,7 +438,7 @@ impl<'tbl> ConfigTable<'tbl> for AcpiTable20 {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -428,7 +449,7 @@ impl<'tbl> ConfigTable<'tbl> for SMBIOS {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -439,7 +460,7 @@ impl<'tbl> ConfigTable<'tbl> for SMBIOS3 {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -450,7 +471,7 @@ impl<'tbl> ConfigTable<'tbl> for RuntimeProperties {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -461,7 +482,7 @@ impl<'tbl> ConfigTable<'tbl> for JsonConfigData {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -472,7 +493,7 @@ impl<'tbl> ConfigTable<'tbl> for JsonCapsuleData {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -483,7 +504,7 @@ impl<'tbl> ConfigTable<'tbl> for JsonCapsuleResult {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -494,7 +515,7 @@ impl<'tbl> ConfigTable<'tbl> for DeviceTree {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
@@ -505,19 +526,19 @@ impl<'tbl> ConfigTable<'tbl> for MemoryAttributes {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         Self {
             table: raw.cast_mut(),
         }
     }
 }
 
-// #[cfg(no)]
+#[cfg(no)]
 impl<'tbl> ConfigTable<'tbl> for ConformanceProfile {
     type Out<'cfg> = Self  where
     'tbl: 'cfg;
 
-    unsafe fn from_raw(raw: *const u8) -> Self::Out<'tbl> {
+    unsafe fn from_raw(raw: *const c_void) -> Self::Out<'tbl> {
         // let raw = &*raw.cast::<RawConformanceProfile>();
         // let profiles = from_raw_parts(raw.profiles.cast::<Guid>(),
         // raw.size.into()).to_vec();

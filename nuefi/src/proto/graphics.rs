@@ -1,6 +1,7 @@
 //! UEFI Graphics related protocols
 use alloc::{vec, vec::Vec};
 use core::{
+    ffi::c_void,
     fmt::{self, Write},
     iter::once,
     marker::PhantomData,
@@ -12,7 +13,6 @@ use core::{
 use raw::{RawBltOperation, RawBltPixel, RawGraphicsInfo, RawGraphicsOutput, RawPixelFormat};
 
 use self::raw::RawGraphicsMode;
-use super::{Guid, Str16};
 use crate::{
     error::{EfiStatus, Result, UefiError},
     get_boot_table,
@@ -52,7 +52,7 @@ impl<'table> GraphicsOutput<'table> {
             if let Some(table) = get_boot_table() {
                 // Safety: `info` was allocated by UEFI
                 unsafe {
-                    table.boot().free_pool(info as *mut u8)?;
+                    table.boot().free_pool(info as *mut c_void)?;
                 }
             }
             Ok(mode)

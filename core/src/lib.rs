@@ -10,13 +10,33 @@
 //!
 //! # Organization
 //!
+//! The modules in this crate are organized roughly following
+//! the organization given in the [spec][spec]
+//!
+//! - [`base`] contains the core UEFI data types
+//! - [`error`] is our own addition, and provides a nice [`Result`]
+//! and Error type using [`base::Status`].
+//! - [`table`] contains the various System Tables
+//! - [`extra`] contains various "extra" things, types and trait implementations
+//!   that make working with UEFI nice, but are not part of UEFI
+//! - [`proto`] contains the various UEFI Protocol, organized roughly
+//! following the sidebar for the [HTML Spec][spec]
+//!
 //! # References
 //!
 //! - [UEFI Specification 2.10][spec]
 //!
 //! [spec]: <https://uefi.org/specs/UEFI/2.10/index.html>
 #![no_std]
+extern crate alloc;
 
 pub mod error;
 
 pub mod base;
+pub mod extra;
+pub mod table;
+
+#[doc(inline)]
+pub use nuefi_macros::*;
+
+pub mod proto;

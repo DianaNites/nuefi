@@ -5,7 +5,6 @@ use core::{
     slice::from_raw_parts_mut,
 };
 
-use super::Str16;
 use crate::{
     error::{EfiStatus, Result},
     string::UefiString,

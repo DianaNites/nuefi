@@ -1,6 +1,8 @@
 //! UEFI Tables
 
+use alloc::{string::String, vec::Vec};
 use core::{
+    ffi::c_void,
     iter::from_fn,
     marker::PhantomData,
     mem::{size_of, transmute},
@@ -8,6 +10,8 @@ use core::{
     slice::from_raw_parts,
     time::Duration,
 };
+
+pub use nuefi_core::table::config;
 
 use crate::{
     error::{EfiStatus, Result, UefiError},
@@ -26,10 +30,19 @@ use crate::{
     EfiHandle,
 };
 
-pub mod config;
-pub mod raw;
-use alloc::{string::String, vec::Vec};
-
+pub mod raw {
+    // FIXME: Imports
+    pub use nuefi_core::table::{
+        boot_fn::*,
+        config::ConfigurationTable as RawConfigurationTable,
+        BootServices as RawBootServices,
+        Header,
+        LocateSearch,
+        Revision,
+        RuntimeServices as RawRuntimeServices,
+        SystemTable as RawSystemTable,
+    };
+}
 use raw::*;
 
 interface!(
@@ -47,7 +60,7 @@ impl<'table> BootServices<'table> {
     unsafe fn locate_handle(
         &self,
         search: LocateSearch,
-        search_key: *mut u8,
+        search_key: *mut c_void,
         guid: *const Guid,
     ) -> Result<Vec<EfiHandle>> {
         let lh = self
@@ -98,14 +111,15 @@ impl<'table> BootServices<'table> {
         policy: bool,
         devpath: *mut RawDevicePath,
         parent: EfiHandle,
-        src: *mut u8,
+        src: *mut c_void,
         src_len: usize,
     ) -> Result<EfiHandle> {
         let mut out = EfiHandle::null();
         let li = self.interface().load_image.ok_or(EfiStatus::UNSUPPORTED)?;
 
         // Safety: Callers responsibility
-        let ret = (li)(policy, parent, devpath, src, src_len, &mut out);
+        // FIXME: void
+        let ret = (li)(policy, parent, devpath as _, src, src_len, &mut out);
 
         if ret.is_success() || ret == EfiStatus::SECURITY_VIOLATION {
             assert_ne!(out, EfiHandle::null());
@@ -192,7 +206,7 @@ impl<'table> BootServices<'table> {
     pub unsafe fn locate_protocol<'boot, Protocol: proto::Protocol<'boot>>(
         &'boot self,
     ) -> Result<Option<Protocol>> {
-        let mut out: *mut u8 = null_mut();
+        let mut out: *mut c_void = null_mut();
         let mut guid = Protocol::GUID;
         let lp = self
             .interface()
@@ -242,7 +256,7 @@ impl<'table> BootServices<'table> {
         &'boot self,
         handle: EfiHandle,
     ) -> Result<Option<Scope<Proto>>> {
-        let mut out: *mut u8 = null_mut();
+        let mut out: *mut c_void = null_mut();
         let mut guid = Proto::GUID;
         let op = self
             .interface()
@@ -326,7 +340,7 @@ impl<'table> BootServices<'table> {
             .install_protocol_interface
             .ok_or(EfiStatus::UNSUPPORTED)?;
 
-        (ipi)(&mut h, &mut guid, 0, interface as *mut u8).into()
+        (ipi)(&mut h, &mut guid, 0, interface as *mut c_void).into()
     }
 
     /// Query `handle` to determine if it supports `Protocol`
@@ -354,8 +368,8 @@ impl<'table> BootServices<'table> {
             handle: EfiHandle,
             hp: HandleProtocolFn,
             p_name: &'static str,
-        ) -> Result<Option<NonNull<u8>>> {
-            let mut out: *mut u8 = null_mut();
+        ) -> Result<Option<NonNull<c_void>>> {
+            let mut out: *mut c_void = null_mut();
 
             // Safety: Arguments are statically valid for this call.
             let ret = unsafe { (hp)(handle, guid, &mut out) };
@@ -379,7 +393,7 @@ impl<'table> BootServices<'table> {
             }
         }
 
-        let mut out: *mut u8 = null_mut();
+        let mut out: *mut c_void = null_mut();
         let guid = Protocol::GUID;
         let hp = self
             .interface()
@@ -436,7 +450,13 @@ impl<'table> BootServices<'table> {
         // - Source buffer and its size are valid
         unsafe {
             let devpath = devpath.map(|d| d.as_ptr()).unwrap_or(null_mut());
-            self.load_image_impl(false, devpath, parent, src.as_ptr() as *mut u8, src.len())
+            self.load_image_impl(
+                false,
+                devpath,
+                parent,
+                src.as_ptr() as *mut c_void,
+                src.len(),
+            )
         }
     }
 
@@ -565,11 +585,11 @@ impl<'table> BootServices<'table> {
     ///
     /// This will fail if `ty` is [MemoryType::RESERVED]
     #[inline]
-    pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<NonNull<u8>> {
+    pub fn allocate_pool(&self, ty: MemoryType, size: usize) -> Result<NonNull<c_void>> {
         if ty == MemoryType::RESERVED {
             return Err(EfiStatus::INVALID_PARAMETER.into());
         }
-        let mut out: *mut u8 = null_mut();
+        let mut out: *mut c_void = null_mut();
 
         let ap = self
             .interface()
@@ -631,7 +651,7 @@ impl<'table> BootServices<'table> {
     /// - Must have been allocated by [BootServices::allocate_pool]
     /// - Must be non-null
     #[inline]
-    pub unsafe fn free_pool(&self, memory: *mut u8) -> Result<()> {
+    pub unsafe fn free_pool(&self, memory: *mut c_void) -> Result<()> {
         let fp = self.interface().free_pool.ok_or(EfiStatus::UNSUPPORTED)?;
         (fp)(memory).into()
     }
@@ -797,7 +817,7 @@ impl SystemTable<Boot> {
         let ptr = self.table().con_out;
         assert!(!ptr.is_null(), "con_out handle was null");
         // Safety: Construction ensures safety.
-        unsafe { SimpleTextOutput::new(ptr) }
+        unsafe { SimpleTextOutput::new(ptr.cast()) }
     }
 
     /// Output on stderr.
@@ -807,7 +827,7 @@ impl SystemTable<Boot> {
         let ptr = self.table().con_err;
         assert!(!ptr.is_null(), "std_err handle was null");
         // Safety: Construction ensures safety.
-        unsafe { SimpleTextOutput::new(ptr) }
+        unsafe { SimpleTextOutput::new(ptr.cast()) }
     }
 
     /// Reference to the UEFI Boot services.

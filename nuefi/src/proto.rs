@@ -56,9 +56,7 @@ pub mod media;
 pub mod platform_init;
 pub mod vendor;
 
-pub use nuefi_core::base::{Char16, Guid};
-
-pub type Str16 = *const Char16;
+pub use nuefi_core::base::Guid;
 
 /// Defines a UEFI Protocol
 ///
@@ -189,35 +187,4 @@ pub struct Time {
     pub _pad2: u8,
 }
 
-/// Identifies an entity within UEFI, such as a [`Protocol`].
-///
-/// You shouldn't need to use this, see more
-/// specific traits like [`Protocol`] instead.
-///
-/// See the [`crate::GUID`] macro for how to implement this.
-///
-/// # Safety
-///
-/// This trait is unsafe because if the GUID you provide is wrong, UB can
-/// result.
-///
-/// You must ensure the GUID is correct for whatever entity you are
-/// representing, or else you will cause type confusion.
-// #[doc(hidden)]
-pub unsafe trait Entity {
-    /// Entity GUID
-    const GUID: Guid;
-
-    /// Entity Name
-    const NAME: &'static str;
-
-    /// Entity Name
-    fn name() -> &'static str {
-        Self::NAME
-    }
-
-    /// Entity GUID
-    fn guid() -> Guid {
-        Self::GUID
-    }
-}
+pub use nuefi_core::extra::Entity;

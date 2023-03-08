@@ -2,7 +2,6 @@
 
 use core::{fmt, ptr::null_mut};
 
-use super::Str16;
 use crate::error::EfiStatus;
 
 /// EFI Physical Address

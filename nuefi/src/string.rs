@@ -158,7 +158,7 @@ impl<'table> Drop for UefiString<'table> {
     fn drop(&mut self) {
         if let Some(table) = get_boot_table() {
             // Safety: self.data was allocated by allocate_pool
-            let _ = unsafe { table.boot().free_pool(self.data as *mut u8) };
+            let _ = unsafe { table.boot().free_pool(self.data.cast()) };
         }
     }
 }

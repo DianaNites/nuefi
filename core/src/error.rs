@@ -4,6 +4,8 @@
 //! [`Status`][st] warnings and errors are mapped to [`Err`],
 //! and success mapped to [`Ok`]
 //!
+//! This works nicely with the `?` operator
+//!
 //! See [`Status`][st] for details.
 //!
 //! [st]: crate::base::Status

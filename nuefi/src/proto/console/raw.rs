@@ -2,7 +2,8 @@
 
 use core::{fmt, ptr::null_mut};
 
-use super::Str16;
+use nuefi_core::base::Char16;
+
 use crate::error::EfiStatus;
 
 #[derive(Debug)]
@@ -29,9 +30,10 @@ pub struct RawSimpleTextOutput {
     pub reset: Option<unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> EfiStatus>,
 
     pub output_string:
-        Option<unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus>,
+        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> EfiStatus>,
 
-    pub test_string: Option<unsafe extern "efiapi" fn(this: *mut Self, string: Str16) -> EfiStatus>,
+    pub test_string:
+        Option<unsafe extern "efiapi" fn(this: *mut Self, string: *const Char16) -> EfiStatus>,
 
     pub query_mode: Option<
         unsafe extern "efiapi" fn(

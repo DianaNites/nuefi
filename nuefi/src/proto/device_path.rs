@@ -1,6 +1,7 @@
 //! UEFI Device Path Protocol
 
 use core::{
+    ffi::c_void,
     mem::{size_of, transmute},
     slice::from_raw_parts,
 };
@@ -71,7 +72,7 @@ impl<'table> DevicePath<'table> {
     /// Free the DevicePath
     pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
         // Safety: Construction ensures these are valid
-        unsafe { boot.free_pool(self.interface as *mut u8) }
+        unsafe { boot.free_pool(self.interface as *mut c_void) }
     }
 
     /// Duplicate/clone the path
@@ -140,7 +141,9 @@ impl<'table> DevicePath<'table> {
         let cap = path_len + hdr_size + hdr_size;
         // log::trace!("Capacity: {cap} - {path_len}");
 
-        let data = boot.allocate_pool(MemoryType::LOADER_DATA, cap)?;
+        let data = boot
+            .allocate_pool(MemoryType::LOADER_DATA, cap)?
+            .cast::<u8>();
 
         let path_len = path_len
             .try_into()
@@ -173,7 +176,7 @@ impl<'table> DevicePath<'table> {
             let ret = self.append(&node)?;
 
             // Free our data
-            boot.free_pool(data.as_ptr())?;
+            boot.free_pool(data.as_ptr().cast())?;
 
             Ok(ret)
         }
