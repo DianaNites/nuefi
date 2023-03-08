@@ -49,13 +49,6 @@ impl Revision {
     }
 }
 
-impl PartialEq<(u32, u32)> for Revision {
-    #[inline]
-    fn eq(&self, other: &(u32, u32)) -> bool {
-        (self.major(), self.minor()).eq(other)
-    }
-}
-
 /// The common header of the 3 UEFI tables, System, Boot, and Runtime.
 ///
 /// This structure precedes the UEFI defined tables. UEFI tables are dynamically
