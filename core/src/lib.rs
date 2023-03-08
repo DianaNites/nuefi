@@ -21,16 +21,19 @@
 //!   that make working with UEFI nice, but are not part of UEFI
 //! - [`proto`] contains the various UEFI Protocol, organized roughly
 //! following the sidebar for the [HTML Spec][spec]
+//! - [`handlers`] contains the implementations for `panic` and `alloc_error`
+//!   used by the [`entry`] macro
 //!
 //! # References
 //!
 //! - [UEFI Specification 2.10][spec]
 //!
-//! [spec]: <https://uefi.org/specs/UEFI/2.10/index.html>
+//! [spec]: https://uefi.org/specs/UEFI/2.10/index.html
 #![no_std]
 extern crate alloc;
 
 pub mod error;
+// pub mod handlers;
 
 pub mod base;
 pub mod extra;
@@ -40,3 +43,9 @@ pub mod table;
 pub use nuefi_macros::*;
 
 pub mod proto;
+
+mod nuefi_core {
+    //! Hack required for the GUID macro to work in this crate
+
+    pub use super::*;
+}

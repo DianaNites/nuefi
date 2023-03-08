@@ -8,7 +8,7 @@ error[E0061]: this function takes 1 argument but 2 arguments were supplied
  --> tests/entry/fail/missing.rs:5:4
   |
 4 | #[entry]
-  | -------- unexpected argument of type `SystemTable<Boot>`
+  | -------- unexpected argument of type `nuefi::SystemTable<Boot>`
 5 | fn e_main(_handle: EfiHandle) -> Result<()> {
   |    ^^^^^^
   |

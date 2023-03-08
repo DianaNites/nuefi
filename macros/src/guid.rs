@@ -86,7 +86,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
 /// without imports and with the input GUID bytes filled in.
 ///
 /// ```rust,no_run
-/// use nuefi::proto::Guid;
+/// use nuefi_core::base::Guid;
 ///
 /// const GUID: Guid = unsafe {
 ///       Guid::from_bytes([
@@ -102,8 +102,8 @@ pub(crate) fn parse_guid(
     errors: &mut Errors,
 ) -> impl ToTokens {
     // This makes errors really nice
-    let error_def = quote! {const GUID: #krate::proto::Guid = unsafe {
-        #krate::proto::Guid::from_bytes([
+    let error_def = quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
+        #krate::nuefi_core::base::Guid::from_bytes([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00,
         ])
@@ -114,8 +114,8 @@ pub(crate) fn parse_guid(
             Ok(guid) => {
                 let lol = format!("{:?}", guid.to_bytes_me());
                 if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
-                    quote! {const GUID: #krate::proto::Guid = unsafe {
-                        #krate::proto::Guid::from_bytes(#lol)
+                    quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
+                        #krate::nuefi_core::proto::Guid::from_bytes(#lol)
                     };}
                 } else {
                     quote! {
@@ -161,7 +161,7 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
     let guid_imp = quote! {
 
         // #[cfg(no)]
-        unsafe impl #imp_generics #krate::proto::Entity for #imp_struct #imp_generics {
+        unsafe impl #imp_generics #krate::nuefi_core::extra::Entity for #imp_struct #imp_generics {
             #guid
 
             const NAME: &'static str = #name;

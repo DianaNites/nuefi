@@ -12,7 +12,7 @@ error[E0061]: this function takes 0 arguments but 2 arguments were supplied
   | --------
   | |
   | unexpected argument of type `EfiHandle`
-  | unexpected argument of type `SystemTable<Boot>`
+  | unexpected argument of type `nuefi::SystemTable<Boot>`
 5 | fn e_main() {}
   |    ^^^^^^
   |

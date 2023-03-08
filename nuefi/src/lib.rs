@@ -86,6 +86,9 @@ pub mod string;
 pub mod table;
 mod util;
 
+/// UEFI Core types
+pub use nuefi_core;
+
 /// Handle to the SystemTable. Uses Acquire/Release
 static TABLE: AtomicPtr<RawSystemTable> = AtomicPtr::new(core::ptr::null_mut());
 

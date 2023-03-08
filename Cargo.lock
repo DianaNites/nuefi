@@ -157,6 +157,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "nuefi",
+ "nuefi_core",
  "nuuid",
  "quote",
  "syn",

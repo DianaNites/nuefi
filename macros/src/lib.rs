@@ -155,8 +155,8 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust
+/// # use nuefi_macros::Protocol;
 /// # use nuefi::interface;
-/// # use nuefi::Protocol;
 /// # pub struct RawMyProtocol;
 /// #
 /// interface!(
@@ -186,10 +186,12 @@ pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// The resultant GUID is accessible as the `GUID` associated constant.
 ///
+/// This implements [`Entity`][`nuefi_core::extra::Entity`]
+///
 /// # Example
 ///
 /// ```rust
-/// # use nuefi::GUID;
+/// # use nuefi_macros::GUID;
 ///
 /// #[GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")]
 /// struct HasID;

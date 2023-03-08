@@ -25,3 +25,4 @@ syn = { version = "1.0.107", features = [
 log = { version = "0.4.17", default-features = false }
 trybuild = { version = "1.0.77", features = ["diff"] }
 nuefi = { path = "../nuefi" }
+nuefi_core = { path = "../core" }
