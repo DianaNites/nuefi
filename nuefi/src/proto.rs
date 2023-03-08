@@ -42,9 +42,6 @@
 
 use core::{marker::PhantomData, ops::Deref};
 
-use log::error;
-use nuuid::Uuid;
-
 use crate::{get_boot_table, EfiHandle};
 
 pub mod console;
@@ -140,11 +137,7 @@ impl<'table, Proto: Protocol<'table>> Drop for Scope<'table, Proto> {
     fn drop(&mut self) {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
-            if let Err(e) = boot.close_protocol::<Proto>(self.handle, self.agent, self.controller) {
-                error!("Error dropping scoped protocol: {e}");
-            }
-        } else {
-            error!("Tried dropping scoped protocol after boot services");
+            let _ = boot.close_protocol::<Proto>(self.handle, self.agent, self.controller);
         }
     }
 }
