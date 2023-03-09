@@ -137,16 +137,6 @@ impl Guid {
     pub const fn to_bytes(self) -> [u8; 16] {
         self.0
     }
-
-    // TODO: Replace with `new`
-    #[inline]
-    #[doc(hidden)]
-    // #[deprecated(note = "Nuuid use new")]
-    pub const unsafe fn from_bytes(bytes: [u8; 16]) -> Self {
-        // FIXME: Uhh.. why? This is wrong. The proc macro should be doing this.
-        Self(nuuid::Uuid::from_bytes_me(bytes).to_bytes())
-        // Self::new(bytes)
-    }
 }
 
 impl fmt::Debug for Guid {

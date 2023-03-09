@@ -148,4 +148,4 @@ pub struct Time {
     pub _pad2: u8,
 }
 
-pub use nuefi_core::{base::Guid, extra::Entity, proto::Protocol};
+pub use crate::nuefi_core::{base::Guid, extra::Entity, proto::Protocol};

@@ -19,8 +19,9 @@
 //! - [`table`] contains the various System Tables
 //! - [`extra`] contains various "extra" things, types and trait implementations
 //!   that make working with UEFI nice, but are not part of UEFI
-//! - [`proto`] contains the various UEFI Protocol, organized roughly
-//! following the sidebar for the [HTML Spec][spec]
+//! - [`proto`] contains the various UEFI Protocols, organized roughly
+//! following the sidebar for the [HTML Spec][spec], as well as the
+//! [`Protocol`][`proto::Protocol`] trait.
 //! - [`handlers`] contains the implementations for `panic` and `alloc_error`
 //!   used by the [`entry`] macro
 //!
@@ -45,7 +46,7 @@ pub use nuefi_macros::*;
 pub mod proto;
 
 mod nuefi_core {
-    //! Hack required for the GUID macro to work in this crate
+    //! Hack required for the [`GUID`]/[`Protocol`] macro to work in this crate
 
     pub use super::*;
 }

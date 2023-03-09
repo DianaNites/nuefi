@@ -89,7 +89,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
 /// use nuefi_core::base::Guid;
 ///
 /// const GUID: Guid = unsafe {
-///       Guid::from_bytes([
+///       Guid::new([
 ///           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 ///           0x00, 0x00,
 ///       ])
@@ -103,7 +103,7 @@ pub(crate) fn parse_guid(
 ) -> impl ToTokens {
     // This makes errors really nice
     let error_def = quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
-        #krate::nuefi_core::base::Guid::from_bytes([
+        #krate::nuefi_core::base::Guid::new([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00,
         ])
@@ -112,10 +112,10 @@ pub(crate) fn parse_guid(
     if let Some(guid) = &opts {
         match Uuid::parse_me(guid) {
             Ok(guid) => {
-                let lol = format!("{:?}", guid.to_bytes_me());
+                let lol = format!("{:?}", guid.to_bytes());
                 if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
                     quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
-                        #krate::nuefi_core::base::Guid::from_bytes(#lol)
+                        #krate::nuefi_core::base::Guid::new(#lol)
                     };}
                 } else {
                     quote! {

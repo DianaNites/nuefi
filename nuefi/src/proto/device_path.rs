@@ -1,10 +1,30 @@
 //! UEFI Device Path Protocol
+//!
+//! # References
+//!
+//! - [UEFI Section 10. Device Path Protocol][s10]
+//!
+//! [s10]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html>
 
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use core::{
     ffi::c_void,
     mem::{size_of, transmute},
     slice::from_raw_parts,
 };
+
+pub mod raw {
+    // FIXME: Ugly hack to keep things compiling
+    pub use nuefi_core::proto::device_path::{
+        DevicePath as RawDevicePath,
+        DevicePathToText as RawDevicePathToText,
+        DevicePathUtil as RawDevicePathUtil,
+    };
+}
+use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
 use super::{Guid, Protocol, Scope};
 use crate::{
@@ -16,14 +36,6 @@ use crate::{
     util::interface,
     Protocol,
 };
-
-pub mod raw;
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
-
-use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
 
 /// Helper to get [`DevicePathUtil`]
 fn get_dev_util<'proto>(

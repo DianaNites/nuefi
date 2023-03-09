@@ -6,8 +6,9 @@
 //!
 //! Currently, only a subset of the UEFI API is implemented.
 
-// FIXME: Ugly hack for GUID macro
-pub use crate::{base::Guid, extra::Entity};
+use crate::base::Guid;
+
+pub mod device_path;
 
 /// Defines a UEFI Protocol
 ///

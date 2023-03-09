@@ -36,12 +36,7 @@ impl<'t> Proto<'t> {
 fn main() {
     let p = unsafe { Proto::new(null_mut()) };
 
-    let guid = unsafe {
-        // `parse_me` because thats what the macro expects
-        // TODO: Have an option for this? Change it? Why does it expect this?
-        // Ah. Because thats what all UEFI GUIDs are in.
-        Guid::from_bytes(Uuid::parse_me(GUID).unwrap().to_bytes_me())
-    };
+    let guid = Guid::new(Uuid::parse_me(GUID).unwrap().to_bytes());
 
     assert_eq!(p.guid(), guid);
 
