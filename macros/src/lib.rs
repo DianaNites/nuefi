@@ -186,16 +186,18 @@ pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// The resultant GUID is accessible as the `GUID` associated constant.
 ///
-/// This implements [`Entity`][`nuefi_core::extra::Entity`]
+/// This implements [`Entity`][Entity]
 ///
 /// # Example
 ///
 /// ```rust
 /// # use nuefi_macros::GUID;
-///
+/// #
 /// #[GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")]
 /// struct HasID;
 /// ```
+///
+/// [Entity]: ../nuefi_core/extra/trait.Entity.html
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn GUID(args: TokenStream, input: TokenStream) -> TokenStream {
