@@ -19,7 +19,7 @@ use core::{
 pub mod raw {
     // FIXME: Ugly hack to keep things compiling
     pub use nuefi_core::proto::device_path::{
-        DevicePath as RawDevicePath,
+        DevicePathHdr as RawDevicePath,
         DevicePathToText as RawDevicePathToText,
         DevicePathUtil as RawDevicePathUtil,
     };

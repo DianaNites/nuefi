@@ -17,31 +17,35 @@ use core::ffi::c_void;
 use nuefi_macros::GUID;
 
 pub mod devpath_fn {
-    //! Function definitions for [`super::DevicePath`]
+    //! Function definitions for [`super::DevicePathHdr`]
     //!
     //! # References
     //!
     //! - <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html>
-    use super::DevicePath;
+    use super::DevicePathHdr;
 
-    pub type GetDevicePathSize = unsafe extern "efiapi" fn(this: *mut DevicePath) -> usize;
+    pub type GetDevicePathSize = unsafe extern "efiapi" fn(this: *mut DevicePathHdr) -> usize;
 
     pub type DuplicateDevicePath =
-        unsafe extern "efiapi" fn(this: *mut DevicePath) -> *mut DevicePath;
+        unsafe extern "efiapi" fn(this: *mut DevicePathHdr) -> *mut DevicePathHdr;
 
-    pub type AppendDeviceNode =
-        unsafe extern "efiapi" fn(this: *mut DevicePath, other: *mut DevicePath) -> *mut DevicePath;
+    pub type AppendDeviceNode = unsafe extern "efiapi" fn(
+        this: *mut DevicePathHdr,
+        other: *mut DevicePathHdr,
+    ) -> *mut DevicePathHdr;
 
-    pub type AppendDevicePath =
-        unsafe extern "efiapi" fn(this: *mut DevicePath, other: *mut DevicePath) -> *mut DevicePath;
+    pub type AppendDevicePath = unsafe extern "efiapi" fn(
+        this: *mut DevicePathHdr,
+        other: *mut DevicePathHdr,
+    ) -> *mut DevicePathHdr;
 }
 
 mod imp {
-    //! Privately implement [`DevicePath`][super::DevicePath]
+    //! Privately implement [`DevicePath`][`super::DevicePathHdr`]
     // use super::*;
 }
 
-/// [`DevicePath`] types
+/// [`DevicePathHdr`] types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct DevicePathType(u8);
@@ -68,7 +72,7 @@ impl DevicePathType {
     pub const END: Self = Self(0x7F);
 }
 
-/// [`DevicePath`] Sub Types
+/// [`DevicePathHdr`] Sub Types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct DevicePathSubType(u8);
@@ -77,15 +81,16 @@ impl DevicePathSubType {
     /// Represents a file [Media][`DevicePathType::MEDIA`] path
     pub const MEDIA_FILE: Self = Self(0x04);
 
-    /// Represents the end of the entire [`DevicePath`]
+    /// Represents the end of the entire [`DevicePathHdr`]
     pub const END_ENTIRE: Self = Self(0xFF);
 
-    /// Represents the end of this [`DevicePath`] instance
+    /// Represents the end of this [`DevicePathHdr`] instance
     /// and the start of a new one
     pub const END_INSTANCE: Self = Self(0x01);
 }
 
-/// Generic [`DevicePath`] structure, and a [`Protocol`][super::Protocol]
+/// Generic [`DevicePathHdr`] structure, and a
+/// [`Protocol`][`crate::extra::Protocol`]
 ///
 /// See [the module][`super::device_path`] docs for detail on what a Device Path
 /// is
@@ -101,7 +106,7 @@ impl DevicePathSubType {
 #[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
 #[derive(Debug)]
 #[repr(C, packed)]
-pub struct DevicePath {
+pub struct DevicePathHdr {
     pub ty: DevicePathType,
 
     pub sub_ty: DevicePathSubType,
@@ -110,8 +115,8 @@ pub struct DevicePath {
     pub len: [u8; 2],
 }
 
-impl DevicePath {
-    /// Create a new [`DevicePath`]
+impl DevicePathHdr {
+    /// Create a new [`DevicePathHdr`]
     ///
     /// # Safety
     ///
@@ -164,7 +169,7 @@ pub struct DevicePathUtil {
 pub struct DevicePathToText {
     pub convert_device_node_to_text: Option<
         unsafe extern "efiapi" fn(
-            node: *mut DevicePath,
+            node: *mut DevicePathHdr,
             display: bool,
             shortcuts: bool,
         ) -> *mut u16,
@@ -172,7 +177,7 @@ pub struct DevicePathToText {
 
     pub convert_device_path_to_text: Option<
         unsafe extern "efiapi" fn(
-            path: *mut DevicePath,
+            path: *mut DevicePathHdr,
             display: bool,
             shortcuts: bool,
         ) -> *mut u16,
