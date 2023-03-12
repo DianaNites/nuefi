@@ -8,6 +8,8 @@
 //! but there may be conveniences or extra information provided.
 //! These are not intended to be pure raw definitions, adding nothing else.
 //!
+//! Nothing in here can, itself, interact with UEFI in any way.
+//!
 //! # Organization
 //!
 //! The modules in this crate are organized roughly following
