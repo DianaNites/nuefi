@@ -21,7 +21,7 @@
 //!   that make working with UEFI nice, but are not part of UEFI
 //! - [`proto`] contains the various UEFI Protocols, organized roughly
 //! following the sidebar for the [HTML Spec][spec], as well as the
-//! [`Protocol`][`proto::Protocol`] trait.
+//! [`Protocol`][`extra::Protocol`] trait.
 //! - [`handlers`] contains the implementations for `panic` and `alloc_error`
 //!   used by the [`entry`] macro
 //!
