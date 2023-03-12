@@ -1,6 +1,10 @@
 //! UEFI Device Path Protocol
 //!
-//! A UEFI Device Path is a variable length unaligned packed binary structure.
+//! This protocol is special in that it is not actually a protocol,
+//! but a unaligned, variable length binary structure.
+//!
+//! Like a Protocol, a Device Path has a GUID, and the UEFI specification
+//! refers to it as a Protocol, but it has no methods.
 //!
 //! # References
 //!
