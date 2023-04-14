@@ -30,6 +30,9 @@ export MIRIFLAGS := "\
 # -Zmiri-disable-isolation \
 # -Zmiri-retag-fields \
 
+@_default:
+    {{just_executable()}} --list
+
 @miri *args='':
     cargo +nightly miri nextest run -p nuefi {{args}}
     # cargo +nightly miri {{args}}
@@ -41,5 +44,3 @@ export MIRIFLAGS := "\
 
 @doc *args='':
     cargo +nightly doc --no-deps {{args}}
-
-@_default:
