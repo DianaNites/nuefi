@@ -13,8 +13,8 @@ path = "tests/test.rs"
 
 [dependencies]
 nuuid = { version = "0.4.6", default-features = false }
-quote = "1.0.23"
-syn = { version = "1.0.107", features = [
+quote = "1.0.29"
+syn = { version = "1.0.109", features = [
     "full",
     "fold",
     "visit",
@@ -22,7 +22,7 @@ syn = { version = "1.0.107", features = [
 ] }
 
 [dev-dependencies]
-log = { version = "0.4.17", default-features = false }
-trybuild = { version = "1.0.77", features = ["diff"] }
+log = { version = "0.4.19", default-features = false }
+trybuild = { version = "1.0.81", features = ["diff"] }
 nuefi = { path = "../nuefi" }
 nuefi_core = { path = "../core" }
