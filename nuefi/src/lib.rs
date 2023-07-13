@@ -1,6 +1,11 @@
 //! A safe Rust UEFI library that provides an environment to safely
 //! write applications and interact with firmware.
 //!
+//! This library is designed to be easy to use more than it is a direct mapping
+//! to UEFI firmware, though it does intend to support such use in practice
+//! and in documentation, by documenting what actions, if any, are performed
+//! "behind the scenes", and when.
+//!
 //! # Quick Start
 //!
 //! Minimal quick start example, this will setup a UEFI entry point for you that
