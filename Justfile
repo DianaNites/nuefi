@@ -23,6 +23,7 @@ export MIRIFLAGS := "\
 -Zmiri-strict-provenance \
 -Zmiri-symbolic-alignment-check \
 -Zmiri-isolation-error=warn-nobacktrace \
+-Zmiri-tree-borrows \
 "
 
 # -Zmiri-ignore-leaks \
@@ -39,8 +40,8 @@ export MIRIFLAGS := "\
 
 @test *args='':
     RUSTFLAGS="--cfg special_test" \
-    cargo +nightly test {{args}}
-    # cargo +nightly nextest run {{args}}
+    cargo +nightly nextest run {{args}}
+    # cargo +nightly test {{args}}
 
 @doc *args='':
     cargo +nightly doc --no-deps {{args}}

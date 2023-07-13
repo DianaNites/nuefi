@@ -6,6 +6,9 @@
 //! Like a Protocol, a Device Path has a GUID, and the UEFI specification
 //! refers to it as a Protocol, but it has no methods.
 //!
+//! UEFI Device Paths have different types, and each type has a different
+//! sub-type, both of which together determine the daa format for a path node.
+//!
 //! # References
 //!
 //! - [UEFI Section 10. Device Path Protocol][s10]
@@ -68,7 +71,7 @@ impl DevicePathType {
     /// Used by platform firmware to select legacy bios boot options
     pub const BIOS: Self = Self(0x05);
 
-    /// Represents the end of the device path
+    /// Represents the end of the device path structure
     pub const END: Self = Self(0x7F);
 }
 
@@ -104,7 +107,7 @@ impl DevicePathSubType {
 ///
 /// [s10_2]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html#efi-device-path-protocol>
 #[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DevicePathHdr {
     pub ty: DevicePathType,
@@ -182,4 +185,18 @@ pub struct DevicePathToText {
             shortcuts: bool,
         ) -> *mut u16,
     >,
+}
+
+/// A generic UEFI Device Path
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct GenericDevicePath {
+    hdr: DevicePathHdr,
+}
+
+impl GenericDevicePath {
+    /// # Safety
+    pub const unsafe fn from_raw<'a>(_hdr: *const DevicePathHdr) -> &'a GenericDevicePath {
+        todo!()
+    }
 }
