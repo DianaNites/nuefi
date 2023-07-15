@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitflags = "1.3.2"
+bitflags = "2.3.3"
 crc = "3.0.1"
 log = "0.4.19"
 macros = { path = "../macros", package = "nuefi_macros" }
-nuuid = { version = "0.4.6", default-features = false }
+nuuid = { version = "0.5.0", default-features = false }
 # Required so nuuid doesn't fail to compile
 sha-1 = { version = "0.10.1", default-features = false, features = [
     # "force-soft",
