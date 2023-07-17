@@ -19,10 +19,10 @@ mod imp {
     impl Sealed for AcpiTable10 {}
     impl Sealed for AcpiTable20 {}
     impl Sealed for RuntimeProperties {}
-    impl Sealed for SMBIOS {}
+    impl Sealed for Smbios {}
     impl Sealed for SMBIOS3 {}
-    impl Sealed for SAL {}
-    impl Sealed for MPS {}
+    impl Sealed for Sal {}
+    impl Sealed for Mps {}
     impl Sealed for JsonConfigData {}
     impl Sealed for JsonCapsuleData {}
     impl Sealed for JsonCapsuleResult {}
@@ -153,14 +153,14 @@ impl<'tbl> GenericConfig<'tbl> {
             Some(AcpiTable10::NAME)
         } else if guid == RuntimeProperties::GUID {
             Some(RuntimeProperties::NAME)
-        } else if guid == SMBIOS::GUID {
-            Some(SMBIOS::NAME)
+        } else if guid == Smbios::GUID {
+            Some(Smbios::NAME)
         } else if guid == SMBIOS3::GUID {
             Some(SMBIOS3::NAME)
-        } else if guid == SAL::GUID {
-            Some(SAL::NAME)
-        } else if guid == MPS::GUID {
-            Some(MPS::NAME)
+        } else if guid == Sal::GUID {
+            Some(Sal::NAME)
+        } else if guid == Mps::GUID {
+            Some(Mps::NAME)
         } else if guid == JsonConfigData::GUID {
             Some(JsonConfigData::NAME)
         } else if guid == JsonCapsuleData::GUID {
@@ -257,21 +257,21 @@ pub struct SMBIOS3 {
 /// Table for SMBIOS
 #[GUID("EB9D2D31-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
-pub struct SMBIOS {
+pub struct Smbios {
     table: *mut c_void,
 }
 
 /// Table for SAL
 #[GUID("EB9D2D32-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
-pub struct SAL {
+pub struct Sal {
     table: *mut c_void,
 }
 
 /// Table for MPS / MultiProcessor Specification
 #[GUID("EB9D2D2F-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
-pub struct MPS {
+pub struct Mps {
     table: *mut c_void,
 }
 
@@ -445,7 +445,7 @@ impl<'tbl> ConfigTable<'tbl> for AcpiTable20 {
     }
 }
 
-impl<'tbl> ConfigTable<'tbl> for SMBIOS {
+impl<'tbl> ConfigTable<'tbl> for Smbios {
     type Out<'cfg> = Self where
         'tbl: 'cfg;
 

@@ -2,7 +2,14 @@
 //!
 //! Note: This crate treats all UEFI strings as UTF-16
 use alloc::{string::String, vec::Vec};
-use core::{fmt::Display, marker::PhantomData, mem::transmute, ops::Deref, slice::from_raw_parts};
+use core::{
+    char::REPLACEMENT_CHARACTER,
+    fmt::Display,
+    marker::PhantomData,
+    mem::transmute,
+    ops::Deref,
+    slice::from_raw_parts,
+};
 
 use log::{error, trace};
 
@@ -241,16 +248,16 @@ impl<'buf> UefiStr<'buf> {
     /// # Panics
     ///
     /// - On failure
-    pub fn into_string(&self) -> String {
-        char::decode_utf16(self.as_slice().iter().cloned())
-            .map(|r| r.unwrap())
+    pub fn to_str(&self) -> String {
+        char::decode_utf16(self.as_slice().iter().copied())
+            .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
             .collect::<String>()
     }
 }
 
 impl<'buf> Display for UefiStr<'buf> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.into_string())
+        write!(f, "{}", self.to_str())
     }
 }
 

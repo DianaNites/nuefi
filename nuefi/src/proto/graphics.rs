@@ -210,10 +210,10 @@ impl GraphicsMode {
 #[non_exhaustive]
 pub enum PixelFormat {
     /// RBG Pixels
-    RGB,
+    Rgb,
 
     /// BGR Pixels
-    BGR,
+    Bgr,
 
     /// Pixels defined by [`raw::RawPixelMask`]
     BitMask,
@@ -225,8 +225,8 @@ pub enum PixelFormat {
 impl From<RawPixelFormat> for PixelFormat {
     fn from(value: RawPixelFormat) -> Self {
         match value {
-            RawPixelFormat::RGB => PixelFormat::RGB,
-            RawPixelFormat::BGR => PixelFormat::BGR,
+            RawPixelFormat::RGB => PixelFormat::Rgb,
+            RawPixelFormat::BGR => PixelFormat::Bgr,
             RawPixelFormat::BIT_MASK => PixelFormat::BitMask,
             RawPixelFormat::BLT_ONLY => PixelFormat::BltOnly,
             _ => unimplemented!(),

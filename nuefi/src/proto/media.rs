@@ -437,7 +437,7 @@ impl FsInfo {
             // Initialize the new info struct
             info.as_mut_ptr()
                 .cast::<u8>()
-                .copy_from_nonoverlapping(raw.as_ptr() as *const u8, f_size);
+                .copy_from_nonoverlapping(raw.as_ptr(), f_size);
             let info = info.assume_init();
 
             // The length of the filename in UTF-16, minus the nul terminator.

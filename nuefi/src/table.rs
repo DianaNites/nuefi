@@ -776,12 +776,12 @@ impl SystemTable<Internal> {
 impl SystemTable<Boot> {
     /// String identifying the vendor
     pub fn firmware_vendor(&self) -> String {
-        let p = self.table().firmware_vendor as *mut u16;
+        let p = self.table().firmware_vendor;
         if p.is_null() {
             return String::new();
         }
         // Safety: always valid
-        unsafe { UefiStr::from_ptr(p) }.into_string()
+        unsafe { UefiStr::from_ptr(p) }.to_str()
     }
 
     /// Firmware-specific value indicating its revision
