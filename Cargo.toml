@@ -1,6 +1,11 @@
 [workspace]
 # default-members = []
-members = ["nuefi", "macros", "core"]
+members = [
+    #
+    "nuefi",
+    "macros",
+    "core",
+]
 resolver = "2"
 
 [patch.crates-io]
