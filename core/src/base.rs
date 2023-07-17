@@ -141,7 +141,7 @@ impl Guid {
 
 impl fmt::Debug for Guid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let uuid = Uuid::from_bytes_me(self.0);
+        let uuid = Uuid::from_bytes_le(self.0);
         f.debug_tuple("Guid") //.
             .field(&self.0)
             .field(&format_args!("[Guid] {uuid}"))
@@ -151,7 +151,7 @@ impl fmt::Debug for Guid {
 
 impl fmt::Display for Guid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let uuid = Uuid::from_bytes_me(self.0);
+        let uuid = Uuid::from_bytes_le(self.0);
         uuid.fmt(f)
     }
 }

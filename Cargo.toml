@@ -2,3 +2,6 @@
 # default-members = []
 members = ["nuefi", "macros", "core"]
 resolver = "2"
+
+[patch.crates-io]
+nuuid = { path = '../Nuuid' }

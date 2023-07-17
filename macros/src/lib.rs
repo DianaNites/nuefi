@@ -5,6 +5,7 @@ mod entry;
 mod guid;
 mod proto;
 
+mod compat;
 mod imp;
 
 /// The UEFI Entry point
@@ -146,7 +147,8 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// This is the only valid way to implement the
 /// [`uefi::proto::Protocol`][Protocol] trait.
 ///
-/// This macro accepts the GUID as a string literal, in mixed-endian hex.
+/// This macro accepts the GUID as a hex string literal in any of the formats
+/// supported by [`nuuid::Uuid`]
 ///
 /// The struct this is applied to MUST have been created with the
 /// [`uefi::interface`][interface] macro.
@@ -182,11 +184,12 @@ pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// Macro to parse a GUID. Accepts a single mixed-endian hex string literal
 ///
-/// This macro accepts the GUID as a string literal, in mixed-endian hex.
+/// This macro accepts the GUID as a hex string literal in any of the formats
+/// supported by [`nuuid::Uuid`]
 ///
 /// The resultant GUID is accessible as the `GUID` associated constant.
 ///
-/// This implements [`Entity`][Entity]
+/// This implements the [`Entity`][Entity] trait
 ///
 /// # Example
 ///
@@ -195,6 +198,10 @@ pub fn Protocol(args: TokenStream, input: TokenStream) -> TokenStream {
 /// #
 /// #[GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")]
 /// struct HasID;
+///
+/// fn main() {
+///     println!("HasID: {}", HasID::GUID);
+/// }
 /// ```
 ///
 /// [Entity]: ../nuefi_core/extra/trait.Entity.html

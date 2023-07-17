@@ -1,0 +1,11 @@
+error: unexpected value
+ --> tests/generic/fail/extra_crate.rs:4:24
+  |
+4 | #[entry(crate("nuefi", "text", this::is::wrong))]
+  |                        ^^^^^^
+
+error: unexpected value
+ --> tests/generic/fail/extra_crate.rs:4:32
+  |
+4 | #[entry(crate("nuefi", "text", this::is::wrong))]
+  |                                ^^^^^^^^^^^^^^^

@@ -1,10 +1,13 @@
 use std::fmt::Display;
 
-use quote::{__private::Span, format_ident};
-use syn::{spanned::Spanned, Error, Ident, Lit, Meta, MetaList, NestedMeta};
+use proc_macro2::Span;
+use quote::format_ident;
+use syn::{spanned::Spanned, Error, Ident, Lit, Meta};
+
+use crate::compat::{AttributeArgs, NestedMeta};
 
 /// Options common to our macro, such as `crate`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CommonOpts {
     /// `nuefi` crate name
     ///
@@ -14,10 +17,7 @@ pub struct CommonOpts {
 
 impl CommonOpts {
     pub const fn new() -> Self {
-        Self {
-            //
-            krate: None,
-        }
+        Self { krate: None }
     }
 
     /// Ident for our crate
@@ -27,6 +27,7 @@ impl CommonOpts {
 }
 
 /// Error stack during parsing macro input
+#[derive(Debug)]
 pub struct Errors {
     data: Vec<Error>,
 }
@@ -52,36 +53,43 @@ impl Errors {
 
 /// Attempt to parse the `crate("name")` attribute argument,
 /// returning whether we did so.
-pub fn krate(i: &Ident, meta: &MetaList, errors: &mut Errors, opts: &mut CommonOpts) -> bool {
-    if i == "crate" {
-        if let Some(f) = meta.nested.first() {
-            match f {
-                NestedMeta::Meta(_) => {
-                    errors.push(meta.span(), format!("Expected value: {:?}", meta.nested));
-                }
-                NestedMeta::Lit(li) => match li {
-                    Lit::Str(lit) => match opts.krate {
-                        Some(_) => {
-                            errors.push(meta.span(), "Duplicate attribute `crate`");
-                        }
-                        None => {
-                            opts.krate.replace(format_ident!("{}", lit.value()));
-                        }
-                    },
-                    _ => {
-                        errors.push(meta.nested.span(), "Expected string literal");
-                        errors.push(li.span(), "Expected string literal");
+pub fn krate_(meta: &NestedMeta, errors: &mut Errors, opts: &mut CommonOpts) -> bool {
+    if let NestedMeta::Meta(Meta::List(l)) = meta {
+        if let Some(i) = l.path.get_ident() {
+            if i == "crate" {
+                let nested: AttributeArgs = match l.parse_args() {
+                    Ok(a) => a,
+                    Err(e) => {
+                        errors.push(e.span(), e);
+                        Default::default()
                     }
-                },
+                };
+                if let Some((f, extra)) = nested.attributes.split_first() {
+                    for x in extra {
+                        errors.push(x.span(), "unexpected value");
+                    }
+
+                    if let NestedMeta::Lit(Lit::Str(lit)) = f {
+                        match opts.krate {
+                            Some(_) => {
+                                errors.push(meta.span(), "Duplicate attribute `crate`");
+                            }
+                            None => {
+                                opts.krate.replace(format_ident!("{}", lit.value()));
+                                return true;
+                            }
+                        }
+                    } else {
+                        errors.push(f.span(), "Expected string literal");
+                    }
+                }
             }
         }
-        true
-    } else {
-        false
     }
+    false
 }
 
-// #[cfg(no)]
+#[cfg(no)]
 #[allow(clippy::if_same_then_else)]
 fn _parse_args<F>(args: &[NestedMeta], errors: &mut Errors, opts: &mut CommonOpts, user: F)
 where

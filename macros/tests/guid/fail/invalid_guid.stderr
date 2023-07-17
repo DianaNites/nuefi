@@ -1,0 +1,11 @@
+error: invalid GUID: error parsing uuid, string of length 42 is invalid
+ --> tests/guid/fail/invalid_guid.rs:7:8
+  |
+7 | #[GUID("c986ec27-69420-af54-4b55-80aa-91697fcdf8eb")]
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: unknown attribute
+  --> tests/guid/fail/invalid_guid.rs:10:48
+   |
+10 | #[GUID("c986ec27-af54-4b55-80aa-91697fcdf8eb", test)]
+   |                                                ^^^^

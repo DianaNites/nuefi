@@ -1,38 +1,31 @@
 use nuuid::Uuid;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens, __private::Span};
-use syn::{
-    ext::IdentExt,
-    parse_macro_input,
-    spanned::Spanned,
-    AttributeArgs,
-    ExprArray,
-    Ident,
-    ItemStruct,
-    Lit,
-    Meta,
-    NestedMeta,
-};
+use syn::{ext::IdentExt, parse_macro_input, spanned::Spanned, ExprArray, Ident, ItemStruct, Lit};
 
-use crate::imp::{krate, CommonOpts, Errors};
+use crate::{
+    compat::{AttributeArgs, NestedMeta},
+    imp::{krate_, CommonOpts, Errors},
+};
 
 pub type Guid = Option<String>;
 
 /// Options our macro accepts
-struct Opts {
+#[derive(Debug, Clone)]
+pub(crate) struct GuidOpts {
     /// Common macro arguments
-    common: CommonOpts,
+    pub common: CommonOpts,
 
     /// GUID macro argument
     ///
     /// `GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")`
-    guid: Guid,
+    pub guid: Guid,
 
-    guid_span: Span,
+    pub guid_span: Span,
 }
 
-impl Opts {
-    fn new() -> Self {
+impl GuidOpts {
+    pub fn new() -> Self {
         Self {
             common: CommonOpts::new(),
             guid: None,
@@ -41,41 +34,49 @@ impl Opts {
     }
 }
 
+/// Parse a GUID
+///
+/// true if successful, false otherwise.
+fn guid_(meta: &NestedMeta, errors: &mut Errors, opts: &mut GuidOpts) -> bool {
+    if let NestedMeta::Lit(Lit::Str(lit)) = meta {
+        match opts.guid {
+            Some(_) => errors.push(lit.span(), "duplicate GUID attribute"),
+            None => {
+                let v = lit.value();
+                let span = lit.span();
+                if v.is_empty() {
+                    errors.push(span, "GUID cannot be empty");
+                } else {
+                    match Uuid::parse_le(&v) {
+                        Ok(guid) => {
+                            opts.guid = Some(format!("{:?}", guid.to_bytes()));
+                            opts.guid_span = span;
+                        }
+                        Err(e) => {
+                            errors.push(span, format!("invalid GUID: {e}"));
+                        }
+                    };
+                }
+            }
+        }
+        return true;
+    }
+    false
+}
+
 #[allow(clippy::if_same_then_else)]
-fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
-    for arg in args {
-        match &arg {
-            NestedMeta::Lit(Lit::Str(lit)) => {
-                opts.guid_span = lit.span();
-                if opts.guid.replace(lit.value()).is_some() {
-                    errors.push(lit.span(), "Duplicate GUID attribute");
-                }
-            }
-            NestedMeta::Meta(Meta::List(l)) => {
-                if let Some(i) = l.path.get_ident() {
-                    if krate(i, l, errors, &mut opts.common) {
-                    } else {
-                        // TODO: Common Errors
-                        errors.push(l.span(), format!("Unknown attribute: `{}`", i));
-                    }
-                } else {
-                    // TODO: Common Errors
-                    errors.push(l.span(), format!("Unknown attribute: `{:?}`", l));
-                }
-            }
+pub(crate) fn parse_args(args: &AttributeArgs, errors: &mut Errors, opts: &mut GuidOpts) {
+    if args.attributes.is_empty() {
+        errors.push(args.span(), "missing GUID");
+    }
 
-            NestedMeta::Meta(meta) => {
-                let path = meta.path();
-                if let Some(ident) = path.get_ident() {
-                    errors.push(ident.span(), format!("Unknown attribute: `{}`", ident));
-                } else {
-                    errors.push(meta.span(), format!("Unknown attribute: `{:?}`", meta));
-                }
-            }
-
-            NestedMeta::Lit(l) => {
-                errors.push(l.span(), format!("Unknown literal: `{:?}`", l));
-            }
+    for arg in &args.attributes {
+        if krate_(arg, errors, &mut opts.common) {
+            // continue;
+        } else if guid_(arg, errors, opts) {
+            // continue;
+        } else {
+            errors.push(arg.span(), "unknown attribute");
         }
     }
 }
@@ -95,12 +96,7 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
 ///       ])
 ///   };
 /// ```
-pub(crate) fn parse_guid(
-    opts: &Guid,
-    input: impl Spanned,
-    krate: &Ident,
-    errors: &mut Errors,
-) -> impl ToTokens {
+pub(crate) fn parse_guid(opts: &Guid, krate: &Ident) -> impl ToTokens {
     // This makes errors really nice
     let error_def = quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
         #krate::nuefi_core::base::Guid::new([
@@ -110,34 +106,14 @@ pub(crate) fn parse_guid(
     };};
 
     if let Some(guid) = &opts {
-        match Uuid::parse_me(guid) {
-            Ok(guid) => {
-                let lol = format!("{:?}", guid.to_bytes());
-                if let Ok(lol) = syn::parse_str::<ExprArray>(&lol) {
-                    quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
-                        #krate::nuefi_core::base::Guid::new(#lol)
-                    };}
-                } else {
-                    quote! {
-                        compile_error!(
-                            "Uh this shouldn't have happened. Syn failed when it shouldn't have.\n\
-                            This breaks the macro.\n\
-                            This is message brought to you by the Nuefi `GUID` macro.\n\
-                            Please direct your bug report there."
-                        )
-
-                        #error_def
-                    }
-                }
-            }
-            Err(e) => {
-                errors.push(input.span(), format!("Invalid GUID: {e}"));
-                error_def
-            }
+        let guid = syn::parse_str::<ExprArray>(guid).unwrap();
+        quote! {
+            const GUID: #krate::nuefi_core::base::Guid = unsafe {
+                #krate::nuefi_core::base::Guid::new(#guid)
+            };
         }
     } else {
-        errors.push(input.span(), "Missing Protocol GUID");
-        error_def
+        quote! {#error_def}
     }
 }
 
@@ -145,25 +121,31 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemStruct);
     let mut errors = Errors::new();
-    let mut opts = Opts::new();
+    let mut opts = GuidOpts::new();
 
     parse_args(&args, &mut errors, &mut opts);
 
     let krate = opts.common.krate();
 
-    let guid = parse_guid(&opts.guid, opts.guid_span, &krate, &mut errors);
+    let guid = parse_guid(&opts.guid, &krate);
 
     let imp_struct = &input.ident;
-    let imp_generics = &input.generics;
+
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let name = imp_struct.unraw().to_string();
 
     let guid_imp = quote! {
+        impl #impl_generics #imp_struct #ty_generics #where_clause {
+            /// GUID of the protocol
+            #guid
+        }
 
-        // #[cfg(no)]
-        unsafe impl #imp_generics #krate::nuefi_core::extra::Entity for #imp_struct #imp_generics {
+        unsafe impl #impl_generics #krate::nuefi_core::extra::Entity for #imp_struct #ty_generics #where_clause {
+            /// GUID of the protocol
             #guid
 
+            /// Name of the protocol
             const NAME: &'static str = #name;
         }
     };
@@ -174,11 +156,10 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
         #guid_imp
     };
 
-    let e = if let Some(e) = errors.combine() {
-        e.into_compile_error()
-    } else {
-        quote! {}
-    };
+    let e = errors
+        .combine()
+        .map(|e| e.into_compile_error())
+        .unwrap_or(quote! {});
 
     TokenStream::from(quote! {
         #e

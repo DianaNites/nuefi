@@ -1,10 +1,7 @@
 //! Test that the Protocol macro basic features works correctly
 use core::ptr::null_mut;
 
-use nuefi::{
-    proto::{Guid, Protocol},
-    Protocol,
-};
+use nuefi::{proto::Protocol, Protocol};
 use nuuid::Uuid;
 
 // Random UUID from `uuidgen`
@@ -36,12 +33,8 @@ impl<'t> Proto<'t> {
 fn main() {
     let p = unsafe { Proto::new(null_mut()) };
 
-    let guid = Guid::new(Uuid::parse_me(GUID).unwrap().to_bytes());
-
-    assert_eq!(p.guid(), guid);
-
     let mut buf = [0u8; 36];
-    let s = Uuid::from_bytes_me(p.guid().to_bytes()).to_str(&mut buf);
+    let s = Uuid::from_bytes_le(p.guid().to_bytes()).to_str(&mut buf);
     assert_eq!(s, GUID, "Protocol macro didn't do GUID correctly");
 
     let name = "Proto";

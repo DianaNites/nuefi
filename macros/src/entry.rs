@@ -1,20 +1,11 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    parse_macro_input,
-    spanned::Spanned,
-    AttributeArgs,
-    Ident,
-    ItemFn,
-    Lit,
-    Meta,
-    MetaList,
-    NestedMeta,
-    Pat,
-    Path,
-};
+use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Lit, Meta, MetaList, Pat, Path};
 
-use crate::imp::{krate, CommonOpts, Errors};
+use crate::{
+    compat::{AttributeArgs, NestedMeta},
+    imp::{krate_, CommonOpts, Errors},
+};
 
 /// Options our macro accepts
 struct Config {
@@ -91,8 +82,15 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
         let mut log = Log::new();
         let mut exclude: Vec<String> = Vec::new();
         let mut targets: Vec<String> = Vec::new();
+        let nested: AttributeArgs = match list.parse_args() {
+            Ok(a) => a,
+            Err(_) => {
+                errors.push(list.span(), "Invalid");
+                Default::default()
+            }
+        };
 
-        for a in &list.nested {
+        for a in &nested.attributes {
             match a {
                 NestedMeta::Meta(Meta::Path(p)) => {
                     if let Some(i) = p.get_ident() {
@@ -120,12 +118,19 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                             if log.exclude.is_some() {
                                 errors.push(li.path.span(), "Duplicate attribute `exclude`");
                             } else {
-                                for f in &li.nested {
+                                let nested: AttributeArgs = match li.parse_args() {
+                                    Ok(a) => a,
+                                    Err(_) => {
+                                        errors.push(li.span(), "Invalid");
+                                        Default::default()
+                                    }
+                                };
+                                for f in &nested.attributes {
                                     match f {
                                         NestedMeta::Meta(_m) => {
                                             errors.push(
                                                 li.span(),
-                                                format!("Expected value: {:?}", li.nested),
+                                                format!("Expected value: {:?}", nested),
                                             );
                                         }
                                         NestedMeta::Lit(lit) => match lit {
@@ -153,12 +158,19 @@ fn log(i: &Ident, list: &MetaList, errors: &mut Errors, opts: &mut Config) -> bo
                             if log.targets.is_some() {
                                 errors.push(li.path.span(), "Duplicate attribute `targets`");
                             } else {
-                                for f in &li.nested {
+                                let nested: AttributeArgs = match li.parse_args() {
+                                    Ok(a) => a,
+                                    Err(_) => {
+                                        errors.push(li.span(), "Invalid");
+                                        Default::default()
+                                    }
+                                };
+                                for f in &nested.attributes {
                                     match f {
                                         NestedMeta::Meta(_) => {
                                             errors.push(
                                                 li.span(),
-                                                format!("Expected value: {:?}", li.nested),
+                                                format!("Expected value: {:?}", nested),
                                             );
                                         }
                                         NestedMeta::Lit(lit) => match lit {
@@ -240,6 +252,9 @@ fn simple_opts(i: &Ident, path: &Path, errors: &mut Errors, opts: &mut Config) -
 #[allow(clippy::if_same_then_else)]
 fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
     for arg in args {
+        if krate_(arg, errors, &mut opts.common) {
+            continue;
+        }
         match &arg {
             NestedMeta::Meta(Meta::NameValue(m)) => {
                 if let Some(i) = m.path.get_ident() {
@@ -258,9 +273,10 @@ fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Config) {
             NestedMeta::Meta(Meta::List(l)) => {
                 if let Some(i) = l.path.get_ident() {
                     if log(i, l, errors, opts) {
-                    } else if krate(i, l, errors, &mut opts.common) {
+                        // } else if krate(i, l, errors, &mut opts.common) {
                     } else {
-                        errors.push(l.span(), format!("Unexpected argument `{}`", i));
+                        // errors.push(l.span(), format!("Unexpected argument
+                        // `{}`", i));
                     }
                 } else {
                     errors.push(l.span(), format!("Unexpected argument `{:?}`", l.path));
@@ -290,7 +306,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let mut opts = Config::new();
 
-    parse_args(&args, &mut errors, &mut opts);
+    parse_args(&args.attributes, &mut errors, &mut opts);
 
     let sig = &input.sig;
     let ident = &sig.ident;

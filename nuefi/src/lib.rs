@@ -65,7 +65,7 @@
 // now they're harder to find.
 // #![warn(clippy::undocumented_unsafe_blocks, clippy::missing_safety_doc)]
 #![no_std]
-#![feature(alloc_error_handler)]
+// #![feature(alloc_error_handler)]
 extern crate alloc;
 
 use core::{

@@ -13,8 +13,9 @@ path = "tests/test.rs"
 
 [dependencies]
 nuuid = { version = "0.5.0", default-features = false }
+proc-macro2 = "1.0.66"
 quote = "1.0.29"
-syn = { version = "1.0.109", features = [
+syn = { version = "2.0.26", features = [
     "full",
     "fold",
     "visit",

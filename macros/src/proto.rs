@@ -1,97 +1,31 @@
 use proc_macro::TokenStream;
-use quote::{__private::Span, quote};
+use quote::quote;
 use syn::{
     ext::IdentExt,
     parse_macro_input,
     spanned::Spanned,
-    AttributeArgs,
     ItemStruct,
-    Lit,
-    Meta,
-    NestedMeta,
     Type,
     TypeGroup,
     TypePath,
 };
 
 use crate::{
-    guid::{parse_guid, Guid},
-    imp::{krate, CommonOpts, Errors},
+    compat::AttributeArgs,
+    guid::{parse_args, GuidOpts},
+    imp::Errors,
 };
-
-/// Options our macro accepts
-struct Opts {
-    /// Common macro arguments
-    common: CommonOpts,
-
-    /// GUID macro argument
-    ///
-    /// `GUID("A46423E3-4617-49F1-B9FF-D1BFA9115839")`
-    guid: Guid,
-
-    guid_span: Span,
-}
-
-impl Opts {
-    fn new() -> Self {
-        Self {
-            common: CommonOpts::new(),
-            guid: None,
-            guid_span: Span::call_site(),
-        }
-    }
-}
-
-fn parse_args(args: &[NestedMeta], errors: &mut Errors, opts: &mut Opts) {
-    for arg in args {
-        match &arg {
-            NestedMeta::Meta(Meta::List(list)) => {
-                if let Some(ident) = list.path.get_ident() {
-                    if krate(ident, list, errors, &mut opts.common) {
-                    } else {
-                        // TODO: Common Errors
-                        errors.push(list.span(), format!("Unknown argument: `{}`", ident));
-                    }
-                } else {
-                    // TODO: Common Errors
-                    errors.push(list.span(), format!("Unknown argument: `{:?}`", list));
-                }
-            }
-            // #[cfg(no)]
-            syn::NestedMeta::Meta(m) => {
-                let name = m.path().get_ident();
-                let span = m.span();
-                if let Some(name) = name {
-                    errors.push(span, format!("Unexpected argument `{}`", name));
-                } else {
-                    errors.push(span, format!("Unexpected argument `{:?}`", m));
-                }
-            }
-            syn::NestedMeta::Lit(Lit::Str(lit)) => {
-                let s = lit.value();
-                opts.guid_span = lit.span();
-                // Don't check for UUID validity here, its checked later.
-                if opts.guid.replace(s).is_some() {
-                    errors.push(lit.span(), "Duplicate GUID attribute");
-                }
-            }
-            syn::NestedMeta::Lit(l) => {
-                errors.push(l.span(), format!("Unknown literal: `{:?}`", l));
-            }
-        }
-    }
-}
 
 pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as ItemStruct);
     let mut errors: Errors = Errors::new();
-    let mut opts = Opts::new();
+    let mut opts = GuidOpts::new();
 
     parse_args(&args, &mut errors, &mut opts);
 
     let imp_struct = &input.ident;
-    let imp_generics = &input.generics;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // This makes errors really nice
     let error_def = quote! {
@@ -180,7 +114,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let krate = opts.common.krate();
 
-    let guid = parse_guid(&opts.guid, opts.guid_span, &krate, &mut errors);
+    let guid = crate::guid::parse_guid(&opts.guid, &krate);
 
     let name = imp_struct.unraw().to_string();
 
@@ -188,7 +122,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
         #input
 
         // #[cfg(no)]
-        unsafe impl #imp_generics #krate::nuefi_core::extra::Protocol<'table> for #imp_struct #imp_generics {
+        unsafe impl #impl_generics #krate::nuefi_core::extra::Protocol<'table> for #imp_struct #ty_generics #where_clause {
             #guid
 
             const NAME: &'static str = #name;

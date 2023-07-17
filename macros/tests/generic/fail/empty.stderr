@@ -1,0 +1,27 @@
+error: GUID cannot be empty
+ --> tests/generic/fail/empty.rs:7:8
+  |
+7 | #[GUID("")]
+  |        ^^
+
+error: missing GUID
+  --> tests/generic/fail/empty.rs:10:1
+   |
+10 | #[GUID()]
+   | ^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `GUID` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: missing GUID
+  --> tests/generic/fail/empty.rs:13:1
+   |
+13 | #[GUID]
+   | ^^^^^^^
+   |
+   = note: this error originates in the attribute macro `GUID` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: unknown attribute
+  --> tests/generic/fail/empty.rs:16:8
+   |
+16 | #[GUID(GUID)]
+   |        ^^^^

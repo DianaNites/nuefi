@@ -1,4 +1,4 @@
-error: Invalid GUID: ParseUuidError
+error: invalid GUID: error parsing uuid, string of length 42 is invalid
   --> tests/proto/fail/invalid_guid.rs:12:12
    |
 12 | #[Protocol("c986ec27-69420-af54-4b55-80aa-91697fcdf8eb")]
