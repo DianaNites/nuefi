@@ -1,4 +1,11 @@
 //! Nuefi internal semver-exempt unstable macro crate
+// #![allow(
+//     unused_variables,
+//     unused_mut,
+//     dead_code,
+//     unreachable_code,
+//     unused_imports
+// )]
 use proc_macro::TokenStream;
 
 mod entry;
