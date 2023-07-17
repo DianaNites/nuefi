@@ -11,7 +11,7 @@ use crate::{
 pub mod raw;
 
 interface!(
-    #[Protocol("5568E427-68FC-4F3D-AC74-CA555231CC68", crate("crate"))]
+    #[Protocol("5568E427-68FC-4F3D-AC74-CA555231CC68")]
     InitrdMediaGuid(RawInitrdMediaGuid)
 );
 

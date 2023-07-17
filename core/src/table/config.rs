@@ -41,28 +41,28 @@ pub mod vendor {
 
         use crate::GUID;
 
-        #[GUID("A31280AD-481E-41B6-95E8-127F4C984779", crate("crate"))]
+        #[GUID("A31280AD-481E-41B6-95E8-127F4C984779")]
         #[derive(Debug)]
         #[repr(C)]
         pub struct TianoCompress {
             table: *mut c_void,
         }
 
-        #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF", crate("crate"))]
+        #[GUID("EE4E5898-3914-4259-9D6E-DC7BD79403CF")]
         #[derive(Debug)]
         #[repr(C)]
         pub struct LZMACompress {
             table: *mut c_void,
         }
 
-        #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB", crate("crate"))]
+        #[GUID("3D532050-5CDA-4FD0-879E-0F7F630D5AFB")]
         #[derive(Debug)]
         #[repr(C)]
         pub struct BrotliCompress {
             table: *mut c_void,
         }
 
-        #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889", crate("crate"))]
+        #[GUID("D42AE6BD-1352-4bfb-909A-CA72A6EAE889")]
         #[derive(Debug)]
         #[repr(C)]
         pub struct LZMAf86Compress {
@@ -227,7 +227,7 @@ impl<'tbl> GenericConfig<'tbl> {
 }
 
 /// Table for ACPI 2.0 and newer
-#[GUID("8868E871-E4F1-11D3-BC22-0080C73C8881", crate("crate"))]
+#[GUID("8868E871-E4F1-11D3-BC22-0080C73C8881")]
 #[derive(Debug)]
 pub struct AcpiTable20 {
     table: *mut c_void,
@@ -241,42 +241,42 @@ impl AcpiTable20 {
 }
 
 /// Table for ACPI 1.0
-#[GUID("EB9D2D30-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+#[GUID("EB9D2D30-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
 pub struct AcpiTable10 {
     table: *mut c_void,
 }
 
 /// Table for SMBIOS 3
-#[GUID("F2FD1544-9794-4A2C-992E-E5BBCF20E394", crate("crate"))]
+#[GUID("F2FD1544-9794-4A2C-992E-E5BBCF20E394")]
 #[derive(Debug)]
 pub struct SMBIOS3 {
     table: *mut c_void,
 }
 
 /// Table for SMBIOS
-#[GUID("EB9D2D31-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+#[GUID("EB9D2D31-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
 pub struct SMBIOS {
     table: *mut c_void,
 }
 
 /// Table for SAL
-#[GUID("EB9D2D32-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+#[GUID("EB9D2D32-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
 pub struct SAL {
     table: *mut c_void,
 }
 
 /// Table for MPS / MultiProcessor Specification
-#[GUID("EB9D2D2F-2D88-11D3-9A16-0090273FC14D", crate("crate"))]
+#[GUID("EB9D2D2F-2D88-11D3-9A16-0090273FC14D")]
 #[derive(Debug)]
 pub struct MPS {
     table: *mut c_void,
 }
 
 /// Table for ACPI 2.0 and newer
-#[GUID("EB66918A-7EEF-402A-842E-931D21C38AE9", crate("crate"))]
+#[GUID("EB66918A-7EEF-402A-842E-931D21C38AE9")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct RuntimeProperties {
@@ -284,34 +284,34 @@ pub struct RuntimeProperties {
 }
 
 /// Table for JSON Config Data
-#[GUID("87367F87-1119-41CE-AAEC-8BE0111F558A", crate("crate"))]
+#[GUID("87367F87-1119-41CE-AAEC-8BE0111F558A")]
 #[derive(Debug)]
 pub struct JsonConfigData {
     table: *mut c_void,
 }
 
 /// Table for JSON Capsule Data
-#[GUID("35E7A725-8DD2-4CAC-8011-33CDA8109056", crate("crate"))]
+#[GUID("35E7A725-8DD2-4CAC-8011-33CDA8109056")]
 #[derive(Debug)]
 pub struct JsonCapsuleData {
     table: *mut c_void,
 }
 
 /// Table for JSON Capsule Result
-#[GUID("DBC461C3-B3DE-422A-B9B4-9886FD49A1E5", crate("crate"))]
+#[GUID("DBC461C3-B3DE-422A-B9B4-9886FD49A1E5")]
 #[derive(Debug)]
 pub struct JsonCapsuleResult {
     table: *mut c_void,
 }
 
 /// Flattened DTB Device Tree
-#[GUID("B1B621D5-F19C-41A5-830B-D9152C69AAE0", crate("crate"))]
+#[GUID("B1B621D5-F19C-41A5-830B-D9152C69AAE0")]
 #[derive(Debug)]
 pub struct DeviceTree {
     table: *mut c_void,
 }
 
-#[GUID("DCFA911D-26EB-469F-A220-38B7DC461220", crate("crate"))]
+#[GUID("DCFA911D-26EB-469F-A220-38B7DC461220")]
 #[derive(Debug)]
 pub struct MemoryAttributes {
     table: *mut c_void,
@@ -333,7 +333,7 @@ pub struct RawConformanceProfile {
 /// UEFI Conformance profile
 ///
 /// If this doesn't exist, this indicates UEFI spec compliance
-#[GUID("36122546-F7E7-4C8F-BD9B-EB8525B50C0B", crate("crate"))]
+#[GUID("36122546-F7E7-4C8F-BD9B-EB8525B50C0B")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct ConformanceProfile {
@@ -341,42 +341,42 @@ pub struct ConformanceProfile {
     profiles: Vec<Guid>,
 }
 
-#[GUID("49152E77-1ADA-4764-B7A2-7AFEFED95E8B", crate("crate"))]
+#[GUID("49152E77-1ADA-4764-B7A2-7AFEFED95E8B")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct DebugImageInfo {
     table: *mut c_void,
 }
 
-#[GUID("D719B2CB-3D3A-4596-A3BC-DAD00E67656F", crate("crate"))]
+#[GUID("D719B2CB-3D3A-4596-A3BC-DAD00E67656F")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct ImageExecInfo {
     table: *mut c_void,
 }
 
-#[GUID("B122A263-3661-4F68-9929-78F8B0D62180", crate("crate"))]
+#[GUID("B122A263-3661-4F68-9929-78F8B0D62180")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct SystemResource {
     table: *mut c_void,
 }
 
-#[GUID("0DE9F0EC-88B6-428F-977A-258F1D0E5E72", crate("crate"))]
+#[GUID("0DE9F0EC-88B6-428F-977A-258F1D0E5E72")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryRangeCapsule {
     table: *mut c_void,
 }
 
-#[GUID("6FD5B00C-D426-4283-9887-6CF5CF1CB1FE", crate("crate"))]
+#[GUID("6FD5B00C-D426-4283-9887-6CF5CF1CB1FE")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct UserInformation {
     table: *mut c_void,
 }
 
-#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042", crate("crate"))]
+#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct HIIDatabaseExport {
@@ -384,7 +384,7 @@ pub struct HIIDatabaseExport {
 }
 
 /// Deprecated Legacy EFI Properties
-#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042", crate("crate"))]
+#[GUID("EF9FC172-A1B2-4693-B327-6D32FC416042")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct EfiProperties {
@@ -392,7 +392,7 @@ pub struct EfiProperties {
 }
 
 // Defined in the UEFI Platform Init spec Volume 2 Appendix B
-#[GUID("05AD34BA-6F02-4214-952E-4DA0398E2BB9", crate("crate"))]
+#[GUID("05AD34BA-6F02-4214-952E-4DA0398E2BB9")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct DXEServices {
@@ -400,7 +400,7 @@ pub struct DXEServices {
 }
 
 // Defined in the UEFI Platform Init spec Volume 2 Appendix B
-#[GUID("7739F24C-93D7-11D4-9A3A-0090273FC14D", crate("crate"))]
+#[GUID("7739F24C-93D7-11D4-9A3A-0090273FC14D")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct HOBlist {
@@ -408,7 +408,7 @@ pub struct HOBlist {
 }
 
 // <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L211-L213>
-#[GUID("4C19049F-4137-4DD3-9C10-8B97A83FFDFA", crate("crate"))]
+#[GUID("4C19049F-4137-4DD3-9C10-8B97A83FFDFA")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryTypeInfo {
@@ -416,7 +416,7 @@ pub struct MemoryTypeInfo {
 }
 
 // <https://github.com/tianocore/edk2/blob/f80f052277c88a67c55e107b550f504eeea947d3/MdeModulePkg/MdeModulePkg.dec#L259-L261>
-#[GUID("060CC026-4C0D-4DDA-8F41-595FEF00A502", crate("crate"))]
+#[GUID("060CC026-4C0D-4DDA-8F41-595FEF00A502")]
 #[derive(Debug)]
 #[repr(C)]
 pub struct MemoryStatus {

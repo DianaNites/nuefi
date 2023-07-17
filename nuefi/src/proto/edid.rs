@@ -8,7 +8,7 @@ pub mod raw;
 use raw::*;
 
 interface!(
-    #[Protocol("BD8C1056-9F36-44EC-92A8-A6337F817986", crate("crate"))]
+    #[Protocol("BD8C1056-9F36-44EC-92A8-A6337F817986")]
     ActiveEdid(RawEdidActive)
 );
 
@@ -32,6 +32,6 @@ impl<'boot> ActiveEdid<'boot> {
 // {0xa0,0x49,0x8a,0xd0,0x6c,0x1a,0x66,0xaa}}
 
 interface!(
-    #[Protocol("1C0C34F6-D380-41FA-A049-8AD06C1A66AA", crate("crate"))]
+    #[Protocol("1C0C34F6-D380-41FA-A049-8AD06C1A66AA")]
     DiscoveredEdid(RawEdidDiscovered)
 );

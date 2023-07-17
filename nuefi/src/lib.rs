@@ -68,6 +68,8 @@
 // #![feature(alloc_error_handler)]
 extern crate alloc;
 
+extern crate self as nuefi;
+
 use core::{
     ffi::c_void,
     fmt::Write,

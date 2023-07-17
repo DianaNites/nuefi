@@ -76,7 +76,7 @@ fn get_dev_text<'proto>(
 }
 
 interface!(
-    #[Protocol("09576E91-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
+    #[Protocol("09576E91-6D3F-11D2-8E39-00A0C969723B")]
     DevicePath(RawDevicePath)
 );
 
@@ -194,7 +194,7 @@ impl<'table> DevicePath<'table> {
 }
 
 interface!(
-    #[Protocol("0379BE4E-D706-437D-B037-EDB82FB772A4", crate("crate"))]
+    #[Protocol("0379BE4E-D706-437D-B037-EDB82FB772A4")]
     DevicePathUtil(RawDevicePathUtil)
 );
 
@@ -237,7 +237,7 @@ impl<'table> DevicePathUtil<'table> {
 }
 
 interface!(
-    #[Protocol("8B843E20-8132-4852-90CC-551A4E4A7F1C", crate("crate"))]
+    #[Protocol("8B843E20-8132-4852-90CC-551A4E4A7F1C")]
     DevicePathToText(RawDevicePathToText)
 );
 

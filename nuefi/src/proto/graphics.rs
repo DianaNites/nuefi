@@ -23,7 +23,7 @@ use crate::{
 pub mod raw;
 
 interface!(
-    #[Protocol("9042A9DE-23DC-4A38-96FB-7ADED080516A", crate("crate"))]
+    #[Protocol("9042A9DE-23DC-4A38-96FB-7ADED080516A")]
     GraphicsOutput(RawGraphicsOutput)
 );
 

@@ -106,7 +106,7 @@ impl DevicePathSubType {
 /// - [Section 10.2. EFI Device Path Protocol][s10_2]
 ///
 /// [s10_2]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html#efi-device-path-protocol>
-#[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
+#[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B")]
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DevicePathHdr {

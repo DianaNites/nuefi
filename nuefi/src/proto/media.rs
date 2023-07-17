@@ -23,7 +23,7 @@ use crate::{
 pub mod raw;
 
 interface!(
-    #[Protocol("4006C0C1-FCB3-403E-996D-4A6C8724E06D", crate("crate"))]
+    #[Protocol("4006C0C1-FCB3-403E-996D-4A6C8724E06D")]
     LoadFile2(RawLoadFile2)
 );
 
@@ -36,7 +36,7 @@ interface!(
     /// Gives [`FsHandle`] based access to a device.
     ///
     /// UEFI supports the `FAT{12,16,32}` filesystems out of the box
-    #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B", crate("crate"))]
+    #[Protocol("964E5B22-6459-11D2-8E39-00A0C969723B")]
     SimpleFileSystem(RawSimpleFileSystem)
 );
 
@@ -405,7 +405,7 @@ impl<'this, 'table> Drop for FsHandle<'this, 'table> {
 /// UEFI [`FsHandle`] information
 ///
 /// Represents information about an entity on the filesystem
-#[GUID("09576E92-6D3F-11D2-8E39-00A0C969723B", crate("crate"))]
+#[GUID("09576E92-6D3F-11D2-8E39-00A0C969723B")]
 #[derive(Debug)]
 pub struct FsInfo {
     info: RawFsInfo,

@@ -35,6 +35,10 @@
 #![no_std]
 extern crate alloc;
 
+// For the [`GUID`]/[`Protocol`] macro to work in this crate
+extern crate self as nuefi;
+extern crate self as nuefi_core;
+
 pub mod error;
 // pub mod handlers;
 
@@ -46,9 +50,3 @@ pub mod table;
 pub use nuefi_macros::*;
 
 pub mod proto;
-
-mod nuefi_core {
-    //! Hack required for the [`GUID`]/[`Protocol`] macro to work in this crate
-
-    pub use super::*;
-}
