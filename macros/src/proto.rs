@@ -114,7 +114,7 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let krate = opts.common.krate();
 
-    let guid = crate::guid::parse_guid(&opts.guid, &krate);
+    let guid = crate::guid::guid_tokens(&opts.guid, &krate);
 
     let name = imp_struct.unraw().to_string();
 

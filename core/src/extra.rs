@@ -47,6 +47,7 @@ pub unsafe trait Entity {
 ///
 /// This trait is unsafe because an incorrect GUID or type specification will
 /// lead to type confusion and unsafety for both Rust and UEFI.
+///
 /// Unsafe code relies heavily on this invariant
 pub unsafe trait Protocol<'table> {
     /// Protocol GUID

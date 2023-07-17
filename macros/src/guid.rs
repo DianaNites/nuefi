@@ -64,6 +64,8 @@ fn guid_(meta: &NestedMeta, errors: &mut Errors, opts: &mut GuidOpts) -> bool {
     false
 }
 
+/// Parse a GUID attribute into [`GuidOpts`], recording any errors into
+/// [`Errors`]
 #[allow(clippy::if_same_then_else)]
 pub(crate) fn parse_args(args: &AttributeArgs, errors: &mut Errors, opts: &mut GuidOpts) {
     if args.attributes.is_empty() {
@@ -81,36 +83,30 @@ pub(crate) fn parse_args(args: &AttributeArgs, errors: &mut Errors, opts: &mut G
     }
 }
 
-/// Parse a GUID
-///
-/// Returns code like the below,
+/// Returns tokens for code like the below,
 /// without imports and with the input GUID bytes filled in.
 ///
 /// ```rust,no_run
 /// use nuefi_core::base::Guid;
 ///
-/// const GUID: Guid = unsafe {
-///       Guid::new([
-///           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-///           0x00, 0x00,
-///       ])
-///   };
+/// const GUID: Guid = Guid::new([
+///     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+///     0x00,
+/// ]);
 /// ```
-pub(crate) fn parse_guid(opts: &Guid, krate: &Ident) -> impl ToTokens {
+pub(crate) fn guid_tokens(opts: &Guid, krate: &Ident) -> impl ToTokens {
     // This makes errors really nice
-    let error_def = quote! {const GUID: #krate::nuefi_core::base::Guid = unsafe {
-        #krate::nuefi_core::base::Guid::new([
+    let error_def = quote! {
+        const GUID: #krate::nuefi_core::base::Guid = #krate::nuefi_core::base::Guid::new([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00,
         ])
-    };};
+    ;};
 
     if let Some(guid) = &opts {
         let guid = syn::parse_str::<ExprArray>(guid).unwrap();
         quote! {
-            const GUID: #krate::nuefi_core::base::Guid = unsafe {
-                #krate::nuefi_core::base::Guid::new(#guid)
-            };
+            const GUID: #krate::nuefi_core::base::Guid = #krate::nuefi_core::base::Guid::new(#guid);
         }
     } else {
         quote! {#error_def}
@@ -127,7 +123,7 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let krate = opts.common.krate();
 
-    let guid = parse_guid(&opts.guid, &krate);
+    let guid = guid_tokens(&opts.guid, &krate);
 
     let imp_struct = &input.ident;
 
@@ -137,15 +133,13 @@ pub fn guid(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let guid_imp = quote! {
         impl #impl_generics #imp_struct #ty_generics #where_clause {
-            /// GUID of the protocol
+            /// Entity GUID
             #guid
         }
 
         unsafe impl #impl_generics #krate::nuefi_core::extra::Entity for #imp_struct #ty_generics #where_clause {
-            /// GUID of the protocol
             #guid
 
-            /// Name of the protocol
             const NAME: &'static str = #name;
         }
     };
