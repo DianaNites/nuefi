@@ -20,12 +20,13 @@ target := "/boot/vmlinuz-linux"
 
 qemu_common := "\
 qemu-system-x86_64 -nodefaults \
-        -machine q35 -smp 2 -m 2G \
-        --enable-kvm \
-        -qmp unix:" + qmp_sock + ",server=on,wait=off \
-        -drive if=pflash,format=raw,file=" + ovmf + ",readonly=on \
-        -drive if=pflash,format=raw,file=" + ovmf_vars_src + ",readonly=on \
-        -drive format=raw,file=fat:rw:" + boot + " \
+    -machine q35 -smp 2 -m 2G \
+    --enable-kvm \
+    -device isa-debug-exit,iosize=0x04 \
+    -qmp unix:" + qmp_sock + ",server=on,wait=off \
+    -drive if=pflash,format=raw,file=" + ovmf + ",readonly=on \
+    -drive if=pflash,format=raw,file=" + ovmf_vars_src + ",readonly=on \
+    -drive format=raw,file=fat:rw:" + boot + " \
 "
 
 # We need to ignore leaks because miri hates us
@@ -60,12 +61,18 @@ export MIRIFLAGS := "\
     {{qemu_common}} \
         -name self-tests \
         -nographic \
-        -debugcon stdio
-    # -serial mon:stdio
-    # -display none \
-    # -vga std \
-    # -display spice-app \
-    #
+        -debugcon stdio; \
+    ret=$?; \
+    if [ $ret -eq 69 ]; then \
+        exit 0; \
+    else \
+        exit $ret; \
+    fi
+# -serial mon:stdio
+# -display none \
+# -vga std \
+# -display spice-app \
+#
 
 @_setup: _copy_vars
     if [ "{{profile}}" == "debug" ]; then \
