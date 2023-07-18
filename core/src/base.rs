@@ -360,23 +360,7 @@ impl Handle {
     ///
     /// # Safety
     ///
-    /// By calling this, you assert that `p` actually does
-    /// point to a legitimate UEFI handle.
-    ///
-    /// There is no reason you should ever need this,
-    /// as a UEFI application.
-    ///
-    /// All UEFI handles are assumed to be.. *UEFI handles*.
-    /// Their implementation is undefined,
-    /// but they must be some common structure so they can be
-    /// properly identified by the various functions that take this
-    /// or safely return an error on an invalid handle.
-    /// At least, that would be a valid implementation.
-    ///
-    /// Whatever random value you pass wont be.
-    ///
-    /// This is a massive safety invariant relied on throughout
-    /// the library.
+    /// - `p` must have originated from UEFI and be a handle
     #[inline]
     pub const unsafe fn new(p: *mut c_void) -> Self {
         Self(p)
