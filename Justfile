@@ -9,6 +9,7 @@ ovmf_vars_src := "/usr/share/edk2-ovmf/x64/OVMF_VARS.fd"
 efi_out := target_dir + "/uefi"
 ovmf_vars := efi_out + "/vars.fd"
 boot := efi_out + "/boot"
+qmp_sock := target_dir + "/qmp.sock"
 
 release := "/etc/os-release"
 cmdline := justfile_directory() + "/cmdline"
@@ -21,6 +22,7 @@ qemu_common := "\
 qemu-system-x86_64 -nodefaults \
         -machine q35 -smp 2 -m 2G \
         --enable-kvm \
+        -qmp unix:" + qmp_sock + ",server=on,wait=off \
         -drive if=pflash,format=raw,file=" + ovmf + ",readonly=on \
         -drive if=pflash,format=raw,file=" + ovmf_vars_src + ",readonly=on \
         -drive format=raw,file=fat:rw:" + boot + " \
@@ -56,8 +58,10 @@ export MIRIFLAGS := "\
 
 @qemu: _setup
     {{qemu_common}} \
+        -name self-tests \
         -nographic \
-        -serial mon:stdio
+        -debugcon stdio
+    # -serial mon:stdio
     # -display none \
     # -vga std \
     # -display spice-app \
