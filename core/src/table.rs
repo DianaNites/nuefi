@@ -3,7 +3,7 @@
 //! This provides fully public FFI-compatible definitions for the UEFI tables.
 //!
 //! It also attempts to provide safer ways to construct known valid variants
-use core::{ffi::c_void, mem::size_of};
+use core::{ffi::c_void, fmt, mem::size_of};
 
 use crate::{base::*, error::Result};
 
@@ -30,9 +30,21 @@ pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 /// The lower 16 bits are the minor version, in binary coded decimal
 ///
 /// Has the same ABI as [`u32`]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Revision(pub u32);
+
+impl fmt::Debug for Revision {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct Wrapper(Revision);
+        impl fmt::Debug for Wrapper {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{:?} [{}]", (self.0).0, self.0)
+            }
+        }
+        f.debug_tuple("Revision").field(&Wrapper(*self)).finish()
+    }
+}
 
 impl Revision {
     /// Create a new revision for `major.minor`
@@ -74,8 +86,8 @@ impl Revision {
     }
 }
 
-impl core::fmt::Display for Revision {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl fmt::Display for Revision {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.major(), self.minor())?;
         if self.patch() > 0 {
             write!(f, ".{}", self.patch())?;
