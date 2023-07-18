@@ -789,13 +789,10 @@ impl SystemTable<Boot> {
         self.table().firmware_revision
     }
 
-    /// Returns the (Major, Minor) UEFI Revision that this implementation claims
-    /// conformance to.
-    pub fn uefi_revision(&self) -> (u32, u32) {
-        (
-            self.table().header.revision.major(),
-            self.table().header.revision.minor(),
-        )
+    /// Returns the UEFI [`Revision`] that this implementation claims
+    /// conformance to
+    pub fn uefi_revision(&self) -> Revision {
+        self.table().header.revision
     }
 
     /// Output on stdout.

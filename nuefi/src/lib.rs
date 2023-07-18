@@ -259,7 +259,7 @@ mod tests {
             EfiHandle,
         };
 
-        const MOCK_REVISION: Revision = Revision::new(2, 70);
+        const MOCK_REVISION: Revision = Revision::new(2, 7, 0);
         const MOCK_FW_REVISION: u32 = 69420;
         pub const MOCK_VENDOR: &str = "Mock Vendor";
 

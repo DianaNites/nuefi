@@ -37,8 +37,12 @@ pub struct Revision(pub u32);
 impl Revision {
     /// Create a new revision for `major.minor`
     #[inline]
-    pub const fn new(major: u16, minor: u16) -> Self {
-        Revision(((major as u32) << 16) | minor as u32)
+    pub const fn new(major: u16, minor: u8, patch: u8) -> Self {
+        if minor > 99 || patch > 99 {
+            panic!("Revision minor or patch cannot be greater than 99");
+        }
+        let (minor, patch) = (minor as u32, patch as u32);
+        Revision(((major as u32) << 16) | ((minor * 10) + patch))
     }
 
     /// The major part of the revision
@@ -55,8 +59,8 @@ impl Revision {
     ///
     /// Y in `x.Y.z`
     #[inline]
-    pub const fn minor(self) -> u32 {
-        self.0 as u16 as u32 / 10
+    pub const fn minor(self) -> u8 {
+        self.0 as u8 / 10
     }
 
     /// The patch part of the revision
@@ -65,8 +69,8 @@ impl Revision {
     ///
     /// Z in `x.y.Z`
     #[inline]
-    pub const fn patch(self) -> u32 {
-        self.0 as u16 as u32 % 10
+    pub const fn patch(self) -> u8 {
+        self.0 as u8 % 10
     }
 }
 
@@ -308,19 +312,19 @@ impl SystemTable {
     pub const SIGNATURE: u64 = 0x5453595320494249;
 
     pub const REVISION: Revision = Self::REVISION_2_100;
-    pub const REVISION_2_100: Revision = Revision::new(2, 100);
-    pub const REVISION_2_90: Revision = Revision::new(2, 90);
-    pub const REVISION_2_80: Revision = Revision::new(2, 80);
-    pub const REVISION_2_70: Revision = Revision::new(2, 70);
-    pub const REVISION_2_60: Revision = Revision::new(2, 60);
-    pub const REVISION_2_50: Revision = Revision::new(2, 50);
-    pub const REVISION_2_40: Revision = Revision::new(2, 40);
-    pub const REVISION_2_31: Revision = Revision::new(2, 31);
-    pub const REVISION_2_30: Revision = Revision::new(2, 30);
-    pub const REVISION_2_20: Revision = Revision::new(2, 20);
-    pub const REVISION_2_00: Revision = Revision::new(2, 00);
-    pub const REVISION_1_10: Revision = Revision::new(1, 10);
-    pub const REVISION_1_02: Revision = Revision::new(1, 2);
+    pub const REVISION_2_100: Revision = Revision::new(2, 10, 0);
+    pub const REVISION_2_90: Revision = Revision::new(2, 9, 0);
+    pub const REVISION_2_80: Revision = Revision::new(2, 8, 0);
+    pub const REVISION_2_70: Revision = Revision::new(2, 7, 0);
+    pub const REVISION_2_60: Revision = Revision::new(2, 6, 0);
+    pub const REVISION_2_50: Revision = Revision::new(2, 5, 0);
+    pub const REVISION_2_40: Revision = Revision::new(2, 4, 0);
+    pub const REVISION_2_31: Revision = Revision::new(2, 3, 1);
+    pub const REVISION_2_30: Revision = Revision::new(2, 3, 0);
+    pub const REVISION_2_20: Revision = Revision::new(2, 2, 0);
+    pub const REVISION_2_00: Revision = Revision::new(2, 0, 0);
+    pub const REVISION_1_10: Revision = Revision::new(1, 1, 0);
+    pub const REVISION_1_02: Revision = Revision::new(1, 2, 0);
 
     pub const SPECIFICATION: Revision = Self::REVISION;
 
@@ -487,7 +491,7 @@ mod tests {
 
     #[test]
     fn revision() {
-        let rev = Revision::new(2, 70);
+        let rev = Revision::new(2, 7, 0);
         assert_eq!(rev.major(), 2);
         assert_eq!(rev.minor(), 70);
     }
