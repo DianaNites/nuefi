@@ -40,8 +40,8 @@ const NEXT_BIT: usize = 1 << (STATUS_BITS - 2);
 ///
 /// We provide this because while UEFI does define their `BOOLEAN`
 /// to be either `0`, `1`, or undefined, apparently in the wild
-/// many implementations accept any non-zero valid, and
-/// either way on the Rust side, we must be defensive.
+/// many implementations consider any non-zero valid,
+/// and in any case the Rust side must be defensive against invalid values.
 ///
 /// If UEFI ever gives us an invalid [`bool`], that would be
 /// immediate Rust UB, whereas this type is valid for all `u8`.
@@ -69,7 +69,7 @@ impl Ord for Boolean {
 impl PartialOrd for Boolean {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        self.to_bool().partial_cmp(&other.to_bool())
+        Some(self.cmp(other))
     }
 }
 
