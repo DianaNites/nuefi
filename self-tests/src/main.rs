@@ -22,17 +22,37 @@ impl Write for Stdout {
     }
 }
 
+fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -> Result<()> {
+    writeln!(stdout, "Starting testing of UEFI 2.70")?;
+    //
+    Ok(())
+}
+
 #[entry(panic, alloc)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // let mut stdout = table.stdout();
     let mut stdout = Stdout;
-    writeln!(&mut stdout, "Firmware Vendor {}", table.firmware_vendor())?;
-    writeln!(
-        &mut stdout,
-        "Firmware Revision {}",
-        table.firmware_revision()
-    )?;
-    writeln!(&mut stdout, "UEFI Revision {:?}", table.uefi_revision())?;
+
+    let fw_vendor = table.firmware_vendor();
+    let fw_revision = table.firmware_revision();
+    let uefi_revision = table.uefi_revision();
+
+    writeln!(&mut stdout, "Firmware Vendor {}", fw_vendor)?;
+    writeln!(&mut stdout, "Firmware Revision {}", fw_revision)?;
+    writeln!(&mut stdout, "UEFI Revision {:?}", uefi_revision)?;
+
+    writeln!(&mut stdout, "Successfully initialized testing core")?;
+
+    match uefi_revision {
+        (2, x) if x >= 70 => {
+            test_2_70(handle, table, &mut stdout)?;
+        }
+        (y, x) => {
+            writeln!(&mut stdout, "Unsupported UEFI revision {y}.{x}")?;
+            return Err(Status::UNSUPPORTED.into());
+        }
+    }
+
     loop {
         unsafe {
             asm!("hlt");
