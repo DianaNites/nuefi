@@ -360,16 +360,13 @@ impl Handle {
     ///
     /// # Safety
     ///
-    /// - `p` must have originated from UEFI and be a handle
+    /// - `ptr` must have originated from UEFI and be a handle
     #[inline]
-    pub const unsafe fn new(p: *mut c_void) -> Self {
-        Self(p)
+    pub const unsafe fn new(ptr: *mut c_void) -> Self {
+        Self(ptr)
     }
 
     /// Create a new null [`Handle`]
-    ///
-    /// This is safe because a null [`Handle`] is an error, and
-    /// we maintain this invariant where needed.
     #[inline]
     pub const fn null() -> Self {
         Self(null_mut())
