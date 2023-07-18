@@ -19,6 +19,10 @@ type SimpleTextOutput = c_void;
 /// The CRC used by the UEFI tables
 ///
 /// See [`Header`]
+// FIXME: UEFI doesn't actually require this, and provides CalculateCrc32 for
+// this. The problem, however, is to use it you must first blindly trust the
+// system table.
+// Maybe try it only as a fallback, just in case? who knows what firmware does
 pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 
 /// UEFI Header Revision
@@ -27,7 +31,7 @@ pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 ///
 /// The upper 16 bits are the major version
 ///
-/// The lower 16 bits are the minor version
+/// The lower 16 bits are the minor version, in binary coded decimal
 ///
 /// Same representation as [`u32`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,15 +46,41 @@ impl Revision {
     }
 
     /// The major part of the revision
+    ///
+    /// X in `X.y.z`
     #[inline]
     pub const fn major(self) -> u32 {
         self.0 >> 16
     }
 
     /// The minor part of the revision
+    ///
+    /// Limited to 0-9
+    ///
+    /// Y in `x.Y.z`
     #[inline]
     pub const fn minor(self) -> u32 {
-        self.0 as u16 as u32
+        self.0 as u16 as u32 / 10
+    }
+
+    /// The patch part of the revision
+    ///
+    /// Limited to 0-9
+    ///
+    /// Z in `x.y.Z`
+    #[inline]
+    pub const fn patch(self) -> u32 {
+        self.0 as u16 as u32 % 10
+    }
+}
+
+impl core::fmt::Display for Revision {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}", self.major(), self.minor())?;
+        if self.patch() > 0 {
+            write!(f, ".{}", self.patch())?;
+        }
+        Ok(())
     }
 }
 
@@ -83,7 +113,7 @@ impl Revision {
 /// for some more details on the rules around padding in Rust.
 ///
 /// Also see <https://users.rust-lang.org/t/is-it-possible-to-read-uninitialized-memory-without-invoking-ub/63092/17>
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct Header {
     /// Unique signature identifying the table
