@@ -1,10 +1,9 @@
 profile := "debug"
 triple := "x86_64-unknown-uefi"
 target_dir := justfile_directory() + "/target"
-scratch_dir := justfile_directory() + "/scratch"
-preset := scratch_dir + "/test_rust.preset"
+
 cargo_out := target_dir + "/" + triple + "/" + profile
-efi := cargo_out + "/uefi-stub.efi"
+efi := cargo_out + "/self-tests.efi"
 ovmf := "/usr/share/edk2-ovmf/x64/OVMF_CODE.secboot.fd"
 ovmf_vars_src := "/usr/share/edk2-ovmf/x64/OVMF_VARS.fd"
 efi_out := target_dir + "/uefi"
@@ -17,6 +16,15 @@ splash := "/usr/share/systemd/bootctl/splash-arch.bmp"
 initrd := "/boot/initramfs-linux.img"
 
 target := "/boot/vmlinuz-linux"
+
+qemu_common := "\
+qemu-system-x86_64 -nodefaults \
+        -machine q35 -smp 2 -m 2G \
+        --enable-kvm \
+        -drive if=pflash,format=raw,file=" + ovmf + ",readonly=on \
+        -drive if=pflash,format=raw,file=" + ovmf_vars_src + ",readonly=on \
+        -drive format=raw,file=fat:rw:" + boot + " \
+"
 
 # We need to ignore leaks because miri hates us
 export MIRIFLAGS := "\
@@ -45,3 +53,27 @@ export MIRIFLAGS := "\
 
 @doc *args='':
     cargo +nightly doc --no-deps {{args}}
+
+@qemu: _setup
+    {{qemu_common}} \
+        -nographic \
+        -serial mon:stdio
+    # -display none \
+    # -vga std \
+    # -display spice-app \
+    #
+
+@_setup: _copy_vars
+    if [ "{{profile}}" == "debug" ]; then \
+        cargo build --target {{triple}} -p self-tests; \
+    else \
+        cargo build --target {{triple}} --profile {{profile}} -p self-tests; \
+    fi
+
+    rm -rf "{{boot}}"
+    mkdir -p "{{boot}}/EFI/Boot"
+    cp "{{efi}}" "{{boot}}/EFI/Boot/BootX64.efi"
+
+@_copy_vars:
+    mkdir -p "{{efi_out}}"
+    cp -n "{{ovmf_vars_src}}" "{{ovmf_vars}}" &>/dev/null || true
