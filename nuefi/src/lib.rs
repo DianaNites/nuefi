@@ -1,10 +1,12 @@
-//! A safe Rust UEFI library that provides an environment to safely
+//! A safe Rust UEFI library that provides a high level environment to safely
 //! write applications and interact with firmware.
 //!
-//! This library is designed to be easy to use more than it is a direct mapping
-//! to UEFI firmware, though it does intend to support such use in practice
-//! and in documentation, by documenting what actions, if any, are performed
-//! "behind the scenes", and when.
+//! While this library intends to be flexible and provide as much control as
+//! possible when needed, it is primarily designed around a safe high level
+//! interface.
+//!
+//! Documentation is provided on which firmware calls are made when on a best
+//! effort basis.
 //!
 //! # Quick Start
 //!
@@ -31,6 +33,23 @@
 //!     alloc,
 //! )]
 //! fn main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+//!     let mut stdout = table.stdout();
+//!     writeln!(&mut stdout, "Hello, world!")?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! An application that wants to manage panic and allocation features
+//! itself can do so
+//!
+//! ```rust
+//! // We need these imports
+//! use nuefi::{entry, EfiHandle, SystemTable, Boot, error};
+//! use core::fmt::Write;
+//!
+//! // Generate the UEFI entry point
+//! #[entry]
+//! fn e_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
 //!     let mut stdout = table.stdout();
 //!     writeln!(&mut stdout, "Hello, world!")?;
 //!     Ok(())
@@ -131,8 +150,11 @@ fn get_image_handle() -> Option<EfiHandle> {
 
 /// UEFI Entry point
 ///
-/// Uses a user-provided main function of type [`MainCheck`] as the library
-/// entry-point
+/// Uses a user-provided main function of type [`__internal__nuefi__main`] as
+/// the library entry-point
+///
+/// This will be the users entry point, exported by the [`entry`] macro.
+/// This is the only way to specify [`nuefi`] entry point.
 ///
 /// This does some basic initial setup, preparing the user entry point from the
 /// UEFI one, validating tables, handling `main`s return value.
