@@ -7,8 +7,10 @@ edition = "2021"
 nuefi = { path = "../nuefi" }
 nuuid = { version = "0.5.0", default-features = false }
 qemu-exit = "3.0.2"
+raw-cpuid = "11.0.1"
 runs_inside_qemu = "1.2.1"
 # Required so nuuid doesn't fail to compile
 sha-1 = { version = "0.10.1", default-features = false, features = [
     "force-soft",
 ] }
+x86_64 = "0.14.10"

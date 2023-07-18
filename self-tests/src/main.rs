@@ -21,7 +21,9 @@ use nuefi::{
     SystemTable,
 };
 use qemu_exit::{QEMUExit, X86};
+use raw_cpuid::CpuId;
 use runs_inside_qemu::runs_inside_qemu;
+use x86_64::registers::control::{Cr0, Cr0Flags};
 
 // Only 127 codes are possible because linux.
 const EXIT: X86 = X86::new(0x501, 69);
@@ -37,8 +39,12 @@ impl Write for Stdout {
 }
 
 macro_rules! ensure {
-    ($stdout:expr, $e:expr) => {{
-        write!($stdout, "Testing `{}` = ", stringify!($e))?;
+    ($stdout:expr, $e:expr $(, $m:expr)?) => {{
+        write!($stdout, "Testing ")?;
+        $(
+            write!($stdout, "{}: ", $m)?;
+        )?
+        write!($stdout, "`{}` = ", stringify!($e))?;
         if !{ $e } {
             writeln!($stdout, "FAILED")?;
         } else {
@@ -63,7 +69,27 @@ fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -
     ensure!(stdout, hdr.crc32 != 0);
     ensure!(stdout, hdr.reserved == 0);
     ensure!(stdout, hdr.size as usize == size_of::<RawSystemTable>());
-    //
+
+    let cpuid = CpuId::new();
+    let info = cpuid.get_feature_info().ok_or(Status::UNSUPPORTED)?;
+
+    let mut word: u16 = 0;
+    // Safety: loads a 16 bit value
+    unsafe {
+        asm!(
+            "fnstcw [{}]",
+            in(reg) &mut word,
+            options(nostack),
+        )
+    };
+    ensure!(stdout, word == 0x037F, "x87 FPU Control Word");
+
+    let cr0 = Cr0::read();
+    ensure!(
+        stdout,
+        !cr0.contains(Cr0Flags::EMULATE_COPROCESSOR | Cr0Flags::TASK_SWITCHED),
+        "Task Switch and FP Emulation exceptions off"
+    );
 
     //
     Ok(())
