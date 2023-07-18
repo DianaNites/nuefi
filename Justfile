@@ -10,6 +10,7 @@ efi_out := target_dir + "/uefi"
 ovmf_vars := efi_out + "/vars.fd"
 boot := efi_out + "/boot"
 qmp_sock := target_dir + "/qmp.sock"
+debug_out := target_dir + "/stdout.log"
 
 release := "/etc/os-release"
 cmdline := justfile_directory() + "/cmdline"
@@ -54,6 +55,10 @@ export MIRIFLAGS := "\
     cargo +nightly nextest run {{args}}
     # cargo +nightly test {{args}}
 
+@solver *args='':
+    cargo +nightly rustc -p nuefi -- -Ztrait-solver=next
+    # cargo +nightly rustc -p nuefi -- -Ztrait-solver=next-coherence
+
 @doc *args='':
     cargo +nightly doc --no-deps {{args}}
 
@@ -61,14 +66,14 @@ export MIRIFLAGS := "\
     {{qemu_common}} \
         -name self-tests \
         -nographic \
-        -debugcon stdio; \
+        -serial mon:stdio \
+        -debugcon file:{{debug_out}}; \
     ret=$?; \
     if [ $ret -eq 69 ]; then \
         exit 0; \
     else \
         exit $ret; \
     fi
-# -serial mon:stdio
 # -display none \
 # -vga std \
 # -display spice-app \
