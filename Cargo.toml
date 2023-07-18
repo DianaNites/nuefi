@@ -2,9 +2,10 @@
 # default-members = []
 members = [
     #
-    "nuefi",
+    # "nuefi",
     "macros",
     "core",
+    "self-tests",
 ]
 resolver = "2"
 
