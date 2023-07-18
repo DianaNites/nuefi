@@ -774,7 +774,7 @@ impl SystemTable<Internal> {
 
 /// Available during Boot Services
 impl SystemTable<Boot> {
-    /// String identifying the vendor
+    /// String identifying the firmware vendor
     pub fn firmware_vendor(&self) -> String {
         let p = self.table().firmware_vendor;
         if p.is_null() {
