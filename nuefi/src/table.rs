@@ -795,6 +795,11 @@ impl SystemTable<Boot> {
         self.table().header.revision
     }
 
+    /// A copy of the UEFI Table header structure
+    pub fn header(&self) -> Header {
+        self.table().header
+    }
+
     /// Output on stdout.
     ///
     /// This is only valid for as long as the SystemTable is
