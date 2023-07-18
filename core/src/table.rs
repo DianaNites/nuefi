@@ -505,6 +505,7 @@ mod tests {
     fn revision() {
         let rev = Revision::new(2, 7, 0);
         assert_eq!(rev.major(), 2);
-        assert_eq!(rev.minor(), 70);
+        assert_eq!(rev.minor(), 7);
+        assert_eq!(rev.patch(), 0);
     }
 }
