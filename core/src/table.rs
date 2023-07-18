@@ -16,24 +16,20 @@ type SimpleTextInput = c_void;
 // FIXME: Hack
 type SimpleTextOutput = c_void;
 
-/// The CRC used by the UEFI tables
+/// The CRC used by the UEFI tables, used in [`Header`]
 ///
-/// See [`Header`]
-// FIXME: UEFI doesn't actually require this, and provides CalculateCrc32 for
-// this. The problem, however, is to use it you must first blindly trust the
-// system table.
-// Maybe try it only as a fallback, just in case? who knows what firmware does
+/// UEFI Specification Section 4.2.1. EFI_TABLE_HEADER specifies this as
+/// "a standard CCITT32 CRC algorithm with a seed polynomial value of
+/// 0x04c11db7", by which they mean the ISO HDLC algorithm.
 pub static CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_ISO_HDLC);
 
 /// UEFI Header Revision
-///
-/// This is a binary coded decimal.
 ///
 /// The upper 16 bits are the major version
 ///
 /// The lower 16 bits are the minor version, in binary coded decimal
 ///
-/// Same representation as [`u32`]
+/// Has the same ABI as [`u32`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Revision(pub u32);
@@ -55,7 +51,7 @@ impl Revision {
 
     /// The minor part of the revision
     ///
-    /// Limited to 0-9
+    /// Limited to 00-99
     ///
     /// Y in `x.Y.z`
     #[inline]
@@ -65,7 +61,7 @@ impl Revision {
 
     /// The patch part of the revision
     ///
-    /// Limited to 0-9
+    /// Limited to 00-99
     ///
     /// Z in `x.y.Z`
     #[inline]
