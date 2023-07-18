@@ -154,7 +154,8 @@ fn get_image_handle() -> Option<EfiHandle> {
 /// the library entry-point
 ///
 /// This will be the users entry point, exported by the [`entry`] macro.
-/// This is the only way to specify [`nuefi`] entry point.
+/// This is the only way to specify the uefi entry point for a [`nuefi`]
+/// program.
 ///
 /// This does some basic initial setup, preparing the user entry point from the
 /// UEFI one, validating tables, handling `main`s return value.
@@ -228,7 +229,6 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
     // - Must exist or won't link
     // - Signature was verified by proc macro based on the existence of
     //   `__INTERNAL_NUEFI_YOU_MUST_USE_MACRO`
-    //
     // - `system_table` was validated earlier
     let ret = unsafe { __internal__nuefi__main(image, SystemTable::new(system_table)) };
     match ret {
