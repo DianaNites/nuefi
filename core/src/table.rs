@@ -268,25 +268,11 @@ pub struct SystemTable {
     /// Null terminated UCS-2 string
     pub firmware_vendor: *mut Char16,
 
-    /// Firmware revision, always valid
-    ///
     /// Firmware vendor specific version value
     pub firmware_revision: u32,
 
-    /// Padding inherent in the layout.
-    /// We rely on initialized data here for safety.
-    ///
-    /// See [`Header`]
-    ///
-    /// FIXME: Figure out what padding is like on 32-bit, if any
-    ///
-    /// FIXME: Figure out if its actually 100% ABI equivalent to add this
-    /// I initially considered removing this and having a utility function that
-    /// returns `Self` in a `Box`, but then I remembered: COMPOSING!
-    /// This wouldn't compose well at all.
-    ///
-    /// The safety of this is justified under assuming C zeros it
-    /// and this is ABI equiv, or we created it and zeroed it.
+    /// Padding inherent in the layout
+    // TODO: Figure out 32-bit padding
     pub _pad1: [u8; 4],
 
     /// Console input handle
