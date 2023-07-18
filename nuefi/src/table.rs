@@ -726,7 +726,7 @@ pub struct SystemTable<State> {
     /// is called.
     table: *mut RawSystemTable,
 
-    phantom: PhantomData<*const State>,
+    phantom: PhantomData<*mut State>,
 }
 
 // Internal, all
