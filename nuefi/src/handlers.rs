@@ -54,7 +54,8 @@ pub fn alloc_error(layout: Layout) -> ! {
     panic!("Couldn't allocate {} bytes", layout.size())
 }
 
+#[cfg(target_arch = "x86_64")]
 fn hlt() {
-    // Safety: Yeah
+    // Safety: Valid x86_64 instruction
     unsafe { core::arch::asm!("hlt") };
 }
