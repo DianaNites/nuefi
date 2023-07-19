@@ -22,15 +22,17 @@ pub fn panic(info: &PanicInfo) -> ! {
         let mut stdout = table.stdout();
         let _ = writeln!(stdout, "{info}");
 
-        #[cfg(no)]
-        #[cfg(not(debug_assertions))]
+        // #[cfg(no)]
+        // #[cfg(not(debug_assertions))]
         {
-            let handle_p = HANDLE.load(Ordering::Relaxed);
-            let handle = EfiHandle(handle_p);
+            let handle_p = crate::HANDLE.load(Ordering::Relaxed);
+            // Safety: handle_p is either null or from UEFI
+            let handle = unsafe { nuefi_core::base::Handle::new(handle_p) };
             let boot = table.boot();
             // Just in case?
-            if !handle.0.is_null() {
-                let _ = boot.exit(handle, Status::ABORTED);
+            if !handle.as_ptr().is_null() {
+                // let _ = boot.set_watchdog(Some(core::time::Duration::from_secs(60)));
+                let _ = boot.exit(handle, nuefi_core::error::Status::ABORTED);
             }
             let _ = writeln!(
                 stdout,
@@ -40,9 +42,8 @@ pub fn panic(info: &PanicInfo) -> ! {
         }
     }
     // Uselessly loop if we cant do anything else.
-    // Do nothing, I guess?
-    // UEFI watchdog will kill us eventually(~5 minutes from boot)
-    // This may not actually be possible.
+    // The UEFI watchdog will kill us in 5 minutes if the machine
+    // isn't manually reset.
     loop {
         hlt()
     }
