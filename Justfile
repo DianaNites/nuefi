@@ -2,7 +2,7 @@ profile := "debug"
 triple := "x86_64-unknown-uefi"
 target_dir := justfile_directory() + "/target"
 
-cargo_out := target_dir + "/" + triple + "/" + profile
+cargo_out := target_dir + "/" + file_stem(triple) + "/" + profile
 efi := cargo_out + "/self-tests.efi"
 ovmf := "/usr/share/edk2-ovmf/x64/OVMF_CODE.secboot.fd"
 ovmf_vars_src := "/usr/share/edk2-ovmf/x64/OVMF_VARS.fd"

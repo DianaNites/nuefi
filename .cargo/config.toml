@@ -3,3 +3,6 @@ rustflags = [
     #
     # "-Ctarget-feature=+mmx,+sse,-soft-float",
 ]
+
+# [unstable]
+# build-std = ["core", "alloc"]
