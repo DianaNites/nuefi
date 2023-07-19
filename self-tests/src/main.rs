@@ -106,6 +106,13 @@ fn test_panic(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     Ok(())
 }
 
+/// Test basic functionality required for the rest of the test environment to
+/// run
+fn basic_tests(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+    //
+    Ok(())
+}
+
 #[entry(panic, alloc)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // TODO: Could run our own binary with different options to have isolated-ish
