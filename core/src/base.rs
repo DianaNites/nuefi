@@ -379,6 +379,12 @@ impl Handle {
     }
 }
 
+impl fmt::Pointer for Handle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 /// An opaque handle to a UEFI event
 ///
 /// This is FFI compatible with and ABI Identical to a
@@ -392,6 +398,12 @@ impl Event {
     #[inline]
     pub const fn as_ptr(self) -> *mut c_void {
         self.0
+    }
+}
+
+impl fmt::Pointer for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
