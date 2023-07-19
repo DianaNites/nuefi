@@ -131,3 +131,24 @@ pub type CloseProtocol = unsafe extern "efiapi" fn(
     agent_handle: Handle,
     controller_handle: Handle,
 ) -> Status;
+
+pub type CopyMem = unsafe extern "efiapi" fn(
+    //
+    dest: *mut c_void,
+    src: *mut c_void,
+    len: usize,
+);
+
+pub type SetMem = unsafe extern "efiapi" fn(
+    //
+    buffer: *mut c_void,
+    size: usize,
+    value: u8,
+);
+
+pub type CalculateCrc32 = unsafe extern "efiapi" fn(
+    //
+    data: *mut c_void,
+    size: usize,
+    crc: *mut u32,
+) -> Status;

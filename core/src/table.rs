@@ -456,12 +456,12 @@ pub struct BootServices {
     pub install_multiple_protocol_interfaces: *mut c_void,
     pub uninstall_multiple_protocol_interfaces: *mut c_void,
 
-    // Useless CRC
-    pub calculate_crc32: *mut c_void,
+    // Calculate a CRC-32 over a buffer
+    pub calculate_crc32: Option<boot_fn::CalculateCrc32>,
 
     // Misc again
-    pub copy_mem: *mut c_void,
-    pub set_mem: *mut c_void,
+    pub copy_mem: Option<boot_fn::CopyMem>,
+    pub set_mem: Option<boot_fn::SetMem>,
     pub create_event_ex: *mut c_void,
 }
 
