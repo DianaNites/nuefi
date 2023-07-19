@@ -9,12 +9,13 @@
 #![no_main]
 extern crate alloc;
 
-use alloc::string::ToString;
+use alloc::{boxed::Box, string::ToString};
 use core::{arch::asm, fmt::Write, mem::size_of};
 
 use nuefi::{
     entry,
     error::{Result, Status},
+    proto::{loaded_image::LoadedImage, media::LoadFile2},
     table::raw::RawSystemTable,
     Boot,
     EfiHandle,
@@ -28,6 +29,9 @@ use x86_64::registers::control::{Cr0, Cr0Flags};
 // Only 127 codes are possible because linux.
 const EXIT: X86 = X86::new(0x501, 69);
 
+type TestFn = fn(EfiHandle, SystemTable<Boot>) -> Result<()>;
+
+#[derive(Debug, Clone, Copy)]
 struct Stdout;
 
 impl Write for Stdout {
@@ -53,7 +57,8 @@ macro_rules! ensure {
     }};
 }
 
-fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -> Result<()> {
+fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+    let mut stdout = Stdout;
     writeln!(stdout, "Starting testing of UEFI 2.7.0")?;
 
     let hdr = table.header();
@@ -96,6 +101,11 @@ fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -
     Ok(())
 }
 
+fn test_panic(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+    panic!("Test panic");
+    Ok(())
+}
+
 #[entry(panic, alloc)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // TODO: Could run our own binary with different options to have isolated-ish
@@ -111,19 +121,49 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // let mut stdout = table.stdout();
     let mut stdout = Stdout;
 
+    {
+        let boot = table.boot();
+
+        let us = boot
+            .open_protocol::<LoadedImage>(handle)?
+            .ok_or(Status::UNSUPPORTED)?;
+        let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
+        let file_path = us.file_path().ok_or(Status::INVALID_PARAMETER)?;
+        writeln!(stdout, "Path = {}", file_path)?;
+        writeln!(stdout, "Device = {:p}", file_dev)?;
+
+        // let dev = file_path.as_device();
+        let dev = file_path.to_string_lossy()?;
+        writeln!(stdout, "dev = {:#?}", dev)?;
+
+        // let img = boot.load_image_fs(handle, dev);
+        // writeln!(stdout, "img = {:#?}", img)?;
+        // unsafe { boot.start_image(img)? };
+
+        // let load = boot
+        //     .open_protocol::<LoadFile2>(file_dev)?
+        //     .ok_or(Status::INVALID_PARAMETER)?;
+
+        // TODO: Figure out way to automatically register test functions
+        let tests: &[TestFn] = &[test_panic];
+
+        for test in tests {
+            //
+        }
+    }
+
     let fw_vendor = table.firmware_vendor();
     let fw_revision = table.firmware_revision();
     let uefi_revision = table.uefi_revision();
 
-    writeln!(&mut stdout, "Firmware Vendor {}", fw_vendor)?;
-    writeln!(&mut stdout, "Firmware Revision {}", fw_revision)?;
-    writeln!(&mut stdout, "UEFI Revision {}", uefi_revision)?;
-
-    writeln!(&mut stdout, "Successfully initialized testing core")?;
+    writeln!(stdout, "Firmware Vendor {}", fw_vendor)?;
+    writeln!(stdout, "Firmware Revision {}", fw_revision)?;
+    writeln!(stdout, "UEFI Revision {}", uefi_revision)?;
+    writeln!(stdout, "Successfully initialized testing core")?;
 
     match (uefi_revision.major(), uefi_revision.minor()) {
         (2, x) if x >= 7 => {
-            test_2_70(handle, table, &mut stdout)?;
+            test_2_70(handle, table)?;
         }
         (y, x) => {
             writeln!(&mut stdout, "Unsupported UEFI revision {y}.{x}")?;
