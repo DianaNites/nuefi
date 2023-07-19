@@ -5,9 +5,9 @@ use core::{
     ffi::c_void,
     iter::from_fn,
     marker::PhantomData,
-    mem::{size_of, transmute},
+    mem::{size_of, transmute, MaybeUninit},
     ptr::{null_mut, NonNull},
-    slice::from_raw_parts,
+    slice::{from_raw_parts, from_raw_parts_mut},
     time::Duration,
 };
 
@@ -25,7 +25,7 @@ use crate::{
         Protocol,
         Scope,
     },
-    string::UefiStr,
+    string::{UefiStr, UefiString},
     util::interface,
     EfiHandle,
 };
@@ -418,6 +418,58 @@ impl<'table> BootServices<'table> {
         unsafe { (e)(handle, status, 0, null_mut()) }.into()
     }
 
+    /// Exit the image represented by `handle` with `status`, message `msg`,
+    /// and optionally `data`
+    pub fn exit_with(
+        &self,
+        handle: EfiHandle,
+        status: Status,
+        msg: &str,
+        data: Option<&[u8]>,
+    ) -> Result<()> {
+        let e = self.interface().exit.ok_or(Status::UNSUPPORTED)?;
+        if status.is_success() {
+            return Status::INVALID_PARAMETER.into();
+        }
+
+        let msg = UefiString::new(msg);
+
+        let mut out = msg.as_slice_with_nul().to_vec();
+        if let Some(data) = data {
+            if !data.is_empty() {
+                let size = data.len();
+
+                // Reserve space for extra data in terms of `u16`
+                // Size is bytes but this takes elements. 2 bytes per u16
+                let new_len = size / 2;
+                out.reserve_exact(new_len);
+
+                let s = out.spare_capacity_mut();
+                let cap_len = s.len();
+                // Initialize all spare capacity
+                s.fill(MaybeUninit::new(0));
+
+                let ptr = s.as_mut_ptr();
+
+                {
+                    // Safety:
+                    // - Fully initialized spare capacity above
+                    // - u8 slice is twice the length of a u16 slice
+                    let bout = unsafe { from_raw_parts_mut(ptr.cast::<u8>(), s.len() * 2) };
+                    bout[..size].copy_from_slice(data);
+                }
+
+                // Safety:
+                unsafe { out.set_len(out.len() + cap_len) };
+            }
+        }
+
+        let out: &'static mut [u16] = out.leak();
+
+        // Safety: Construction ensures safety
+        unsafe { (e)(handle, status, out.len() * 2, out.as_mut_ptr()) }.into()
+    }
+
     /// Load an image from memory `src`, returning its handle.
     ///
     /// `parent` should be your image handle, as your will be th parent of this
@@ -746,6 +798,7 @@ impl<T> SystemTable<T> {
 
     fn table(&self) -> &RawSystemTable {
         // Safety:
+        // - The existence of `&self` implies this pointer is valid
         // - `Self::new` verifies this pointer is valid
         // - The system table is always valid unless we remap it
         // - Remapping is not currently implemented, so it cannot safely be done.

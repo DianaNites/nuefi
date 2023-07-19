@@ -77,7 +77,7 @@ fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -
     // Safety: loads a 16 bit value
     unsafe {
         asm!(
-            "fnstcw [{}]",
+            "fnstcw word ptr [{}]",
             in(reg) &mut word,
             options(nostack),
         )
@@ -91,12 +91,23 @@ fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>, stdout: &mut Stdout) -
         "Task Switch and FP Emulation exceptions off"
     );
 
-    //
+    panic!("Testing Panic");
+
     Ok(())
 }
 
 #[entry(panic, alloc)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+    // TODO: Could run our own binary with different options to have isolated-ish
+    // testing?
+    // UEFI is identity mapped and privileged so we could,
+    // accidentally corrupt it, but.
+    //
+    // It would allow test functions,
+    // panicking test cases, and logging output.
+    //
+    // We can hook stdout/stderr, check return code, etc.
+    //
     // let mut stdout = table.stdout();
     let mut stdout = Stdout;
 
