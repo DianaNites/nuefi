@@ -19,6 +19,7 @@ use core::{
     ops::Deref,
 };
 
+use log::{debug, error, info, trace, warn};
 use nuefi::{
     entry,
     error::{Result, Status, UefiError},
@@ -127,19 +128,34 @@ mod imp {
 
     #[macro_export]
     macro_rules! ensure {
-    ($stdout:expr, $e:expr $(, $m:expr)?) => {{
-        write!($stdout, "Testing ")?;
-        $(
-            write!($stdout, "{}: ", $m)?;
-        )?
-        write!($stdout, "`{}` = ", stringify!($e))?;
-        if !{ $e } {
-            writeln!($stdout, "FAILED")?;
-        } else {
-            writeln!($stdout, "SUCCESS")?;
-        }
-    }};
-}
+        ($stdout:expr, $e:expr $(, $m:expr)?) => {{
+            ::nuefi::with_boot_table(|table| -> ::nuefi::error::Result<()> {
+                use nuefi::proto::console::{TextBackground, TextForeground};
+                let stdout = table.stdout();
+
+                write!(&stdout, "Testing ")?;
+                $(
+                    write!(&stdout, "{}: ", $m)?;
+                )?
+
+                stdout.with_attributes(TextForeground::BLUE, TextBackground::BLACK, || {
+                    let _ = write!(&stdout, "`{}` = ", stringify!($e));
+                })?;
+
+                if !{ $e } {
+                    stdout.with_attributes(TextForeground::RED, TextBackground::BLACK, || {
+                        let _ = writeln!(&stdout, "FAILED");
+                    })?;
+                } else {
+                    stdout.with_attributes(TextForeground::GREEN, TextBackground::BLACK, || {
+                        let _ = writeln!(&stdout, "SUCCESS");
+                    })?;
+                }
+
+                Ok(())
+            })??;
+        }};
+    }
 }
 
 use imp::*;
@@ -160,99 +176,107 @@ static TESTS: &[(TestFn, bool)] = &[
     (test_2_70, false),
 ];
 
-#[entry(alloc, panic)]
-fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
-    let mut stdout = table.stdout();
+fn check_options() {
+    //
+    use nuefi::proto::console::{TextBackground, TextForeground};
+}
 
+#[entry(
+    //
+    log(targets("nuefi",), color,),
+    // log(color,),
+    alloc, panic
+)]
+fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     if let Err(e) = basic_tests(handle, &table) {
-        writeln!(&mut stdout, "Error running Nuefi Test Suite: {e}")?;
+        error!("Error running Nuefi Test Suite: {e}");
         if runs_inside_qemu().is_maybe_or_very_likely() {
             EXIT.exit_failure();
         }
         return Err(Status::UNSUPPORTED.into());
     }
 
-    // #[cfg(no)]
-    {
-        let boot = table.boot();
+    let boot = table.boot();
 
-        let us = boot
-            .open_protocol::<LoadedImage>(handle)?
-            .ok_or(Status::UNSUPPORTED)?;
+    let us = boot
+        .open_protocol::<LoadedImage>(handle)?
+        .ok_or(Status::UNSUPPORTED)?;
 
-        let options = us.options().transpose()?;
-        if let Some(options) = options {
-            let idx = usize::from_le_bytes(options.try_into().map_err(|_| {
-                let _ = writeln!(stdout, "Invalid load options");
-                Status::INVALID_PARAMETER
-            })?);
-            writeln!(stdout, "Load Options: {idx}: {:#?}", options)?;
+    let options = us.options().transpose()?;
 
-            if idx >= TESTS.len() {
-                writeln!(stdout, "Invalid load options")?;
-                return Err(Status::INVALID_PARAMETER.into());
-            }
-            TESTS[idx].0(handle, &table)?;
+    if let Some(options) = options {
+        let idx = usize::from_le_bytes(options.try_into().map_err(|_| {
+            error!("Invalid load options");
+            Status::INVALID_PARAMETER
+        })?);
+        trace!("Load Options: {idx}: {:#?}", options);
 
-            return Ok(());
-        } else {
-            stdout.clear()?;
-            let fw_vendor = table.firmware_vendor();
-            let fw_revision = table.firmware_revision();
-            let uefi_revision = table.uefi_revision();
+        if idx >= TESTS.len() {
+            error!("Invalid load options");
+            return Err(Status::INVALID_PARAMETER.into());
+        }
+        TESTS[idx].0(handle, &table)?;
 
-            writeln!(stdout, "Firmware Vendor {}", fw_vendor)?;
-            writeln!(stdout, "Firmware Revision {}", fw_revision)?;
-            writeln!(stdout, "UEFI Revision {}", uefi_revision)?;
-            writeln!(stdout, "Successfully initialized testing core")?;
+        return Ok(());
+    } else {
+        table.stdout().clear()?;
+        let fw_vendor = table.firmware_vendor();
+        let fw_revision = table.firmware_revision();
+        let uefi_revision = table.uefi_revision();
+
+        debug!("Firmware Vendor {}", fw_vendor);
+        debug!("Firmware Revision {}", fw_revision);
+        debug!("UEFI Revision {}", uefi_revision);
+        info!("Successfully initialized testing core");
+    }
+
+    let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
+
+    let file_path = boot
+        .open_protocol::<LoadedImageDevicePath>(handle)?
+        .ok_or(Status::UNSUPPORTED)?;
+    let file_path = Path::new(file_path.as_device_path());
+
+    trace!("Path = {}", file_path);
+    trace!("Device = {:p}", file_dev);
+
+    let dev = file_path.as_device();
+
+    let max = TESTS.len();
+    info!("Running {} tests", max);
+    for (idx, (test, fail)) in TESTS.iter().enumerate() {
+        info!("Running test {}/{}", idx + 1, max);
+        let opt = idx.to_le_bytes();
+
+        let img = boot.load_image_fs(handle, dev)?;
+
+        // Scope has to end here or else we'll lock the protocol
+        // for our child image, oops.
+        {
+            let load = boot
+                .open_protocol::<LoadedImage>(img)?
+                .ok_or(Status::INVALID_PARAMETER)?;
+            // Safety: `opt` is valid until start_image below
+            // FIXME: should have a safe API
+            unsafe { load.set_options(&opt) };
         }
 
-        let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
+        // FIXME: No way to get ExitData
+        // Safety: `img` is only run once, reinitialized each loop.
+        let ret = unsafe { boot.start_image(img) };
 
-        let file_path = boot
-            .open_protocol::<LoadedImageDevicePath>(handle)?
-            .ok_or(Status::UNSUPPORTED)?;
-        let file_path = Path::new(file_path.as_device_path());
-
-        writeln!(stdout, "Path = {}", file_path)?;
-        writeln!(stdout, "Device = {:p}", file_dev)?;
-
-        let dev = file_path.as_device();
-
-        let max = TESTS.len();
-        writeln!(stdout, "Running {} tests", max)?;
-        for (idx, (test, fail)) in TESTS.iter().enumerate() {
-            writeln!(stdout, "Running test {}/{}", idx + 1, max)?;
-            let opt = idx.to_le_bytes();
-
-            let img = boot.load_image_fs(handle, dev)?;
-
-            // Scope has to end here or else we'll lock the protocol
-            // for our child image, oops.
-            {
-                let load = boot
-                    .open_protocol::<LoadedImage>(img)?
-                    .ok_or(Status::INVALID_PARAMETER)?;
-                // Safety: `opt` is valid until start_image below
-                // FIXME: should have a safe API
-                unsafe { load.set_options(&opt) };
-            }
-
-            // FIXME: No way to get ExitData
-            // Safety: `img` is only run once, reinitialized each loop.
-            let ret = unsafe { boot.start_image(img) };
-
-            if ret.is_ok() || (ret.is_err() && *fail) {
-                writeln!(stdout, "Test {}/{} completed successfully", idx + 1, max)?;
-            } else {
-                writeln!(stdout, "Test {}/{} completed unsuccessfully", idx + 1, max)?;
-            }
+        if ret.is_ok() || (ret.is_err() && *fail) {
+            info!("Test {}/{} completed successfully", idx + 1, max);
+        } else {
+            warn!("Test {}/{} completed unsuccessfully", idx + 1, max);
         }
     }
+
     // TODO: Callback to keep watchdog alive
     // Detect slow tests
     // Pattern matching
-    // TODO: with_boot public global fn for SystemTable
+
+    loop {}
 
     Ok(())
 }

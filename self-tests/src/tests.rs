@@ -80,7 +80,6 @@ pub fn test_panic(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()
 /// - [`UefiString`]
 pub fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
     let mut stdout = table.stdout();
-    // let mut stdout = Stdout;
 
     let uefi_revision = table.uefi_revision();
     let boot = table.boot();
