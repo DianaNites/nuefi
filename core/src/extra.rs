@@ -81,7 +81,6 @@ pub unsafe trait Protocol<'table> {
     ///
     /// - `this` must be a valid pointer to an instance of [`Protocol::Raw`]
     ///   that will live for `'table`
-    #[doc(hidden)]
     unsafe fn from_raw(this: *mut Self::Raw) -> Self;
 
     #[inline]

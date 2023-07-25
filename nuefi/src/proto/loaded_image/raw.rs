@@ -6,7 +6,7 @@ use crate::{
 };
 
 /// Raw UEFI LoadedImage protocol structure
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RawLoadedImage {
     pub revision: u32,

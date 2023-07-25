@@ -243,12 +243,9 @@ impl<'buf> UefiStr<'buf> {
         unsafe { from_raw_parts(self.data, self.len) }
     }
 
-    /// Convert the [`UefiString`] into a [`String`]
-    ///
-    /// # Panics
-    ///
-    /// - On failure
-    pub fn to_str(&self) -> String {
+    /// Convert the [`UefiString`] into a [`String`], replacing invalid
+    /// characters
+    pub fn to_string_lossy(&self) -> String {
         char::decode_utf16(self.as_slice().iter().copied())
             .map(|r| r.unwrap_or(REPLACEMENT_CHARACTER))
             .collect::<String>()
@@ -257,7 +254,7 @@ impl<'buf> UefiStr<'buf> {
 
 impl<'buf> Display for UefiStr<'buf> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.to_str())
+        write!(f, "{}", self.to_string_lossy())
     }
 }
 

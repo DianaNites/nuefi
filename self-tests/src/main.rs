@@ -22,12 +22,12 @@ use nuefi::{
     error::{Result, Status, UefiError},
     proto::{
         console::SimpleTextOutput,
-        loaded_image::{LoadedImage, LoadedImageDevicePath},
+        loaded_image::{raw::RawLoadedImage, LoadedImage, LoadedImageDevicePath},
         media::LoadFile2,
         Protocol,
         Scope,
     },
-    string::Path,
+    string::{Path, UefiString},
     table::raw::RawSystemTable,
     Boot,
     EfiHandle,
@@ -211,6 +211,17 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         let us = boot
             .open_protocol::<LoadedImage>(handle)?
             .ok_or(Status::UNSUPPORTED)?;
+
+        let options = us.options().transpose()?;
+        if let Some(options) = options {
+            let options = options.to_string_lossy();
+            writeln!(stdout, "Load Options: {}", options)?;
+            if options == "UWU" {
+                panic!("UWU");
+            }
+            loop {}
+        }
+
         let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
 
         let file_path = boot
@@ -225,12 +236,22 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 
         let img = boot.load_image_fs(handle, dev);
         writeln!(stdout, "img = {:#?}", img)?;
-        // unsafe { boot.start_image(img?)? };
+        let img = img?;
 
-        // let load = boot
-        //     .open_protocol::<LoadFile2>(file_dev)?
-        //     .ok_or(Status::INVALID_PARAMETER)?;
+        let opt = UefiString::new("UWU");
 
+        // Scope has to end here or else we'll lock the protocol
+        // for our child image, oops.
+        {
+            let load = boot
+                .open_protocol::<LoadedImage>(img)?
+                .ok_or(Status::INVALID_PARAMETER)?;
+            // Safety:
+            // FIXME: Yes
+            unsafe { load.set_shell_options(&opt) };
+        }
+
+        unsafe { boot.start_image(img)? };
         // TODO: Figure out way to automatically register test functions
         let tests: &[TestFn] = &[test_panic];
 

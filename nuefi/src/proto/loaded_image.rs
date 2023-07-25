@@ -70,7 +70,7 @@ impl<'table> LoadedImage<'table> {
             let opts = opts as *mut u16;
             let len = i.options_size as usize / 2;
             if i.options_size % 2 != 0 {
-                // return Some(Err(Status::INVALID_PARAMETER.into()));
+                return Some(Err(Status::INVALID_PARAMETER.into()));
             }
             // Safety: Unsafe
             Some(Ok(unsafe { UefiStr::from_ptr_len(opts, len) }))
