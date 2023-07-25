@@ -15,8 +15,8 @@ use raw::*;
 
 use crate::{
     error::{Result, Status},
+    nuefi_core::interface,
     proto::{Entity, Guid, Protocol},
-    util::interface,
     Protocol,
 };
 

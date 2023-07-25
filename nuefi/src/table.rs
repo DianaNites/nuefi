@@ -11,6 +11,7 @@ use core::{
     time::Duration,
 };
 
+use nuefi_core::interface;
 pub use nuefi_core::table::config;
 
 use crate::{
@@ -26,7 +27,6 @@ use crate::{
         Scope,
     },
     string::{UefiStr, UefiString},
-    util::interface,
     EfiHandle,
 };
 

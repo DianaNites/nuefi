@@ -50,3 +50,6 @@ pub mod table;
 pub use nuefi_macros::*;
 
 pub mod proto;
+
+#[doc(hidden)]
+pub mod util;

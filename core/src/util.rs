@@ -1,4 +1,4 @@
-//! Utilities
+//! Private Utilities
 
 /// Create a new, transparent, wrapper, around a raw UEFI table or Protocol
 /// interface
@@ -69,5 +69,3 @@ macro_rules! interface {
         )*
     };
 }
-
-pub(crate) use interface;

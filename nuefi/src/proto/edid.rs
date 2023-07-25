@@ -2,7 +2,9 @@
 
 use core::slice::from_raw_parts;
 
-use crate::{interface, Protocol};
+use nuefi_core::interface;
+
+use crate::Protocol;
 
 pub mod raw;
 use raw::*;

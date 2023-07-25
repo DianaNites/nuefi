@@ -6,8 +6,8 @@
 use raw::{RawSecurityArch, RawSecurityArch2};
 
 use crate::{
+    nuefi_core::interface,
     proto::{Guid, Protocol},
-    util::interface,
     Protocol,
 };
 

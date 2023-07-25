@@ -3,8 +3,8 @@
 use raw::*;
 
 use crate::{
+    nuefi_core::interface,
     proto::{device_path::DevicePath, Guid, Protocol},
-    util::interface,
     Protocol,
 };
 

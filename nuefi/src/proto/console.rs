@@ -7,8 +7,8 @@ use core::{
 
 use crate::{
     error::{Result, Status},
+    nuefi_core::interface,
     string::UefiString,
-    util::interface,
 };
 
 pub mod raw;

@@ -31,9 +31,9 @@ use crate::{
     error::{Result, Status},
     get_boot_table,
     mem::MemoryType,
+    nuefi_core::interface,
     string::UefiString,
     table::BootServices,
-    util::interface,
     Protocol,
 };
 

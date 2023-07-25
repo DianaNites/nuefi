@@ -16,7 +16,7 @@ use self::raw::RawGraphicsMode;
 use crate::{
     error::{Result, Status},
     get_boot_table,
-    util::interface,
+    nuefi_core::interface,
     Protocol,
 };
 

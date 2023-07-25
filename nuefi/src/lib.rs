@@ -110,7 +110,6 @@ pub mod mem;
 pub mod proto;
 pub mod string;
 pub mod table;
-mod util;
 
 /// UEFI Core types
 pub use nuefi_core;

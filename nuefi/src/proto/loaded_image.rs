@@ -1,12 +1,12 @@
 //! UEFI Loaded image Protocol
 use core::mem::size_of;
 
+use nuefi_core::interface;
 use raw::RawLoadedImage;
 
 use super::{device_path::DevicePath, Guid, Protocol};
 use crate::{
     string::{Path, UefiStr},
-    util::interface,
     EfiHandle,
     Protocol,
 };
