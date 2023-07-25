@@ -88,4 +88,9 @@ pub unsafe trait Protocol<'table> {
     fn guid(&self) -> Guid {
         Self::GUID
     }
+
+    #[inline]
+    fn name(&self) -> &'static str {
+        Self::NAME
+    }
 }
