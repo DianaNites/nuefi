@@ -67,6 +67,7 @@
 //! UEFI services, though.
 //!
 //! [alt_page]: <https://uefi.org/specs/UEFI/2.10/02_Overview.html#enabling-paging-or-alternate-translations-in-an-application>
+#![allow(clippy::len_without_is_empty)]
 #![allow(
     unused_imports,
     unused_variables,
