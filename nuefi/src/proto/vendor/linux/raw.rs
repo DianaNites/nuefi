@@ -1,3 +1,5 @@
+use nuefi_core::proto::device_path::nodes::{media::Vendor, End};
+
 use super::InitrdMediaGuid;
 use crate::proto::{device_path::raw::RawDevicePath, Protocol};
 
@@ -12,23 +14,19 @@ use crate::proto::{device_path::raw::RawDevicePath, Protocol};
 ///
 /// The real thing is implemented by the LoadFile2 protocol apparently
 ///
-/// [1]: https://docs.kernel.org/x86/boot.html#efi-handover-protocol-deprecated
+/// [1]: https://www.kernel.org/doc/html/latest/arch/x86/boot.html?highlight=boot#efi-handover-protocol-deprecated
 #[repr(C, packed)]
 pub struct RawInitrdMediaGuid {
-    pub path: RawDevicePath,
-    pub guid: [u8; 16],
-    pub end: RawDevicePath,
+    pub vendor: Vendor,
+    pub end: End,
 }
 
 impl RawInitrdMediaGuid {
     /// Create a new instance of this protocol
     pub fn create() -> Self {
         Self {
-            // Safety: Statically valid
-            // TODO: We can create a nicer safe API on this.
-            path: unsafe { RawDevicePath::create(4, 3, 20) },
-            guid: InitrdMediaGuid::GUID.to_bytes(),
-            end: RawDevicePath::end(),
+            vendor: Vendor::new_header(InitrdMediaGuid::GUID, 0),
+            end: End::entire(),
         }
     }
 }

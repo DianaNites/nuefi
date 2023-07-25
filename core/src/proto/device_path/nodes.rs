@@ -366,3 +366,81 @@ pub mod acpi {
         }
     }
 }
+
+pub mod media {
+    use super::*;
+
+    /// Vendor defined path, contents defined by the vendor GUID
+    #[derive(Debug, Clone, Copy)]
+    #[repr(C, packed)]
+    pub struct Vendor {
+        hdr: DevicePathHdr,
+        guid: [u8; 16],
+        data: [u8; 0],
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    #[repr(C, packed)]
+    pub struct File {
+        hdr: DevicePathHdr,
+
+        /// Variable length null-terminated path name
+        path: [u8; 0],
+    }
+
+    //
+
+    impl Vendor {
+        /// Write the header of a Vendor node expecting `data_len` bytes to
+        /// follow.
+        ///
+        /// # Panics
+        ///
+        /// If `data_len + 20` would overflow.
+        pub const fn new_header(guid: Guid, data_len: u16) -> Self {
+            let len = {
+                let this = data_len.checked_add(20);
+                match this {
+                    Some(val) => val,
+                    None => panic!("data_len + 20 overflowed"),
+                }
+            };
+
+            let len = len.to_le_bytes();
+            Self {
+                hdr: DevicePathHdr {
+                    ty: DevicePathType::MEDIA,
+                    sub_ty: sub::hardware::VENDOR,
+                    len,
+                },
+                guid: guid.to_bytes(),
+                data: [],
+            }
+        }
+    }
+
+    impl File {
+        /// Write a [`File`] header expecting `len` bytes to follow
+        ///
+        /// # Panics
+        ///
+        /// If `len` would overflow `u16`.
+        pub const fn new_header(len: u16) -> Self {
+            let len = {
+                let this = len.checked_add(4);
+                match this {
+                    Some(val) => val,
+                    None => panic!("File::new_header `len + 4` overflowed"),
+                }
+            };
+            Self {
+                hdr: DevicePathHdr {
+                    ty: DevicePathType::MEDIA,
+                    sub_ty: sub::media::FILE,
+                    len: len.to_le_bytes(),
+                },
+                path: [],
+            }
+        }
+    }
+}

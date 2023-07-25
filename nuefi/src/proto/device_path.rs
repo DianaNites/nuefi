@@ -16,6 +16,8 @@ use core::{
     slice::from_raw_parts,
 };
 
+use nuefi_core::proto::device_path::nodes::{media::File, End};
+
 pub mod raw {
     // FIXME: Ugly hack to keep things compiling
     pub use nuefi_core::proto::device_path::{
@@ -159,8 +161,8 @@ impl<'table> DevicePath<'table> {
 
         let path_len = path_len.try_into().map_err(|_| Status::BAD_BUFFER_SIZE)?;
 
-        let media = RawDevicePath::media_file(path_len);
-        let end = RawDevicePath::end();
+        let media = File::new_header(path_len);
+        let end = End::entire();
 
         // Safety: `data` is valid for `cap`, which is all we write
         unsafe {
