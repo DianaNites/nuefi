@@ -200,11 +200,8 @@ impl<'buf> UefiStr<'buf> {
     ///
     /// - Data must be a valid non-null pointer to a UEFI string ending in nul
     pub unsafe fn from_ptr(data: *mut u16) -> Self {
-        Self {
-            data,
-            len: string_len(data) + 1,
-            _ghost: PhantomData,
-        }
+        let len = string_len(data) + 1;
+        Self::from_ptr_len(data, len)
     }
 
     /// Create an unowned [UefiStr] from `data` and `len` *characters*,
