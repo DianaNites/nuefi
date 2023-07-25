@@ -14,6 +14,8 @@ use crate::{
 /// path.
 ///
 /// If `ExitBootServices` has been called, this does nothing.
+/// If memory is re-mapped without updating the SystemTable pointer,
+/// this will cause UB.
 ///
 /// The [log] macros automatically include information about what file they're
 /// from, so for example you can only see logs from crate::mem by setting
