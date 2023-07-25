@@ -22,11 +22,12 @@ use nuefi::{
     error::{Result, Status, UefiError},
     proto::{
         console::SimpleTextOutput,
-        loaded_image::LoadedImage,
+        loaded_image::{LoadedImage, LoadedImageDevicePath},
         media::LoadFile2,
         Protocol,
         Scope,
     },
+    string::Path,
     table::raw::RawSystemTable,
     Boot,
     EfiHandle,
@@ -176,6 +177,7 @@ fn test_panic(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 /// - [`SimpleTextOutput`] / `stdout`
 ///     - Actually WE don't..
 /// - [`LoadedImage`]
+/// - [`Scope`]
 /// - [`DevicePath`]
 /// - [`UefiString`]
 fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
@@ -210,17 +212,20 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
             .open_protocol::<LoadedImage>(handle)?
             .ok_or(Status::UNSUPPORTED)?;
         let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
-        let file_path = us.file_path().ok_or(Status::INVALID_PARAMETER)?;
+
+        let file_path = boot
+            .open_protocol::<LoadedImageDevicePath>(handle)?
+            .ok_or(Status::UNSUPPORTED)?;
+        let file_path = Path::new(file_path.as_device_path());
+
         writeln!(stdout, "Path = {}", file_path)?;
         writeln!(stdout, "Device = {:p}", file_dev)?;
 
-        // let dev = file_path.as_device();
-        let dev = file_path.to_string_lossy()?;
-        writeln!(stdout, "dev = {:#?}", dev)?;
+        let dev = file_path.as_device();
 
-        let img = boot.load_image_fs(handle, file_path.as_device());
+        let img = boot.load_image_fs(handle, dev);
         writeln!(stdout, "img = {:#?}", img)?;
-        // unsafe { boot.start_image(img)? };
+        // unsafe { boot.start_image(img?)? };
 
         // let load = boot
         //     .open_protocol::<LoadFile2>(file_dev)?

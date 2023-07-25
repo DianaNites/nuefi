@@ -13,10 +13,14 @@ use alloc::{
 use core::{
     ffi::c_void,
     mem::{size_of, transmute},
+    ptr::addr_of,
     slice::from_raw_parts,
 };
 
-use nuefi_core::proto::device_path::nodes::{media::File, End};
+use nuefi_core::proto::device_path::{
+    nodes::{media::File, End},
+    DevicePathHdr,
+};
 
 pub mod raw {
     // FIXME: Ugly hack to keep things compiling
@@ -26,7 +30,7 @@ pub mod raw {
         DevicePathUtil as RawDevicePathUtil,
     };
 }
-use raw::{RawDevicePath, RawDevicePathToText, RawDevicePathUtil};
+use raw::{RawDevicePathToText, RawDevicePathUtil};
 
 use super::{Guid, Protocol, Scope};
 use crate::{
@@ -79,29 +83,74 @@ fn get_dev_text<'proto>(
 
 interface!(
     #[Protocol("09576E91-6D3F-11D2-8E39-00A0C969723B")]
-    DevicePath(RawDevicePath)
+    DevicePath(DevicePathHdr)
 );
 
 impl<'table> DevicePath<'table> {
     /// Free the DevicePath
-    pub(crate) fn free(&mut self, boot: &BootServices) -> Result<()> {
+    ///
+    /// # Safety
+    ///
+    /// - `self` must *own* the DevicePath
+    /// - No other references to this path may exist
+    /// - This must only be called once.
+    ///
+    /// This is intended to be used from [`Drop`], and that is why it takes
+    /// `&mut Self`.
+    pub unsafe fn free(&mut self, boot: &BootServices) -> Result<()> {
         // Safety: Construction ensures these are valid
         unsafe { boot.free_pool(self.interface as *mut c_void) }
     }
 
+    /// Total size, in bytes, of the entire DevicePath structure, including all
+    /// instances.
+    ///
+    /// This will go through the entire structure to determine the size.
+    /// Repeated calls should be avoided.
+    pub fn len(&self) -> usize {
+        let mut size = 0;
+        let mut ptr = self.interface as *const DevicePathHdr;
+        let mut cur = *self.interface();
+        while End::entire() != cur {
+            // Safety:
+            // - Existence of `&self` means `DevicePath` is valid
+            // - `DevicePath`s must end with an `End` node.
+            unsafe {
+                let len = addr_of!((*ptr).len);
+                let len = u16::from_le_bytes(*len).into();
+                ptr = (ptr as *const u8).add(len) as *const _;
+                cur = *ptr;
+            }
+        }
+        size
+    }
+
     /// Duplicate/clone the path
     ///
-    /// See [`DevicePathUtil::duplicate`]
-    // FIXME: These leak memory.
+    /// It is the callers responsibility to free the returned [`DevicePath`]
+    ///
+    /// This does **not** use [`DevicePathUtil::duplicate`]
     pub fn duplicate(&self) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
-            // TODO: Implement DevicePath ourselves in pure Rust and just do it ourselves?
-            let util = get_dev_util(self)?;
-            let s = util.duplicate(self)?;
-            // Safety: This is required because our local table is an implementation detail
+
+            let len = self.len();
+            let mem = boot.allocate_pool(MemoryType::LOADER_DATA, len)?;
+
+            // Safety: Both pointers are valid for the same length
+            unsafe {
+                core::ptr::copy_nonoverlapping(
+                    self.interface as *const u8,
+                    mem.as_ptr().cast(),
+                    len,
+                )
+            };
+
+            // Safety:
+            // - `mem` is now a copy of `self`
+            // - This is required because our local table is an implementation detail
             // The correct lifetime is `'table`
-            unsafe { Ok(transmute(s)) }
+            unsafe { Ok(transmute(mem)) }
         } else {
             Err(Status::DEVICE_ERROR.into())
         }
@@ -127,6 +176,7 @@ impl<'table> DevicePath<'table> {
 
     /// Append `node` to ourselves, returning a new path.
     // FIXME: These leak memory.
+    #[cfg(no)]
     pub fn append(&self, node: &DevicePath) -> Result<DevicePath<'table>> {
         if let Some(table) = get_boot_table() {
             let boot = table.boot();
@@ -143,6 +193,7 @@ impl<'table> DevicePath<'table> {
 
     /// Append the UEFI file path, returning the new device path
     // FIXME: These leak memory.
+    #[cfg(no)]
     pub fn append_file_path(&self, path: &str) -> Result<DevicePath<'table>> {
         let table = get_boot_table().ok_or(Status::UNSUPPORTED)?;
         let boot = table.boot();
@@ -207,7 +258,7 @@ impl<'table> DevicePathUtil<'table> {
         unsafe {
             (self.interface().get_device_path_size.unwrap())(node.interface)
                 // End of path node
-                - core::mem::size_of::<RawDevicePath>()
+                - core::mem::size_of::<DevicePathHdr>()
         }
     }
 

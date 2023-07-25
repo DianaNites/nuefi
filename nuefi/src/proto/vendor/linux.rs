@@ -19,10 +19,7 @@ interface!(
 
 impl<'table> InitrdMediaGuid<'table> {
     pub fn as_device_path(&self) -> DevicePath<'_> {
-        // Safety: This is just a specific variant of a generic DevicePath
-        // FIXME: This should probably return a reference
-        // It would be safe to cast `&self` to `&DevicePath` because we know their
-        // layouts, and they're transparent.
+        // Safety: This is a DevicePath
         unsafe { DevicePath::from_raw(self.interface as *mut _) }
     }
 }

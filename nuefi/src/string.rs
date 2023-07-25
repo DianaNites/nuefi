@@ -269,7 +269,7 @@ pub struct Path<'table> {
 
 impl<'table> Path<'table> {
     /// Create an unowned [Path] from a [DevicePath]
-    pub(crate) fn new(data: DevicePath<'table>) -> Self {
+    pub fn new(data: DevicePath<'table>) -> Self {
         Self { data }
     }
 
@@ -352,7 +352,8 @@ impl<'table> Clone for PathBuf<'table> {
 impl<'table> Drop for PathBuf<'table> {
     fn drop(&mut self) {
         if let Some(table) = get_boot_table() {
-            let _ = self.data.free(&table.boot());
+            // Safety: We own this path
+            let _ = unsafe { self.data.free(&table.boot()) };
         }
     }
 }

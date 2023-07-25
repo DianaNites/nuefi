@@ -255,7 +255,7 @@ impl<'table> BootServices<'table> {
     pub fn open_protocol<'boot, Proto: proto::Protocol<'boot>>(
         &'boot self,
         handle: EfiHandle,
-    ) -> Result<Option<Scope<Proto>>> {
+    ) -> Result<Option<Scope<'boot, Proto>>> {
         let mut out: *mut c_void = null_mut();
         let mut guid = Proto::GUID;
         let op = self.interface().open_protocol.ok_or(Status::UNSUPPORTED)?;
@@ -506,8 +506,7 @@ impl<'table> BootServices<'table> {
         }
     }
 
-    /// Load an image specified by [`DevicePath`]
-    /// , returning its handle.
+    /// Load an image specified by [`DevicePath`], returning its handle.
     ///
     /// `parent` should be your image handle, as your will be th parent of this
     /// new image.

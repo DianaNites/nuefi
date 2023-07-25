@@ -1,7 +1,11 @@
 //! UEFI Loaded image Protocol
 use core::mem::size_of;
 
-use nuefi_core::interface;
+use nuefi_core::{
+    error::{Result, Status},
+    interface,
+    proto::device_path::DevicePathHdr,
+};
 use raw::RawLoadedImage;
 
 use super::{device_path::DevicePath, Guid, Protocol};
@@ -21,7 +25,11 @@ interface!(
 impl<'table> LoadedImage<'table> {
     const _REVISION: u32 = 0x1000;
 
-    /// The [Path] to the file of the loaded image, if it exists.
+    /// The [`Path`] to the file of the loaded image, if it exists.
+    ///
+    /// Note that this does not include the *device* the file is on,
+    /// and so does not identify where this image was loaded from.
+    /// For that see [`LoadedImageDevicePath`]
     pub fn file_path(&self) -> Option<Path<'_>> {
         let path = self.interface().path;
         if !path.is_null() {
@@ -51,8 +59,9 @@ impl<'table> LoadedImage<'table> {
         }
     }
 
-    /// Read the options for this image as
-    pub fn options(&self) -> Option<UefiStr> {
+    /// Read the options for this image as a [`UefiStr`], if they exist and are
+    /// valid.
+    pub fn options(&self) -> Option<Result<UefiStr>> {
         let i = self.interface();
         let opts = i.options;
         if opts.is_null() || i.options_size == 0 {
@@ -60,8 +69,11 @@ impl<'table> LoadedImage<'table> {
         } else {
             let opts = opts as *mut u16;
             let len = i.options_size as usize / 2;
-            // Safety: Always valid
-            Some(unsafe { UefiStr::from_ptr_len(opts, len) })
+            if i.options_size % 2 != 0 {
+                // return Some(Err(Status::INVALID_PARAMETER.into()));
+            }
+            // Safety: Unsafe
+            Some(Ok(unsafe { UefiStr::from_ptr_len(opts, len) }))
         }
     }
 
@@ -132,5 +144,18 @@ impl<'table> LoadedImage<'table> {
     pub unsafe fn set_path(&self, path: &Path<'_>) {
         // Safety: Existence of `&self` implies validity
         unsafe { &mut *self.interface }.path = path.as_device().as_ptr();
+    }
+}
+
+interface!(
+    /// Identical to [`DevicePath`] except for the GUID
+    #[Protocol("BC62157E-3E33-4FEC-9920-2D3B36D750DF")]
+    LoadedImageDevicePath(DevicePathHdr)
+);
+
+impl<'table> LoadedImageDevicePath<'table> {
+    pub fn as_device_path(&self) -> DevicePath<'_> {
+        // Safety: This is a DevicePath
+        unsafe { DevicePath::from_raw(self.interface) }
     }
 }
