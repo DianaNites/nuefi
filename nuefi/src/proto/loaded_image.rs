@@ -87,7 +87,7 @@ impl<'table> LoadedImage<'table> {
     ///
     /// [start_image]: crate::table::BootServices::start_image
     pub unsafe fn set_shell_options(&self, cmd: &UefiStr<'_>) {
-        // Safety: Always correct fot shell options
+        // Safety: Always correct for shell options
         self.set_options::<u16>(cmd.as_slice());
     }
 
