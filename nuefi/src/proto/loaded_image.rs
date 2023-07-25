@@ -51,6 +51,20 @@ impl<'table> LoadedImage<'table> {
         }
     }
 
+    /// Read the options for this image as
+    pub fn options(&self) -> Option<UefiStr> {
+        let i = self.interface();
+        let opts = i.options;
+        if opts.is_null() || i.options_size == 0 {
+            None
+        } else {
+            let opts = opts as *mut u16;
+            let len = i.options_size as usize / 2;
+            // Safety: Always valid
+            Some(unsafe { UefiStr::from_ptr_len(opts, len) })
+        }
+    }
+
     /// Set the LoadOptions for this loaded image
     ///
     /// # Panics
