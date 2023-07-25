@@ -40,80 +40,93 @@ use raw_cpuid::CpuId;
 use runs_inside_qemu::runs_inside_qemu;
 use x86_64::registers::control::{Cr0, Cr0Flags};
 
-// Only 127 codes are possible because linux.
-const EXIT: X86 = X86::new(0x501, 69);
+mod tests;
 
-type TestFn = fn(EfiHandle, &SystemTable<Boot>) -> Result<()>;
+mod imp {
+    use core::fmt;
 
-type TestResult<T> = core::result::Result<T, TestError>;
+    use nuefi::{
+        error::{Status, UefiError},
+        proto::{Protocol, Scope},
+    };
 
-// TODO: Figure out way to automatically register test functions
-/// Test function and whether it "should fail" or not
-static TESTS: &[(TestFn, bool)] = &[
-    //
-    (test_panic, true),
-    (test_2_70, false),
-];
+    use crate::{qemu_out, TestResult};
 
-#[derive(Debug, Clone, Copy)]
-enum TestError {
-    MissingProtocol(&'static str),
-    Uefi(UefiError),
-}
+    #[derive(Debug, Clone, Copy)]
+    pub enum TestError {
+        MissingProtocol(&'static str),
+        Uefi(UefiError),
+    }
 
-impl fmt::Display for TestError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TestError::MissingProtocol(n) => write!(f, "missing protocol {n}"),
-            TestError::Uefi(e) => write!(f, "{e}"),
+    impl fmt::Display for TestError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                TestError::MissingProtocol(n) => write!(f, "missing protocol {n}"),
+                TestError::Uefi(e) => write!(f, "{e}"),
+            }
         }
     }
-}
 
-impl From<UefiError> for TestError {
-    fn from(value: UefiError) -> Self {
-        TestError::Uefi(value)
+    impl From<fmt::Error> for TestError {
+        fn from(value: fmt::Error) -> Self {
+            TestError::Uefi(Status::DEVICE_ERROR.into())
+        }
     }
-}
 
-impl From<Status> for TestError {
-    fn from(value: Status) -> Self {
-        TestError::Uefi(value.into())
+    impl From<UefiError> for TestError {
+        fn from(value: UefiError) -> Self {
+            TestError::Uefi(value)
+        }
     }
-}
 
-trait TestExt
-where
-    Self: Sized,
-{
-    type OUT;
-
-    fn missing(self) -> TestResult<Self::OUT>;
-}
-
-impl<'a, P> TestExt for Option<Scope<'a, P>>
-where
-    P: Protocol<'a>,
-{
-    type OUT = Scope<'a, P>;
-
-    fn missing(self) -> TestResult<Self::OUT> {
-        self.ok_or(TestError::MissingProtocol(P::NAME))
+    impl From<TestError> for UefiError {
+        fn from(value: TestError) -> Self {
+            match value {
+                TestError::Uefi(u) => u,
+                TestError::MissingProtocol(_) => Status::UNSUPPORTED.into(),
+            }
+        }
     }
-}
 
-#[derive(Debug, Clone, Copy)]
-struct Stdout;
-
-impl Write for Stdout {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        // Safety: Yes
-        unsafe { qemu_out(s.as_bytes()) };
-        Ok(())
+    impl From<Status> for TestError {
+        fn from(value: Status) -> Self {
+            TestError::Uefi(value.into())
+        }
     }
-}
 
-macro_rules! ensure {
+    pub trait TestExt
+    where
+        Self: Sized,
+    {
+        type OUT;
+
+        fn missing(self) -> TestResult<Self::OUT>;
+    }
+
+    impl<'a, P> TestExt for Option<Scope<'a, P>>
+    where
+        P: Protocol<'a>,
+    {
+        type OUT = Scope<'a, P>;
+
+        fn missing(self) -> TestResult<Self::OUT> {
+            self.ok_or(TestError::MissingProtocol(P::NAME))
+        }
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Stdout;
+
+    impl fmt::Write for Stdout {
+        fn write_str(&mut self, s: &str) -> core::fmt::Result {
+            // Safety: Yes
+            unsafe { qemu_out(s.as_bytes()) };
+            Ok(())
+        }
+    }
+
+    #[macro_export]
+    macro_rules! ensure {
     ($stdout:expr, $e:expr $(, $m:expr)?) => {{
         write!($stdout, "Testing ")?;
         $(
@@ -127,83 +140,29 @@ macro_rules! ensure {
         }
     }};
 }
-
-fn test_2_70(handle: EfiHandle, table: &SystemTable<Boot>) -> Result<()> {
-    // let mut stdout = table.stdout();
-    let mut stdout = Stdout;
-    writeln!(stdout, "Starting testing of UEFI 2.7.0")?;
-
-    let hdr = table.header();
-    let uefi_revision = table.uefi_revision();
-
-    ensure!(stdout, uefi_revision.major() == 2);
-    ensure!(stdout, uefi_revision.minor() == 7);
-    ensure!(stdout, uefi_revision.patch() == 0);
-    ensure!(stdout, uefi_revision.to_string() == "2.7");
-    ensure!(stdout, hdr.signature == RawSystemTable::SIGNATURE);
-    ensure!(stdout, hdr.revision == RawSystemTable::REVISION_2_70);
-    // actual `efi_main` should be validating these anyway
-    ensure!(stdout, hdr.crc32 != 0);
-    ensure!(stdout, hdr.reserved == 0);
-    ensure!(stdout, hdr.size as usize == size_of::<RawSystemTable>());
-
-    let cpuid = CpuId::new();
-    let info = cpuid.get_feature_info().ok_or(Status::UNSUPPORTED)?;
-
-    let mut word: u16 = 0;
-    // Safety: loads a 16 bit value
-    unsafe {
-        asm!(
-            "fnstcw word ptr [{}]",
-            in(reg) &mut word,
-            options(nostack),
-        )
-    };
-    ensure!(stdout, word == 0x037F, "x87 FPU Control Word");
-
-    let cr0 = Cr0::read();
-    ensure!(
-        stdout,
-        !cr0.contains(Cr0Flags::EMULATE_COPROCESSOR | Cr0Flags::TASK_SWITCHED),
-        "Task Switch and FP Emulation exceptions off"
-    );
-
-    Ok(())
 }
 
-fn test_panic(handle: EfiHandle, table: &SystemTable<Boot>) -> Result<()> {
-    panic!("Test panic");
-    Ok(())
-}
+use imp::*;
+use tests::*;
 
-/// Test basic functionality required for the rest of the test environment to
-/// run
-///
-/// To run the automated test infrastructure:
-///
-/// - A valid [`SystemTable`]
-/// - A supported UEFI Revision
-/// - [`SimpleTextOutput`] / `stdout`
-///     - Actually WE don't..
-/// - [`LoadedImage`]
-/// - [`Scope`]
-/// - [`DevicePath`]
-/// - [`UefiString`]
-fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
-    let mut stdout = table.stdout();
-    // let mut stdout = Stdout;
+// Only 127 codes are possible because linux.
+const EXIT: X86 = X86::new(0x501, 69);
 
-    let boot = table.boot();
+type TestFn = fn(EfiHandle, &SystemTable<Boot>) -> TestResult<()>;
 
-    let us = boot.open_protocol::<LoadedImage>(handle)?.missing()?;
+type TestResult<T> = core::result::Result<T, TestError>;
 
-    Ok(())
-}
+// TODO: Figure out way to automatically register test functions
+/// Test function and whether it "should fail" or not
+static TESTS: &[(TestFn, bool)] = &[
+    //
+    (test_panic, true),
+    (test_2_70, false),
+];
 
-#[entry(panic, alloc)]
+#[entry(alloc, panic)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
-    // let mut stdout = table.stdout();
-    let mut stdout = Stdout;
+    let mut stdout = table.stdout();
 
     if let Err(e) = basic_tests(handle, &table) {
         writeln!(&mut stdout, "Error running Nuefi Test Suite: {e}")?;
@@ -236,6 +195,16 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
             TESTS[idx].0(handle, &table)?;
 
             return Ok(());
+        } else {
+            stdout.clear()?;
+            let fw_vendor = table.firmware_vendor();
+            let fw_revision = table.firmware_revision();
+            let uefi_revision = table.uefi_revision();
+
+            writeln!(stdout, "Firmware Vendor {}", fw_vendor)?;
+            writeln!(stdout, "Firmware Revision {}", fw_revision)?;
+            writeln!(stdout, "UEFI Revision {}", uefi_revision)?;
+            writeln!(stdout, "Successfully initialized testing core")?;
         }
 
         let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
@@ -280,34 +249,10 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
             }
         }
     }
-    loop {}
-    return Ok(());
-
-    let fw_vendor = table.firmware_vendor();
-    let fw_revision = table.firmware_revision();
-    let uefi_revision = table.uefi_revision();
-
-    writeln!(stdout, "Firmware Vendor {}", fw_vendor)?;
-    writeln!(stdout, "Firmware Revision {}", fw_revision)?;
-    writeln!(stdout, "UEFI Revision {}", uefi_revision)?;
-    writeln!(stdout, "Successfully initialized testing core")?;
-
-    match (uefi_revision.major(), uefi_revision.minor()) {
-        (2, x) if x >= 7 => {
-            test_2_70(handle, &table)?;
-        }
-        (y, x) => {
-            writeln!(&mut stdout, "Unsupported UEFI revision {y}.{x}")?;
-            if runs_inside_qemu().is_maybe_or_very_likely() {
-                EXIT.exit_failure();
-            }
-            return Err(Status::UNSUPPORTED.into());
-        }
-    }
-
-    if runs_inside_qemu().is_maybe_or_very_likely() {
-        EXIT.exit_success();
-    }
+    // TODO: Callback to keep watchdog alive
+    // Detect slow tests
+    // Pattern matching
+    // TODO: with_boot public global fn for SystemTable
 
     Ok(())
 }
