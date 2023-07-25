@@ -7,3 +7,4 @@
 //! Currently, only a subset of the UEFI API is implemented.
 
 pub mod device_path;
+pub mod shell;
