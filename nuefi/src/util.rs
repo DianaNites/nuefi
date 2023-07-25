@@ -22,8 +22,13 @@ macro_rules! interface {
             #[derive(Debug)]
             #[repr(transparent)]
             pub struct $name<'table> {
-                /// Lifetime of this interface is conceptually tied to the [`crate::SystemTable`]
+                /// Protocol instance pointer
+                ///
+                /// The lifetime of this is conceptually tied to the [`crate::SystemTable`]
+                ///
+                /// We should not be considered to have "ownership" of this
                 interface: *mut $in,
+
                 phantom: core::marker::PhantomData<&'table mut $in>,
             }
 
@@ -49,21 +54,9 @@ macro_rules! interface {
 
                 /// Return a reference to the interface by dereferencing and reborrowing its pointer
                 fn interface(&self) -> &$in {
-                    // SAFETY:
-                    // Ensured valid in construction.
-                    // Continued validity ensured by the type system
-                    // Should be statically impossible to invalidate
+                    // Safety:
+                    // - The existence of `&self` implies this is valid
                     unsafe { &*(self.interface as *const $in) }
-                }
-
-                /// Return a mutable reference to the interface by dereferencing and reborrowing its pointer
-                #[allow(clippy::mut_from_ref)]
-                fn interface_mut(&self) -> &mut $in {
-                    // SAFETY:
-                    // Ensured valid in construction.
-                    // Continued validity ensured by the type system
-                    // Should be statically impossible to invalidate
-                    unsafe { &mut *self.interface }
                 }
 
                 /// Raw pointer to this protocols interface

@@ -78,11 +78,14 @@ impl<'table> LoadedImage<'table> {
     /// It is your responsibility to ensure the data lives long enough until
     /// start_image is called.
     pub unsafe fn set_options<T>(&self, data: &[T]) {
-        // EFI pls dont write to our options
-        self.interface_mut().options = data.as_ptr() as *mut _;
+        // Safety: Existence of `&self` implies validity
+        let i = unsafe { &mut *self.interface };
+
         let len: u32 = data.len().try_into().unwrap();
         let size: u32 = size_of::<T>().try_into().unwrap();
-        self.interface_mut().options_size = len * size;
+
+        i.options = data.as_ptr() as *mut _;
+        i.options_size = len * size;
     }
 
     /// Set the image load options in Shell format,
@@ -117,7 +120,8 @@ impl<'table> LoadedImage<'table> {
     ///
     /// [load_image]: crate::table::BootServices
     pub unsafe fn set_device(&self, device: EfiHandle) {
-        self.interface_mut().device = device;
+        // Safety: Existence of `&self` implies validity
+        unsafe { &mut *self.interface }.device = device;
     }
 
     /// Set the [DevicePath] for this image
@@ -126,6 +130,7 @@ impl<'table> LoadedImage<'table> {
     ///
     /// Only use this if you know what you're doing
     pub unsafe fn set_path(&self, path: &Path<'_>) {
-        self.interface_mut().path = path.as_device().as_ptr();
+        // Safety: Existence of `&self` implies validity
+        unsafe { &mut *self.interface }.path = path.as_device().as_ptr();
     }
 }
