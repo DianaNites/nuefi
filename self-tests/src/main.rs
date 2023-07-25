@@ -128,7 +128,7 @@ mod imp {
 
     #[macro_export]
     macro_rules! ensure {
-        ($stdout:expr, $e:expr $(, $m:expr)?) => {{
+        ($e:expr $(, $m:expr)?) => {{
             ::nuefi::with_boot_table(|table| -> ::nuefi::error::Result<()> {
                 use nuefi::proto::console::{TextBackground, TextForeground};
                 let stdout = table.stdout();
@@ -188,14 +188,6 @@ fn check_options() {
     alloc, panic
 )]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
-    if let Err(e) = basic_tests(handle, &table) {
-        error!("Error running Nuefi Test Suite: {e}");
-        if runs_inside_qemu().is_maybe_or_very_likely() {
-            EXIT.exit_failure();
-        }
-        return Err(Status::UNSUPPORTED.into());
-    }
-
     let boot = table.boot();
 
     let us = boot
@@ -209,7 +201,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
             error!("Invalid load options");
             Status::INVALID_PARAMETER
         })?);
-        trace!("Load Options: {idx}: {:#?}", options);
+        trace!("Load Options: {idx}: {:?}", options);
 
         if idx >= TESTS.len() {
             error!("Invalid load options");
@@ -224,9 +216,19 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         let fw_revision = table.firmware_revision();
         let uefi_revision = table.uefi_revision();
 
+        debug!("Initializing testing core");
         debug!("Firmware Vendor {}", fw_vendor);
         debug!("Firmware Revision {}", fw_revision);
         debug!("UEFI Revision {}", uefi_revision);
+
+        if let Err(e) = basic_tests(handle, &table) {
+            error!("Error running Nuefi Test Suite: {e}");
+            if runs_inside_qemu().is_maybe_or_very_likely() {
+                EXIT.exit_failure();
+            }
+            return Err(Status::UNSUPPORTED.into());
+        }
+
         info!("Successfully initialized testing core");
     }
 
