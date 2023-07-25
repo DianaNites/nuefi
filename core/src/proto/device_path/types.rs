@@ -207,9 +207,6 @@ pub mod sub {
 }
 
 impl DevicePathSubType {
-    /// Represents a file [Media][`DevicePathType::MEDIA`] path
-    pub const MEDIA_FILE: Self = Self(0x04);
-
     /// Represents the end of the entire [`DevicePathHdr`]
     pub const END_ENTIRE: Self = Self(0xFF);
 

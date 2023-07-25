@@ -3,6 +3,37 @@
 use super::{types::*, DevicePathHdr};
 use crate::base::Guid;
 
+/// End Of Device Path node
+#[derive(Debug, Clone, Copy)]
+#[repr(C, packed)]
+pub struct End {
+    hdr: DevicePathHdr,
+}
+
+impl End {
+    /// Mark the end of the entire device path
+    pub const fn entire() -> Self {
+        Self {
+            hdr: DevicePathHdr {
+                ty: DevicePathType::END,
+                sub_ty: DevicePathSubType::END_ENTIRE,
+                len: 4u16.to_le_bytes(),
+            },
+        }
+    }
+
+    /// Mark the end of an instance of a device path in a multi-instance path
+    pub const fn instance() -> Self {
+        Self {
+            hdr: DevicePathHdr {
+                ty: DevicePathType::END,
+                sub_ty: DevicePathSubType::END_INSTANCE,
+                len: 4u16.to_le_bytes(),
+            },
+        }
+    }
+}
+
 pub mod hardware {
     //! Defines how a device is attached to the "resource domain" of the
     //! system, the shared memory, MMIO, and I/O space of the system.

@@ -67,6 +67,8 @@ pub mod types;
 
 use types::*;
 
+use self::nodes::End;
+
 /// Generic [`DevicePathHdr`] structure, and a
 /// [`Protocol`][`crate::extra::Protocol`]
 ///
@@ -111,11 +113,8 @@ impl DevicePathHdr {
 
     /// Create the end of path node
     pub fn end() -> Self {
-        Self {
-            ty: DevicePathType::END,
-            sub_ty: DevicePathSubType::END_ENTIRE,
-            len: 4u16.to_le_bytes(),
-        }
+        // Safety: Identical layouts
+        unsafe { core::mem::transmute(End::entire()) }
     }
 
     /// Create a media filepath node for a null terminated path of bytes `len`
@@ -123,7 +122,7 @@ impl DevicePathHdr {
         let len = len.checked_add(4).unwrap();
         Self {
             ty: DevicePathType::MEDIA,
-            sub_ty: DevicePathSubType::MEDIA_FILE,
+            sub_ty: sub::media::FILE,
             len: len.to_le_bytes(),
         }
     }
