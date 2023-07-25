@@ -71,10 +71,16 @@ pub unsafe trait Protocol<'table> {
 
     /// Wrap `Self` around a [`Protocol`] instance `this`
     ///
+    /// # Derive
+    ///
+    /// The derive macro expects `fn new(*mut Protocol::Raw)` to exist.
+    ///
+    /// This should come from the `interface` macro
+    ///
     /// # Safety
     ///
-    /// - `this` must be a valid pointer to a firmware instance of
-    ///   [`Protocol::Raw`]
+    /// - `this` must be a valid pointer to an instance of [`Protocol::Raw`]
+    ///   that will live for `'table`
     #[doc(hidden)]
     unsafe fn from_raw(this: *mut Self::Raw) -> Self;
 
