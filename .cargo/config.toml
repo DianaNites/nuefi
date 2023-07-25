@@ -1,8 +1,12 @@
 [target.x86_64-unknown-uefi]
 rustflags = [
     #
+    # "-Zunstable-options",
     # "-Ctarget-feature=+mmx,+sse,-soft-float",
+    "-Ctarget-feature=+mmx,+sse,+sse2,-soft-float",
+    "-Cforce-unwind-tables=on",
+    # "-Cforce-frame-pointers=on",
 ]
 
-# [unstable]
+[unstable]
 # build-std = ["core", "alloc"]

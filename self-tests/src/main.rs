@@ -128,6 +128,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // let mut stdout = table.stdout();
     let mut stdout = Stdout;
 
+    // #[cfg(no)]
     {
         let boot = table.boot();
 
