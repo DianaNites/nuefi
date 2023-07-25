@@ -123,6 +123,20 @@ static HANDLE: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
 
 pub use nuefi_core::base::Handle as EfiHandle;
 
+/// Run the closure `f` with a reference to the global UEFI system table
+///
+/// If the SystemTable is not in the [`Boot`] state, an error is returned.
+pub fn with_boot_table<E, F>(f: F) -> Result<E, error::UefiError>
+where
+    F: FnOnce(&SystemTable<Boot>) -> E,
+{
+    if let Some(table) = get_boot_table() {
+        Ok(f(&table))
+    } else {
+        Err(Status::UNSUPPORTED.into())
+    }
+}
+
 /// Get the global [`SystemTable<Boot>`], if available
 fn get_boot_table() -> Option<SystemTable<Boot>> {
     let table = TABLE.load(Ordering::Acquire);
