@@ -296,6 +296,8 @@ mod tests {
             let b = [0u8; size_of::<RawBootServices>()];
             // Safety:
             // - All fields of `RawBootServices` are safely nullable/zero
+            //
+            // use transmute because `zeroed` is not const.
             let mut t: RawBootServices = unsafe { core::mem::transmute::<_, _>(b) };
             t.header = MOCK_HEADER;
             t
