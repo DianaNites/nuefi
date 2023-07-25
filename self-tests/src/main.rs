@@ -3,19 +3,30 @@
     unused_imports,
     unused_variables,
     unreachable_code,
-    clippy::no_effect
+    clippy::no_effect,
+    unused_mut
 )]
 #![no_std]
 #![no_main]
 extern crate alloc;
 
 use alloc::{boxed::Box, string::ToString};
-use core::{arch::asm, fmt::Write, mem::size_of};
+use core::{
+    arch::asm,
+    fmt::{self, write, Write},
+    mem::size_of,
+};
 
 use nuefi::{
     entry,
-    error::{Result, Status},
-    proto::{loaded_image::LoadedImage, media::LoadFile2},
+    error::{Result, Status, UefiError},
+    proto::{
+        console::SimpleTextOutput,
+        loaded_image::LoadedImage,
+        media::LoadFile2,
+        Protocol,
+        Scope,
+    },
     table::raw::RawSystemTable,
     Boot,
     EfiHandle,
@@ -30,6 +41,55 @@ use x86_64::registers::control::{Cr0, Cr0Flags};
 const EXIT: X86 = X86::new(0x501, 69);
 
 type TestFn = fn(EfiHandle, SystemTable<Boot>) -> Result<()>;
+
+type TestResult<T> = core::result::Result<T, TestError>;
+
+#[derive(Debug, Clone, Copy)]
+enum TestError {
+    MissingProtocol(&'static str),
+    Uefi(UefiError),
+}
+
+impl fmt::Display for TestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TestError::MissingProtocol(n) => write!(f, "missing protocol {n}"),
+            TestError::Uefi(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+impl From<UefiError> for TestError {
+    fn from(value: UefiError) -> Self {
+        TestError::Uefi(value)
+    }
+}
+
+impl From<Status> for TestError {
+    fn from(value: Status) -> Self {
+        TestError::Uefi(value.into())
+    }
+}
+
+trait TestExt
+where
+    Self: Sized,
+{
+    type OUT;
+
+    fn missing(self) -> TestResult<Self::OUT>;
+}
+
+impl<'a, P> TestExt for Option<Scope<'a, P>>
+where
+    P: Protocol<'a>,
+{
+    type OUT = Scope<'a, P>;
+
+    fn missing(self) -> TestResult<Self::OUT> {
+        self.ok_or(TestError::MissingProtocol(P::NAME))
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 struct Stdout;
@@ -108,25 +168,39 @@ fn test_panic(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 
 /// Test basic functionality required for the rest of the test environment to
 /// run
-fn basic_tests(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
-    //
+///
+/// To run the automated test infrastructure:
+///
+/// - A valid [`SystemTable`]
+/// - A supported UEFI Revision
+/// - [`SimpleTextOutput`] / `stdout`
+///     - Actually WE don't..
+/// - [`LoadedImage`]
+/// - [`DevicePath`]
+/// - [`UefiString`]
+fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
+    let mut stdout = table.stdout();
+    // let mut stdout = Stdout;
+
+    let boot = table.boot();
+
+    let us = boot.open_protocol::<LoadedImage>(handle)?.missing()?;
+
     Ok(())
 }
 
 #[entry(panic, alloc)]
 fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
-    // TODO: Could run our own binary with different options to have isolated-ish
-    // testing?
-    // UEFI is identity mapped and privileged so we could,
-    // accidentally corrupt it, but.
-    //
-    // It would allow test functions,
-    // panicking test cases, and logging output.
-    //
-    // We can hook stdout/stderr, check return code, etc.
-    //
     // let mut stdout = table.stdout();
     let mut stdout = Stdout;
+
+    if let Err(e) = basic_tests(handle, &table) {
+        writeln!(&mut stdout, "Error running Nuefi Test Suite: {e}")?;
+        if runs_inside_qemu().is_maybe_or_very_likely() {
+            EXIT.exit_failure();
+        }
+        return Err(Status::UNSUPPORTED.into());
+    }
 
     // #[cfg(no)]
     {
@@ -144,8 +218,8 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         let dev = file_path.to_string_lossy()?;
         writeln!(stdout, "dev = {:#?}", dev)?;
 
-        // let img = boot.load_image_fs(handle, dev);
-        // writeln!(stdout, "img = {:#?}", img)?;
+        let img = boot.load_image_fs(handle, file_path.as_device());
+        writeln!(stdout, "img = {:#?}", img)?;
         // unsafe { boot.start_image(img)? };
 
         // let load = boot
@@ -235,3 +309,13 @@ unsafe fn qemu_exit(x: u16) {
         }
     }
 }
+
+// TODO: Could run our own binary with different options to have isolated-ish
+// testing?
+// UEFI is identity mapped and privileged so we could,
+// accidentally corrupt it, but.
+//
+// It would allow test functions,
+// panicking test cases, and logging output.
+//
+// We can hook stdout/stderr, check return code, etc.
