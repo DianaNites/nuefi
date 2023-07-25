@@ -1,13 +1,15 @@
 //! UEFI Device Path Protocol
 //!
-//! This protocol is special in that it is not actually a protocol,
-//! but a unaligned, variable length binary structure.
+//! This protocol is a bit special in that it points to an unaligned,
+//! variable length binary structure identifying some specific device or
+//! resource in a way consistent with the system topology.
 //!
-//! Like a Protocol, a Device Path has a GUID, and the UEFI specification
-//! refers to it as a Protocol, but it has no methods.
+//! This Protocol should ideally be installed on device handles to indicate
+//! their physical or logical device.
 //!
 //! UEFI Device Paths have different types, and each type has a different
-//! sub-type, both of which together determine the daa format for a path node.
+//! sub-type, both of which together determine the data format for a
+//! specific path node.
 //!
 //! # References
 //!
@@ -41,6 +43,18 @@ pub mod devpath_fn {
         this: *mut DevicePathHdr,
         other: *mut DevicePathHdr,
     ) -> *mut DevicePathHdr;
+
+    pub type ConvertDeviceNodeToText = unsafe extern "efiapi" fn(
+        node: *mut DevicePathHdr,
+        display: bool,
+        shortcuts: bool,
+    ) -> *mut u16;
+
+    pub type ConvertDevicePathToText = unsafe extern "efiapi" fn(
+        path: *mut DevicePathHdr,
+        display: bool,
+        shortcuts: bool,
+    ) -> *mut u16;
 }
 
 mod imp {
@@ -170,21 +184,9 @@ pub struct DevicePathUtil {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct DevicePathToText {
-    pub convert_device_node_to_text: Option<
-        unsafe extern "efiapi" fn(
-            node: *mut DevicePathHdr,
-            display: bool,
-            shortcuts: bool,
-        ) -> *mut u16,
-    >,
+    pub convert_device_node_to_text: Option<devpath_fn::ConvertDeviceNodeToText>,
 
-    pub convert_device_path_to_text: Option<
-        unsafe extern "efiapi" fn(
-            path: *mut DevicePathHdr,
-            display: bool,
-            shortcuts: bool,
-        ) -> *mut u16,
-    >,
+    pub convert_device_path_to_text: Option<devpath_fn::ConvertDevicePathToText>,
 }
 
 /// A generic UEFI Device Path
