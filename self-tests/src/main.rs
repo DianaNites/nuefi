@@ -1,3 +1,4 @@
+#![allow(unstable_name_collisions)]
 #![allow(
     dead_code,
     unused_imports,
@@ -15,6 +16,7 @@ use core::{
     arch::asm,
     fmt::{self, write, Write},
     mem::size_of,
+    ops::Deref,
 };
 
 use nuefi::{
@@ -41,9 +43,17 @@ use x86_64::registers::control::{Cr0, Cr0Flags};
 // Only 127 codes are possible because linux.
 const EXIT: X86 = X86::new(0x501, 69);
 
-type TestFn = fn(EfiHandle, SystemTable<Boot>) -> Result<()>;
+type TestFn = fn(EfiHandle, &SystemTable<Boot>) -> Result<()>;
 
 type TestResult<T> = core::result::Result<T, TestError>;
+
+// TODO: Figure out way to automatically register test functions
+/// Test function and whether it "should fail" or not
+static TESTS: &[(TestFn, bool)] = &[
+    //
+    (test_panic, true),
+    (test_2_70, false),
+];
 
 #[derive(Debug, Clone, Copy)]
 enum TestError {
@@ -118,7 +128,8 @@ macro_rules! ensure {
     }};
 }
 
-fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+fn test_2_70(handle: EfiHandle, table: &SystemTable<Boot>) -> Result<()> {
+    // let mut stdout = table.stdout();
     let mut stdout = Stdout;
     writeln!(stdout, "Starting testing of UEFI 2.7.0")?;
 
@@ -157,12 +168,10 @@ fn test_2_70(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         "Task Switch and FP Emulation exceptions off"
     );
 
-    panic!("Testing Panic");
-
     Ok(())
 }
 
-fn test_panic(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
+fn test_panic(handle: EfiHandle, table: &SystemTable<Boot>) -> Result<()> {
     panic!("Test panic");
     Ok(())
 }
@@ -214,12 +223,19 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 
         let options = us.options().transpose()?;
         if let Some(options) = options {
-            let options = options.to_string_lossy();
-            writeln!(stdout, "Load Options: {}", options)?;
-            if options == "UWU" {
-                panic!("UWU");
+            let idx = usize::from_le_bytes(options.try_into().map_err(|_| {
+                let _ = writeln!(stdout, "Invalid load options");
+                Status::INVALID_PARAMETER
+            })?);
+            writeln!(stdout, "Load Options: {idx}: {:#?}", options)?;
+
+            if idx >= TESTS.len() {
+                writeln!(stdout, "Invalid load options")?;
+                return Err(Status::INVALID_PARAMETER.into());
             }
-            loop {}
+            TESTS[idx].0(handle, &table)?;
+
+            return Ok(());
         }
 
         let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
@@ -234,31 +250,38 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 
         let dev = file_path.as_device();
 
-        let img = boot.load_image_fs(handle, dev);
-        writeln!(stdout, "img = {:#?}", img)?;
-        let img = img?;
+        let max = TESTS.len();
+        writeln!(stdout, "Running {} tests", max)?;
+        for (idx, (test, fail)) in TESTS.iter().enumerate() {
+            writeln!(stdout, "Running test {}/{}", idx + 1, max)?;
+            let opt = idx.to_le_bytes();
 
-        let opt = UefiString::new("UWU");
+            let img = boot.load_image_fs(handle, dev)?;
 
-        // Scope has to end here or else we'll lock the protocol
-        // for our child image, oops.
-        {
-            let load = boot
-                .open_protocol::<LoadedImage>(img)?
-                .ok_or(Status::INVALID_PARAMETER)?;
-            // Safety:
-            // FIXME: Yes
-            unsafe { load.set_shell_options(&opt) };
-        }
+            // Scope has to end here or else we'll lock the protocol
+            // for our child image, oops.
+            {
+                let load = boot
+                    .open_protocol::<LoadedImage>(img)?
+                    .ok_or(Status::INVALID_PARAMETER)?;
+                // Safety: `opt` is valid until start_image below
+                // FIXME: should have a safe API
+                unsafe { load.set_options(&opt) };
+            }
 
-        unsafe { boot.start_image(img)? };
-        // TODO: Figure out way to automatically register test functions
-        let tests: &[TestFn] = &[test_panic];
+            // FIXME: No way to get ExitData
+            // Safety: `img` is only run once, reinitialized each loop.
+            let ret = unsafe { boot.start_image(img) };
 
-        for test in tests {
-            //
+            if ret.is_ok() || (ret.is_err() && *fail) {
+                writeln!(stdout, "Test {}/{} completed successfully", idx + 1, max)?;
+            } else {
+                writeln!(stdout, "Test {}/{} completed unsuccessfully", idx + 1, max)?;
+            }
         }
     }
+    loop {}
+    return Ok(());
 
     let fw_vendor = table.firmware_vendor();
     let fw_revision = table.firmware_revision();
@@ -271,7 +294,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
 
     match (uefi_revision.major(), uefi_revision.minor()) {
         (2, x) if x >= 7 => {
-            test_2_70(handle, table)?;
+            test_2_70(handle, &table)?;
         }
         (y, x) => {
             writeln!(&mut stdout, "Unsupported UEFI revision {y}.{x}")?;

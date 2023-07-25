@@ -22,8 +22,8 @@ pub fn panic(info: &PanicInfo) -> ! {
         let mut stdout = table.stdout();
         let _ = writeln!(stdout, "{info}");
 
-        #[cfg(no)]
-        #[cfg(not(debug_assertions))]
+        // #[cfg(no)]
+        // #[cfg(not(debug_assertions))]
         {
             let handle_p = crate::HANDLE.load(Ordering::Relaxed);
             // Safety: handle_p is either null or from UEFI

@@ -47,7 +47,7 @@ fn table() -> Result<SystemTable<Boot>> {
 pub struct UefiString<'table> {
     data: *mut u16,
 
-    /// Length in *characters*
+    /// Length in *characters*, including null.
     len: usize,
 
     /// Lifetime erased UefiStr to ourselves
@@ -74,7 +74,7 @@ impl<'table> UefiString<'table> {
         );
         let table = get_boot_table().unwrap();
         let boot = table.boot();
-        // Length in UTF-16
+        // Length in UTF-16, plus null.
         let cap = s.len() + 1;
 
         // Safety: aligned
@@ -115,7 +115,7 @@ impl<'table> UefiString<'table> {
     ///
     /// # Safety
     ///
-    /// - Data must be a valid non-null pointer to a UEFI string ending in nul
+    /// - Data must be a valid non-null pointer to a UEFI string ending in null
     pub unsafe fn from_ptr(data: *mut u16) -> Self {
         let len = string_len(data) + 1;
         Self::from_ptr_len(data, len)
@@ -355,7 +355,7 @@ impl<'table> Drop for PathBuf<'table> {
     }
 }
 
-/// Get the length of a string
+/// Get the length of a string, not including null.
 ///
 /// # Safety
 ///

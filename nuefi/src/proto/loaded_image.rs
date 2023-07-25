@@ -1,5 +1,5 @@
 //! UEFI Loaded image Protocol
-use core::mem::size_of;
+use core::{mem::size_of, slice::from_raw_parts};
 
 use nuefi_core::{
     error::{Result, Status},
@@ -59,15 +59,37 @@ impl<'table> LoadedImage<'table> {
         }
     }
 
+    /// Read the options for this image as a [`&[u8]`]
+    ///
+    /// On return, you own this pointer and are responsible for freeing it via
+    /// [`BootServices::free_pool`]
+    // FIXME: It isnt appropriate for this or anything else in nuefi really
+    // to use the global allocator. UEFI requires things be allocated in certain
+    // ways, but a library user may well want to use an arena or something.
+    // This might require the nightly allocator API? Might literally be impossible
+    // otherwise?
+    pub fn options(&self) -> Option<Result<&[u8]>> {
+        let i = self.interface();
+        let opts = i.options;
+        if opts.is_null() || i.options_size == 0 {
+            None
+        } else {
+            let len = i.options_size as usize;
+            // Safety: opts is valid
+            unsafe { Some(Ok(from_raw_parts(opts, len))) }
+        }
+    }
+
     /// Read the options for this image as a [`UefiStr`], if they exist and are
     /// valid.
-    pub fn options(&self) -> Option<Result<UefiStr>> {
+    pub fn shell_options(&self) -> Option<Result<UefiStr>> {
         let i = self.interface();
         let opts = i.options;
         if opts.is_null() || i.options_size == 0 {
             None
         } else {
             let opts = opts as *mut u16;
+
             let len = i.options_size as usize / 2;
             if i.options_size % 2 != 0 {
                 return Some(Err(Status::INVALID_PARAMETER.into()));
@@ -81,14 +103,14 @@ impl<'table> LoadedImage<'table> {
     ///
     /// # Panics
     ///
-    /// - If `data` is bigger than [`u32::MAX`]
+    /// - If `data` is bigger than [`u32::MAX`], in bytes.
     ///
     /// # Safety
     ///
-    /// You should only use this if you know what you're doing.
+    /// - `data` MUST live until [`BootServices::start_image`][start_image] is
+    ///   called
     ///
-    /// It is your responsibility to ensure the data lives long enough until
-    /// start_image is called.
+    /// [start_image]: crate::table::BootServices::start_image
     pub unsafe fn set_options<T>(&self, data: &[T]) {
         // Safety: Existence of `&self` implies validity
         let i = unsafe { &mut *self.interface };
@@ -96,7 +118,7 @@ impl<'table> LoadedImage<'table> {
         let len: u32 = data.len().try_into().unwrap();
         let size: u32 = size_of::<T>().try_into().unwrap();
 
-        i.options = data.as_ptr() as *mut _;
+        i.options = data.as_ptr() as *mut u8;
         i.options_size = len * size;
     }
 
@@ -117,7 +139,7 @@ impl<'table> LoadedImage<'table> {
     /// [start_image]: crate::table::BootServices::start_image
     pub unsafe fn set_shell_options(&self, cmd: &UefiStr<'_>) {
         // Safety: Always correct for shell options
-        self.set_options::<u16>(cmd.as_slice());
+        self.set_options::<u16>(cmd.as_slice_with_nul());
     }
 
     /// Set the Device handle for this image

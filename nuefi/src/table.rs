@@ -535,15 +535,12 @@ impl<'table> BootServices<'table> {
     ///
     /// # Safety
     ///
-    /// Because UEFI is not an OS, this is equivalent to a FFI call.
-    /// In particular, an evil image could corrupt the system table and
-    /// protocols we depend on as it pleases.
-    ///
-    /// This is only safe to call if you trust the application not to destroy
-    /// the address space or be evil
+    /// - `handle` must only be started ONE time
+    /// - The application represented by `handle` must be trusted the same as an
+    ///   FFI call. UEFI has no "process" isolation.
     ///
     /// Take care not to run untrusted applications for other security reasons
-    /// too.
+    /// too. Only run *trusted* code.
     ///
     /// [loaded]: crate::proto::loaded_image::LoadedImage
     pub unsafe fn start_image(&self, handle: EfiHandle) -> Result<()> {
