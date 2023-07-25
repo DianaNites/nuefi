@@ -62,55 +62,15 @@ mod imp {
     // use super::*;
 }
 
-/// [`DevicePathHdr`] types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
-pub struct DevicePathType(u8);
+pub mod types;
 
-impl DevicePathType {
-    /// Represents a device connected to the system
-    pub const HARDWARE: Self = Self(0x01);
-
-    /// Represents ACPI Plug and Play hardware?
-    pub const ACPI: Self = Self(0x02);
-
-    /// Represents the connection to a device on another system,
-    /// such as a IP address or SCSI ID.
-    pub const MESSAGING: Self = Self(0x03);
-
-    /// Represents the portion of an entity that is being abstracted,
-    /// such as a file path on a storage device.
-    pub const MEDIA: Self = Self(0x04);
-
-    /// Used by platform firmware to select legacy bios boot options
-    pub const BIOS: Self = Self(0x05);
-
-    /// Represents the end of the device path structure
-    pub const END: Self = Self(0x7F);
-}
-
-/// [`DevicePathHdr`] Sub Types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
-pub struct DevicePathSubType(u8);
-
-impl DevicePathSubType {
-    /// Represents a file [Media][`DevicePathType::MEDIA`] path
-    pub const MEDIA_FILE: Self = Self(0x04);
-
-    /// Represents the end of the entire [`DevicePathHdr`]
-    pub const END_ENTIRE: Self = Self(0xFF);
-
-    /// Represents the end of this [`DevicePathHdr`] instance
-    /// and the start of a new one
-    pub const END_INSTANCE: Self = Self(0x01);
-}
+use types::*;
 
 /// Generic [`DevicePathHdr`] structure, and a
 /// [`Protocol`][`crate::extra::Protocol`]
 ///
-/// See [the module][`super::device_path`] docs for detail on what a Device Path
-/// is
+/// See [the module][`super::device_path`] docs for detail on what a
+/// Device Path is
 ///
 /// This protocol can be requested from any handle to obtain the path to
 /// its physical/logical device.
@@ -124,8 +84,10 @@ impl DevicePathSubType {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DevicePathHdr {
+    /// Type of device path
     pub ty: DevicePathType,
 
+    /// Type specific sub-type
     pub sub_ty: DevicePathSubType,
 
     /// Length, in ***bytes***, including this header
@@ -187,18 +149,4 @@ pub struct DevicePathToText {
     pub convert_device_node_to_text: Option<devpath_fn::ConvertDeviceNodeToText>,
 
     pub convert_device_path_to_text: Option<devpath_fn::ConvertDevicePathToText>,
-}
-
-/// A generic UEFI Device Path
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-pub struct GenericDevicePath {
-    hdr: DevicePathHdr,
-}
-
-impl GenericDevicePath {
-    /// # Safety
-    pub const unsafe fn from_raw<'a>(_hdr: *const DevicePathHdr) -> &'a GenericDevicePath {
-        todo!()
-    }
 }
