@@ -795,8 +795,7 @@ impl<T> SystemTable<T> {
     fn table(&self) -> &RawSystemTable {
         // Safety:
         // - The existence of `&self` implies this pointer is valid
-        // - `Self::new` verifies this pointer is valid
-        // - The system table is always valid unless we remap it
+        // - The system table pointer will remain unless we remap its address
         // - Remapping is not currently implemented, so it cannot safely be done.
         unsafe { &*self.table }
     }
