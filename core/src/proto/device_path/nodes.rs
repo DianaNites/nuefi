@@ -4,7 +4,7 @@ use super::{types::*, DevicePathHdr};
 use crate::base::Guid;
 
 /// End Of Device Path node
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(C, packed)]
 pub struct End {
     hdr: DevicePathHdr,
@@ -34,6 +34,18 @@ impl End {
     }
 }
 
+impl PartialEq<DevicePathHdr> for End {
+    fn eq(&self, other: &DevicePathHdr) -> bool {
+        self.hdr.eq(other)
+    }
+}
+
+impl<'a> PartialEq<&'a DevicePathHdr> for End {
+    fn eq(&self, other: &&'a DevicePathHdr) -> bool {
+        self.hdr.eq(*other)
+    }
+}
+
 pub mod hardware {
     //! Defines how a device is attached to the "resource domain" of the
     //! system, the shared memory, MMIO, and I/O space of the system.
@@ -43,7 +55,7 @@ pub mod hardware {
     ///
     /// Must be preceded by an [`super::acpi`] entry uniquely
     /// identifying the PCI root bus
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct PciPath {
         hdr: DevicePathHdr,
@@ -52,7 +64,7 @@ pub mod hardware {
     }
 
     /// PC Card device
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct PcCard {
         hdr: DevicePathHdr,
@@ -60,7 +72,7 @@ pub mod hardware {
     }
 
     /// Memory Mapped device
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct MemoryMapped {
         hdr: DevicePathHdr,
@@ -70,7 +82,7 @@ pub mod hardware {
     }
 
     /// Vendor defined path, contents defined by the vendor GUID
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Vendor {
         hdr: DevicePathHdr,
@@ -78,14 +90,14 @@ pub mod hardware {
         data: [u8; 0],
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Controller {
         hdr: DevicePathHdr,
         num: [u8; 4],
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Bmc {
         hdr: DevicePathHdr,
@@ -203,7 +215,7 @@ pub mod acpi {
     // TODO: Figure out the EFI_PNP_ID macro and etc
 
     /// Acpi Simple
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Acpi {
         hdr: DevicePathHdr,
@@ -219,7 +231,7 @@ pub mod acpi {
     }
 
     /// ACPI Extended
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct AcpiEx {
         hdr: DevicePathHdr,
@@ -249,7 +261,7 @@ pub mod acpi {
     ///
     /// Multiple entries may exist if multiple devices are displaying the
     /// same output.
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Adr {
         hdr: DevicePathHdr,
@@ -263,7 +275,7 @@ pub mod acpi {
         extra: [u8; 0],
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Nvdimm {
         hdr: DevicePathHdr,
@@ -371,7 +383,7 @@ pub mod media {
     use super::*;
 
     /// Vendor defined path, contents defined by the vendor GUID
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct Vendor {
         hdr: DevicePathHdr,
@@ -379,7 +391,7 @@ pub mod media {
         data: [u8; 0],
     }
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     #[repr(C, packed)]
     pub struct File {
         hdr: DevicePathHdr,

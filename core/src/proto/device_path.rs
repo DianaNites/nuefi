@@ -82,7 +82,7 @@ use types::*;
 ///
 /// [s10_2]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html#efi-device-path-protocol>
 #[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B")]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(C, packed)]
 pub struct DevicePathHdr {
     /// Type of device path
