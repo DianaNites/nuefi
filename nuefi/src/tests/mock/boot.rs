@@ -66,6 +66,7 @@ impl MockBoot {
         // we're set up, by which point our main has set these up.
         if let Some(st) = get_boot_table() {
             let off = offset_of!(System, sys) as isize;
+            // Get our parent System, which contains the SystemTable and also us.
             let sys = &*st.raw().cast::<u8>().offset(-off).cast::<System>();
             std::dbg!(sys);
 
