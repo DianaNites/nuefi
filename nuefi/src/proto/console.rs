@@ -8,7 +8,7 @@ use core::{
 use crate::{
     error::{Result, Status},
     nuefi_core::interface,
-    string::UefiString,
+    string::{UefiStr, UefiString},
 };
 
 pub mod raw;
@@ -66,18 +66,21 @@ impl TextBackground {
 
 // interface!(SimpleTextInput(RawSimpleTextInput));
 
+// Note: This Protocol's methods can't use any logging infrastructure because
+// this protocol is, itself, used by logging. It will infinitely recurse.
 interface!(
     #[Protocol("387477C2-69C7-11D2-8E39-00A0C969723B")]
     SimpleTextOutput(RawSimpleTextOutput)
 );
 
 impl<'table> SimpleTextOutput<'table> {
+    /// Output `string` to the system console at the current cursor location
     #[track_caller]
-    pub fn output_string(&self, string: &str) -> Result<()> {
+    pub fn output_string(&self, string: &UefiStr) -> Result<()> {
         let out = self.interface().output_string.ok_or(Status::UNSUPPORTED)?;
-        let s = UefiString::new(string);
+
         // Safety: s is a nul terminated string
-        unsafe { out(self.interface, s.as_ptr()) }.into()
+        unsafe { out(self.interface, string.as_ptr()) }.into()
     }
 
     /// Use these colors for all output to this Protocol within the
@@ -236,38 +239,42 @@ impl<'table> SimpleTextOutput<'table> {
 
 // Internal
 impl<'table> SimpleTextOutput<'table> {
+    /// Write a Rust UTF-8 to this protocol, *without* allocating.
+    ///
+    /// Transparently converts any `\n` into `\r\n`.
+    ///
+    /// To bypass this conversion, use a [`UefiStr`]
+    // Note: Qemu UEFI in mon:stdio incorrectly treats LF as CRLF,
+    // whereas graphically it will be, correctly, mangled. UEFI mandates CR.
     fn write_str_impl(&self, s: &str) -> fmt::Result {
-        // If the input contains a nul byte, write up to the nul and then return an
-        // error.
-        let nul = s.split_once('\0');
-        let s = if let Some((s, _)) = nul { s } else { s };
+        for c in s.as_bytes() {
+            let data = if *c == b'\n' {
+                [b'\r' as u16, *c as u16, b'\0' as u16]
+            } else {
+                [*c as u16, b'\0' as u16, b'\0' as u16]
+            };
 
-        let ret = match self.output_string(s) {
-            Ok(()) => Ok(()),
-            Err(e) if e.status() == Status::WARN_UNKNOWN_GLYPH => Ok(()),
-            Err(_) => Err(fmt::Error),
-        };
-        let ret = if s.ends_with('\n') && nul.is_none() {
-            ret.and_then(|_| self.output_string("\r").map_err(|_| fmt::Error))
-        } else {
-            ret
-        };
+            // Safety: data is always valid
+            let u = unsafe { UefiStr::from_ptr_len(data.as_ptr().cast_mut(), data.len()) };
 
-        if nul.is_none() {
-            ret
-        } else {
-            // Write the offending null byte
-            // So it shows up in logs and etc
-            let _ = self.output_string("\0");
-            Err(fmt::Error)
+            let ret = match self.output_string(&u) {
+                Ok(()) => Ok(()),
+                Err(e) if e.status() == Status::WARN_UNKNOWN_GLYPH => Ok(()),
+                Err(_) => Err(fmt::Error),
+            };
+            ret?;
         }
+        Ok(())
     }
 }
 
 /// All failures are treated as [`Status::DEVICE_ERROR`].
 ///
-/// Warnings are ignored. Ending Newlines are turned into \n\r.
-/// Interior newlines are not.
+/// [`Status::WARN_UNKNOWN_GLYPH`] is ignored.
+///
+/// All `\n` bytes are transparently converted to `\r\n`.
+///
+/// This is guaranteed to not allocate.
 // #[cfg(no)]
 impl<'t> Write for SimpleTextOutput<'t> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -275,6 +282,8 @@ impl<'t> Write for SimpleTextOutput<'t> {
     }
 }
 
+// TODO: Figure out how to link to previous impl
+/// This is guaranteed to not allocate.
 impl<'t> Write for &SimpleTextOutput<'t> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_str_impl(s)
