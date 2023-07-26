@@ -176,11 +176,6 @@ static TESTS: &[(TestFn, bool)] = &[
     (test_2_70, false),
 ];
 
-fn check_options() {
-    //
-    use nuefi::proto::console::{TextBackground, TextForeground};
-}
-
 #[entry(
     //
     log(targets("nuefi",), color,),
