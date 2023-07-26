@@ -250,22 +250,8 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         info!("Running test {}/{}", idx + 1, max);
         let opt = idx.to_le_bytes();
 
-        let img = boot.load_image_fs(handle, dev)?;
-
-        // Scope has to end here or else we'll lock the protocol
-        // for our child image, oops.
-        {
-            let load = boot
-                .open_protocol::<LoadedImage>(img)?
-                .ok_or(Status::INVALID_PARAMETER)?;
-            // Safety: `opt` is valid until start_image below
-            // FIXME: should have a safe API
-            unsafe { load.set_options(&opt) };
-        }
-
-        // FIXME: No way to get ExitData
-        // Safety: `img` is only run once, reinitialized each loop.
-        let ret = unsafe { boot.start_image(img) };
+        // Safety: We trust ourselves.
+        let ret = unsafe { boot.run_image_fs(handle, dev, &opt) };
 
         if ret.is_ok() || (ret.is_err() && *fail) {
             info!("Test {}/{} completed successfully", idx + 1, max);

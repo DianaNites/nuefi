@@ -537,6 +537,41 @@ impl<'table> BootServices<'table> {
         unsafe { (si)(handle, &mut size, null_mut()).into() }
     }
 
+    /// Load and run an image, setting its [`LoadedImage::options`] to
+    /// `options`.
+    ///
+    /// Combination of [`BootServices::load_image_fs`] and
+    /// [`BootServices::start_image`] into one, safer, call.
+    ///
+    /// # Safety
+    ///
+    /// - The application represented by `devpath` must be as trusted as an FFI
+    ///   call. See [`BootServices::start_image`]
+    // TODO: ExitData type
+    pub unsafe fn run_image_fs<T>(
+        &self,
+        parent: EfiHandle,
+        devpath: &DevicePath,
+        options: &[T],
+    ) -> Result<()> {
+        let img = self.load_image_fs(parent, devpath)?;
+
+        // Scope has to end here or else we'll lock the protocol
+        // for our child image, oops.
+        {
+            let load = self
+                .open_protocol::<proto::loaded_image::LoadedImage>(img)?
+                .ok_or(Status::INVALID_PARAMETER)?;
+            // Safety: `options` is valid for the duration of the call
+            unsafe { load.set_options(options) };
+        }
+        // Safety:
+        // - `img` will only be started once
+        // - Caller's responsibility to trust
+        let ret = unsafe { self.start_image(img) };
+        ret
+    }
+
     /// Unload an earlier loaded image
     pub fn unload_image(&self, handle: EfiHandle) -> Result<()> {
         let ui = self.interface().unload_image.ok_or(Status::UNSUPPORTED)?;
