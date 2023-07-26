@@ -201,8 +201,9 @@ impl<'table> BootServices<'table> {
         if ret.is_success() {
             assert!(
                 !out.is_null(),
-                "UEFI locate_protocol returned success, but the protocol was null. \
-                The Protocol was \"{}\" with GUID `{}`",
+                "UEFI locate_protocol returned success, but the interface was null. \
+                The Protocol was \"{}\" with GUID `{}`. \
+                This is a bug with your UEFI firmware.",
                 Protocol::NAME,
                 Protocol::GUID
             );
