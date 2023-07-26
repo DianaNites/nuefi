@@ -297,7 +297,7 @@ mod tests {
         extern crate std;
         std::dbg!(img);
 
-        panic!();
+        // panic!();
 
         // let gop = boot.handle_for::<GraphicsOutput>()?;
         // let gop = boot
@@ -331,9 +331,9 @@ mod tests {
         let mut sys = mock();
         {
             let st = (&mut sys.sys) as *mut _;
-            // info!("{st:?}");
+
+            // FIXME: Need to allocate a image handle.
             let ret = efi_main(IMAGE, st);
-            // info!("{ret:?}");
 
             if !ret.is_success() {
                 panic!("{:#?}", ret);
