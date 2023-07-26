@@ -74,10 +74,6 @@ export MIRIFLAGS := "\
     else \
         exit $ret; \
     fi
-# -display none \
-# -vga std \
-# -display spice-app \
-#
 
 @_setup: _copy_vars
     if [ "{{profile}}" == "debug" ]; then \
