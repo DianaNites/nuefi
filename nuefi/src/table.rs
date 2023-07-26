@@ -823,13 +823,11 @@ impl SystemTable<Internal> {
 /// Available during Boot Services
 impl SystemTable<Boot> {
     /// String identifying the firmware vendor
-    pub fn firmware_vendor(&self) -> String {
+    pub fn firmware_vendor(&self) -> UefiStr<'_> {
         let p = self.table().firmware_vendor;
-        if p.is_null() {
-            return String::new();
-        }
+        debug_assert!(!p.is_null(), "firmware vendor was null");
         // Safety: always valid
-        unsafe { UefiStr::from_ptr(p) }.to_string_lossy()
+        unsafe { UefiStr::from_ptr(p) }
     }
 
     /// Firmware-specific value indicating its revision
