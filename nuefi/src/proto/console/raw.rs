@@ -21,8 +21,7 @@ pub struct RawTextMode {
     pub cursor_visible: bool,
 }
 
-// TODO: Report bug to upstream Rust that derive(Debug) doesn't work for efiapi
-// #[derive(Debug)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct RawSimpleTextOutput {
     pub reset: Option<unsafe extern "efiapi" fn(this: *mut Self, extended: bool) -> Status>,
