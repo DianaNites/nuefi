@@ -333,6 +333,8 @@ impl SystemTable {
     ///
     /// - `this` must be valid for [`size_of::<SystemTable>`] bytes
     /// - `this` must contain a valid [`SystemTable`]
+    /// - `Self::boot_services` must be valid
+    /// - `Self::runtime_services` must be valid
     ///
     /// See [`Header::validate`] for details
     pub unsafe fn validate(this: *mut Self) -> Result<()> {
@@ -378,6 +380,7 @@ impl LocateSearch {
 /// The UEFI Boot Services Table
 ///
 /// This is FFI-safe
+#[derive(Debug)]
 #[repr(C)]
 pub struct BootServices {
     /// Table header
