@@ -304,11 +304,10 @@ mod tests {
     const IMAGE: EfiHandle = unsafe { EfiHandle::new(69420 as *mut _) };
 
     /// This test sets up a mock UEFI environment for the purposes of running
-    /// our wrappers and unsafe code through MIRI where possible, in as
+    /// our wrappers and unsafe code through Miri where possible, in as
     /// close an environment to reality as possible.
     #[test]
     fn miri() -> Result<()> {
-        // setup();
         let (mut st, _box) = { mock() };
         {
             let st = (&mut *st) as *mut RawSystemTable;
@@ -344,18 +343,6 @@ mod tests {
             if !ret.is_error() {
                 panic!("{:#?}", ret);
             }
-
-            // drop(_box);
-            // Miri stack borrows complains because when header validation
-            // makes the byte slice, for some reason that invalidates
-            // `Box` from dropping itself. This has got to be a bug.
-            //
-            // TODO: Try and come up with a minimal repro.
-            // Might be this bug?
-            // <https://github.com/rust-lang/miri/issues/2728>
-            // Re-boxing them causes the error but not directly??
-            // See: The commit that added this comment for details
-            // forget(_box);
         }
         Ok(())
     }
