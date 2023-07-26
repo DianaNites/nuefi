@@ -114,8 +114,7 @@ impl<'table> LoadedImage<'table> {
         i.options_size = len * size;
     }
 
-    /// Set the image load options in Shell format,
-    /// as a UTF-16 null terminated string.
+    /// Set the image load options to a UCS-2 null-terminated string
     ///
     /// # Panics
     ///
