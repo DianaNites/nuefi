@@ -200,32 +200,6 @@ const fn mock_gop() -> RawGraphicsOutput {
     }
 }
 
-const fn mock_system() -> RawSystemTable {
-    const MOCK_HEADER: Header = Header {
-        signature: RawSystemTable::SIGNATURE,
-        revision: MOCK_REVISION,
-        size: size_of::<RawSystemTable>() as u32,
-        crc32: 0,
-        reserved: 0,
-    };
-    RawSystemTable {
-        header: MOCK_HEADER,
-        firmware_vendor: null_mut(),
-        firmware_revision: MOCK_FW_REVISION,
-        console_in_handle: EfiHandle::null(),
-        con_in: null_mut(),
-        console_out_handle: EfiHandle::null(),
-        con_out: null_mut(),
-        console_err_handle: EfiHandle::null(),
-        con_err: null_mut(),
-        runtime_services: null_mut(),
-        boot_services: null_mut(),
-        number_of_table_entries: 0,
-        configuration_table: null_mut(),
-        _pad1: [0u8; 4],
-    }
-}
-
 /// # Safety:
 ///
 /// `T` must not have uninit padding.
@@ -237,7 +211,6 @@ const unsafe fn to_bytes<T>(this: &T) -> &[u8] {
 
 /// Create mock implementations of a SystemTable and a few protocols
 /// to aid testing of the basic interactions
-// pub fn mock() -> (Box<RawSystemTable>, Vec<Box<dyn Any>>) {
 pub fn mock() -> Box<System> {
     let mut sys = System::new();
     let vendor = &mut sys.vendor;
@@ -252,49 +225,7 @@ pub fn mock() -> Box<System> {
         digest.finalize()
     };
 
-    #[allow(clippy::needless_return)]
-    return sys;
-
-    // boot.locate_protocol = Some(locate_protocol);
-
-    // boot.header.crc32 = {
-    //     let mut digest = CRC.digest();
-    //     // Safety: We ensure in the definition that there is no uninit padding.
-    //     unsafe { digest.update(to_bytes(&*boot)) };
-    //     digest.finalize()
-    // };
-
-    // run.header.crc32 = {
-    //     let mut digest = CRC.digest();
-    //     // Safety: We ensure in the definition that there is no uninit padding.
-    //     unsafe { digest.update(to_bytes(&*run)) };
-    //     digest.finalize()
-    // };
-
-    // system.boot_services = addr_of_mut!(*boot).cast();
-    // system.runtime_services = addr_of_mut!(*run).cast();
-    // system.con_out = addr_of_mut!(*out).cast();
-    // // system.firmware_vendor = addr_of!(vendor[0]);
-    // system.firmware_vendor = vendor.as_ptr().cast_mut();
-
-    // system.header.crc32 = {
-    //     let mut digest = CRC.digest();
-    //     // Safety: We ensure in the definition that there is no uninit padding.
-    //     unsafe { digest.update(to_bytes(&*system)) };
-    //     digest.finalize()
-    // };
-
-    #[cfg(no)]
-    (
-        system,
-        vec![
-            //
-            boot,
-            out,
-            run,
-            Box::new(vendor),
-        ],
-    )
+    sys
 }
 
 use imps::*;
