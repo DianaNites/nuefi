@@ -575,3 +575,9 @@ mod tests {
         Ok(())
     }
 }
+
+// FIXME: It isnt appropriate for anything in nuefi really
+// to use the global allocator. UEFI requires things be allocated in certain
+// ways, but a library user may well want to use an arena or something.
+// This might require the nightly allocator API? Might literally be impossible
+// otherwise?
