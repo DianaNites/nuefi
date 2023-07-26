@@ -1,17 +1,17 @@
 [workspace]
 default-members = [
-    # "nuefi",
+    "nuefi",
     "macros",
     "core",
     # "self-tests",
     # "test-runner",
 ]
 members = [
-    # "nuefi",
+    "nuefi",
     "macros",
     "core",
     "self-tests",
-    "test-runner",
+    # "test-runner",
 ]
 resolver = "2"
 
