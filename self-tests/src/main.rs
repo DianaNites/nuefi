@@ -222,7 +222,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         debug!("UEFI Revision {}", uefi_revision);
 
         if let Err(e) = basic_tests(handle, &table) {
-            error!("Error running Nuefi Test Suite: {e}");
+            error!("Error initializing Nuefi Test Suite: {e}");
             if runs_inside_qemu().is_maybe_or_very_likely() {
                 EXIT.exit_failure();
             }
