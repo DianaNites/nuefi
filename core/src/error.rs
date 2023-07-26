@@ -64,10 +64,6 @@ impl From<Status> for Result<()> {
 impl From<Status> for UefiError {
     #[inline]
     fn from(value: Status) -> Self {
-        assert!(
-            !value.is_success(),
-            "Tried to construct a successful UefiError"
-        );
         UefiError::new(value)
     }
 }
