@@ -83,6 +83,15 @@ pub unsafe trait Protocol<'table> {
     ///   that will live for `'table`
     unsafe fn from_raw(this: *mut Self::Raw) -> Self;
 
+    /// Raw pointer to the protocols interface
+    ///
+    /// # Derive
+    ///
+    /// The derive macro expects `Self::interface: *mut Protocol::Raw` to exist.
+    ///
+    /// This should come from the `interface` macro
+    fn as_raw(&self) -> *mut Self::Raw;
+
     #[inline]
     fn guid(&self) -> Guid {
         Self::GUID

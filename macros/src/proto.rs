@@ -133,6 +133,11 @@ pub fn proto(args: TokenStream, input: TokenStream) -> TokenStream {
             unsafe fn from_raw(this: #imp_first_field) -> Self {
                 <#imp_struct>::new(this)
             }
+
+            #[inline]
+            fn as_raw(&self) -> *mut Self::Raw {
+                self.interface
+            }
         }
     };
 
