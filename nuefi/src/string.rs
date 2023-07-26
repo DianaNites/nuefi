@@ -56,7 +56,7 @@ pub struct UefiString<'table> {
     /// return *references*, when we dont have a DST.
     ref_: UefiStr<'table>,
 
-    _ghost: PhantomData<&'table mut u8>,
+    _ghost: PhantomData<&'table u8>,
 }
 
 impl<'table> UefiString<'table> {
@@ -178,7 +178,7 @@ impl<'table> Display for UefiString<'table> {
 
 /// An unowned UEFI string.
 ///
-/// See [UefiString] for more details.
+/// See [`UefiString`] for more details.
 // This type is not unsized, and yet still should ONLY be created behind a reference.
 // Specifically, a reference to the owning [`UefiString`]
 // This is depended on for safety internally, to prevent UAF.
@@ -187,14 +187,14 @@ impl<'table> Display for UefiString<'table> {
 pub struct UefiStr<'buf> {
     data: *mut u16,
 
-    /// Length in *characters*
+    /// Length in *characters*, including null.
     len: usize,
 
-    _ghost: PhantomData<&'buf mut u8>,
+    _ghost: PhantomData<&'buf u16>,
 }
 
 impl<'buf> UefiStr<'buf> {
-    /// Create an unowned [UefiStr] from `data`
+    /// Create an unowned [`UefiStr`] from `data`
     ///
     /// # Safety
     ///
@@ -204,7 +204,7 @@ impl<'buf> UefiStr<'buf> {
         Self::from_ptr_len(data, len)
     }
 
-    /// Create an unowned [UefiStr] from `data` and `len` *characters*,
+    /// Create an unowned [`UefiStr`] from `data` and `len` *characters*,
     /// including nul.
     ///
     /// # Safety
