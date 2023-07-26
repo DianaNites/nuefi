@@ -25,6 +25,103 @@ use crate::{
     SystemTable,
 };
 
+fn to_ucs(s: &str) -> Vec<u16> {
+    assert!(
+        !s.contains('\0'),
+        "Tried to use to_ucs with an internal null"
+    );
+
+    // Length in UTF-16, plus null.
+    let cap = s.len() + 1;
+
+    let mut out: Vec<u16> = Vec::with_capacity(cap);
+
+    let mut write = out.spare_capacity_mut();
+
+    // TODO: Actually UCS-2 instead of UTF-16?
+    s.encode_utf16().chain([0]).zip(write).for_each(|(c, w)| {
+        w.write(c);
+    });
+
+    // Safety:
+    // - `out` should now be fully initialized for `cap`
+    unsafe { out.set_len(cap) };
+
+    // Just error if the input had any characters outside the UCS range
+    if !s.chars().all(|c| (c as u32) < 0x10000) {
+        panic!("invalid character in UcsString");
+    }
+
+    out
+}
+
+/// A UCS-2 string compatible with [`UefiString`],
+/// but allocated using the Rust global allocator.
+///
+/// If the Global allocator and the UEFI allocator are the same,
+/// these can safely be converted to [`UefiString`] at zero cost using the
+/// TODO: unsafe functions [``]
+#[derive(Debug)]
+// #[repr(transparent)]
+pub struct UcsString {
+    data: Vec<u16>,
+}
+
+impl UcsString {
+    pub fn new(s: &str) -> Self {
+        Self { data: to_ucs(s) }
+    }
+
+    /// Get the string as a slice of u16 characters.
+    ///
+    /// Does not include trailing nul
+    #[inline]
+    pub fn as_slice(&self) -> &[u16] {
+        &self.data[..self.data.len() - 1]
+    }
+
+    /// Get the string as a slice of u16 characters
+    #[inline]
+    pub fn as_slice_with_nul(&self) -> &[u16] {
+        self.data.as_slice()
+    }
+
+    /// # Safety
+    ///
+    /// - `ptr` must contain a trailing nul
+    /// - `ptr` must be valid for reads up to and including the null
+    pub unsafe fn from_ptr(ptr: *const u16) -> Self {
+        let len = string_len(ptr) + 1;
+        Self::from_ptr_len(ptr, len)
+    }
+
+    /// # Safety
+    ///
+    /// [`Self::from_ptr`]
+    pub unsafe fn from_ptr_len(data: *const u16, len: usize) -> Self {
+        Self {
+            data: from_raw_parts(data, len).to_vec(),
+        }
+    }
+
+    #[inline]
+    pub fn as_ptr(&self) -> *const u16 {
+        self.data.as_ptr()
+    }
+
+    /// Unsafely get this [`UcsString`] as a [`UefiStr`]
+    ///
+    /// # Safety
+    ///
+    /// The global Rust allocator must be the UEFI pool allocator
+    // TODO: Is this actually fine, would there be a problem with Uefi reading
+    // strings from whatever memory we want?
+    // So long as it doesn't think it owns it, it should be fine and safe?
+    pub unsafe fn as_uefi_str(&self) -> UefiStr<'_> {
+        UefiStr::from_ptr_len(self.data.as_ptr().cast_mut(), self.data.len())
+    }
+}
+
 /// An owned UEFI string, encoded as UTF-16/UCS-2/lies*
 ///
 /// *UEFI firmware supposedly often lies/is not conformant with UCS-2.
