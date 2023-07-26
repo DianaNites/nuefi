@@ -60,14 +60,6 @@ impl<'table> LoadedImage<'table> {
     }
 
     /// Read the options for this image as a [`&[u8]`]
-    ///
-    /// On return, you own this pointer and are responsible for freeing it via
-    /// [`BootServices::free_pool`]
-    // FIXME: It isnt appropriate for this or anything else in nuefi really
-    // to use the global allocator. UEFI requires things be allocated in certain
-    // ways, but a library user may well want to use an arena or something.
-    // This might require the nightly allocator API? Might literally be impossible
-    // otherwise?
     pub fn options(&self) -> Option<Result<&[u8]>> {
         let i = self.interface();
         let opts = i.options;
