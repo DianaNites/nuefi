@@ -267,7 +267,7 @@ mod tests {
     use crate::{
         entry,
         error::{Result, Status},
-        proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
+        proto::{console::SimpleTextOutput, graphics::GraphicsOutput, loaded_image::LoadedImage},
         string::{UcsString, UefiStr, UefiString},
     };
 
@@ -291,10 +291,13 @@ mod tests {
 
         let boot = table.boot();
 
-        // Safety: Testing
-        let img = unsafe { boot.locate_protocol::<LoadedImage>()? };
+        // Safety: Always valid
+        let img = unsafe { boot.locate_protocol::<SimpleTextOutput>()? };
+
         extern crate std;
         std::dbg!(img);
+
+        panic!();
 
         // let gop = boot.handle_for::<GraphicsOutput>()?;
         // let gop = boot

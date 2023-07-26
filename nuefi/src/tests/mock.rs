@@ -13,6 +13,7 @@ use nuefi_core::{
     table::{Header, CRC},
 };
 
+use self::{boot::MockBoot, console::MockConsole};
 use crate::{
     error::Status,
     proto::{
@@ -31,6 +32,8 @@ use crate::{
 
 mod boot;
 mod console;
+
+pub static mut MOCK_GOP: RawGraphicsOutput = mock_gop();
 
 const MOCK_REVISION: Revision = Revision::new(2, 7, 0);
 const MOCK_FW_REVISION: u32 = 69420;
@@ -226,30 +229,4 @@ pub fn mock() -> Box<System> {
     };
 
     sys
-}
-
-use imps::*;
-
-use self::{boot::MockBoot, console::MockConsole};
-mod imps {
-    use core::ffi::c_void;
-
-    use super::*;
-
-    pub static mut MOCK_GOP: RawGraphicsOutput = mock_gop();
-
-    pub unsafe extern "efiapi" fn locate_protocol(
-        guid: *mut proto::Guid,
-        key: *mut c_void,
-        out: *mut *mut c_void,
-    ) -> Status {
-        let guid = *guid;
-        if guid == GraphicsOutput::GUID {
-            out.write(addr_of_mut!(MOCK_GOP) as *mut _);
-            Status::SUCCESS
-        } else {
-            out.write(null_mut());
-            Status::NOT_FOUND
-        }
-    }
 }

@@ -61,6 +61,8 @@ impl MockBoot {
         if out.is_null() || guid.is_null() {
             return Status::INVALID_PARAMETER;
         }
+        let guid = *guid;
+        let out = &mut *out;
 
         // It's okay to use this because it will only be called after
         // we're set up, by which point our main has set these up.
@@ -68,11 +70,21 @@ impl MockBoot {
             let off = offset_of!(System, sys) as isize;
             // Get our parent System, which contains the SystemTable and also us.
             let sys = &*st.raw().cast::<u8>().offset(-off).cast::<System>();
-            std::dbg!(sys);
 
-            //
+            let found = sys
+                .db
+                .iter()
+                .find_map(|h| h.protos.iter().find(|p| p.guid == guid));
 
-            Status::NOT_FOUND
+            std::dbg!(&sys);
+            std::dbg!(&found);
+
+            if let Some(proto) = found {
+                *out = proto.ptr.cast_mut().cast();
+                Status::SUCCESS
+            } else {
+                Status::NOT_FOUND
+            }
         } else {
             Status::UNSUPPORTED
         }
