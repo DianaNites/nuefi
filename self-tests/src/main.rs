@@ -39,7 +39,10 @@ use nuefi::{
 use qemu_exit::{QEMUExit, X86};
 use raw_cpuid::CpuId;
 use runs_inside_qemu::runs_inside_qemu;
-use x86_64::registers::control::{Cr0, Cr0Flags};
+use x86_64::{
+    instructions::hlt,
+    registers::control::{Cr0, Cr0Flags},
+};
 
 mod tests;
 
@@ -259,7 +262,9 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // Detect slow tests
     // Pattern matching
 
-    loop {}
+    loop {
+        hlt()
+    }
 
     Ok(())
 }
