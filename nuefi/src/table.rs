@@ -826,7 +826,7 @@ impl SystemTable<Boot> {
     pub fn firmware_vendor(&self) -> UefiStr<'_> {
         let p = self.table().firmware_vendor;
         debug_assert!(!p.is_null(), "firmware vendor was null");
-        // Safety: always valid
+        // Safety: UEFI firmware responsibility
         unsafe { UefiStr::from_ptr(p) }
     }
 
