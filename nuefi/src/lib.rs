@@ -291,6 +291,11 @@ mod tests {
 
         let boot = table.boot();
 
+        // Safety: Testing
+        let img = unsafe { boot.locate_protocol::<LoadedImage>()? };
+        extern crate std;
+        std::dbg!(img);
+
         // let gop = boot.handle_for::<GraphicsOutput>()?;
         // let gop = boot
         //     .open_protocol::<GraphicsOutput>(gop)?

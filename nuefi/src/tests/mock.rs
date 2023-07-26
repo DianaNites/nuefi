@@ -29,75 +29,12 @@ use crate::{
     EfiHandle,
 };
 
+mod boot;
+mod console;
+
 const MOCK_REVISION: Revision = Revision::new(2, 7, 0);
 const MOCK_FW_REVISION: u32 = 69420;
 pub const MOCK_VENDOR: &str = "Mock Vendor";
-
-#[derive(Debug)]
-#[repr(C)]
-struct MockConsole {
-    this: RawSimpleTextOutput,
-
-    /// Simple linear framebuffer
-    screen: Box<[u16; 80 * 25]>,
-}
-
-impl MockConsole {
-    pub fn new() -> Self {
-        Self {
-            this: RawSimpleTextOutput {
-                reset: Some(Self::reset),
-                output_string: Some(Self::output_string),
-                test_string: None,
-                query_mode: None,
-                set_mode: None,
-                set_attribute: None,
-                clear_screen: Some(Self::clear_screen),
-                set_cursor_position: None,
-                enable_cursor: None,
-                mode: null_mut(),
-            },
-            screen: Box::new([0u16; 80 * 25]),
-        }
-    }
-}
-
-impl MockConsole {
-    unsafe extern "efiapi" fn reset(this: *mut RawSimpleTextOutput, _extended: bool) -> Status {
-        Status::SUCCESS
-    }
-
-    unsafe extern "efiapi" fn output_string(
-        this: *mut RawSimpleTextOutput,
-        string: *const Char16,
-    ) -> Status {
-        let this = &mut *(this as *mut Self);
-
-        let s = UcsString::from_ptr(string);
-        let len = s.as_slice().len();
-
-        this.screen[..len].copy_from_slice(s.as_slice());
-
-        std::dbg!(s);
-
-        Status::SUCCESS
-    }
-
-    unsafe extern "efiapi" fn clear_screen(this: *mut RawSimpleTextOutput) -> Status {
-        let this = &mut *(this as *mut Self);
-        this.screen.fill(0);
-        Status::SUCCESS
-    }
-}
-
-impl MockConsole {
-    unsafe fn free(this: *const u8) {
-        let this = this as *const Self;
-
-        // Safety: Caller
-        core::ptr::drop_in_place(this.cast_mut());
-    }
-}
 
 /// Points to an instance of a Protocol, type-erased
 #[derive(Debug)]
@@ -130,7 +67,7 @@ pub struct System {
 
     pub sys: RawSystemTable,
 
-    pub boot: Box<RawBootServices>,
+    pub boot: Box<MockBoot>,
 
     pub run: Box<RawRuntimeServices>,
 
@@ -138,15 +75,9 @@ pub struct System {
 }
 
 impl System {
-    fn new() -> Self {
+    fn new() -> Box<Self> {
         let vendor = UcsString::new(MOCK_VENDOR);
-        let mut boot = Box::new(mock_boot());
-        boot.header.crc32 = {
-            let mut digest = CRC.digest();
-            // Safety: We ensure in the definition that there is no uninit padding.
-            unsafe { digest.update(to_bytes(&*boot)) };
-            digest.finalize()
-        };
+        let mut boot = Box::new(MockBoot::new());
 
         let mut run = Box::new(mock_run());
         run.header.crc32 = {
@@ -194,7 +125,7 @@ impl System {
 
                 // Both of these are safe because we know their pointers are stable
                 runtime_services: &mut *run as *mut RawRuntimeServices,
-                boot_services: &mut *boot as *mut RawBootServices,
+                boot_services: &mut boot.this,
 
                 number_of_table_entries: 0,
                 configuration_table: null_mut(),
@@ -202,7 +133,7 @@ impl System {
             }
         };
 
-        Self {
+        let mut sys = Box::new(Self {
             db: vec![
                 // .
                 console,
@@ -211,7 +142,9 @@ impl System {
             boot,
             run,
             sys,
-        }
+        });
+
+        sys
     }
 
     fn add_protocol(&mut self, handle: EfiHandle, entry: ProtoEntry) {
@@ -236,24 +169,6 @@ impl Drop for System {
             }
         }
     }
-}
-
-const fn mock_boot() -> RawBootServices {
-    const MOCK_HEADER: Header = Header {
-        signature: RawBootServices::SIGNATURE,
-        revision: RawBootServices::REVISION,
-        size: size_of::<RawBootServices>() as u32,
-        crc32: 0,
-        reserved: 0,
-    };
-    let b = [0u8; size_of::<RawBootServices>()];
-    // Safety:
-    // - All fields of `RawBootServices` are safely nullable/zero
-    //
-    // use transmute because `zeroed` is not const.
-    let mut t: RawBootServices = unsafe { core::mem::transmute::<_, _>(b) };
-    t.header = MOCK_HEADER;
-    t
 }
 
 const fn mock_run() -> RawRuntimeServices {
@@ -323,7 +238,7 @@ const unsafe fn to_bytes<T>(this: &T) -> &[u8] {
 /// Create mock implementations of a SystemTable and a few protocols
 /// to aid testing of the basic interactions
 // pub fn mock() -> (Box<RawSystemTable>, Vec<Box<dyn Any>>) {
-pub fn mock() -> System {
+pub fn mock() -> Box<System> {
     let mut sys = System::new();
     let vendor = &mut sys.vendor;
     let system = &mut sys.sys;
@@ -337,7 +252,7 @@ pub fn mock() -> System {
         digest.finalize()
     };
 
-    //
+    #[allow(clippy::needless_return)]
     return sys;
 
     // boot.locate_protocol = Some(locate_protocol);
@@ -383,6 +298,8 @@ pub fn mock() -> System {
 }
 
 use imps::*;
+
+use self::{boot::MockBoot, console::MockConsole};
 mod imps {
     use core::ffi::c_void;
 
