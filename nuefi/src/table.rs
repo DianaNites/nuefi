@@ -196,6 +196,14 @@ impl SystemTable<Boot> {
         self.table().header
     }
 
+    /// A pointer to the [`RawSystemTable`] structure
+    ///
+    /// This pointer is valid for the life of the UEFI application,
+    /// with the exception of manually re-mapping memory.
+    pub fn raw(&self) -> *const RawSystemTable {
+        self.table
+    }
+
     /// Output on stdout.
     ///
     /// This is only valid for as long as the SystemTable is
