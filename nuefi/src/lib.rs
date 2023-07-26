@@ -268,6 +268,7 @@ mod tests {
         entry,
         error::{Result, Status},
         proto::{graphics::GraphicsOutput, loaded_image::LoadedImage},
+        string::{UcsString, UefiStr, UefiString},
     };
 
     mod mock;
@@ -276,6 +277,16 @@ mod tests {
     pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         let stdout = table.stdout();
         stdout.reset()?;
+
+        let s = UcsString::new("Test");
+        let ss = s.as_slice_with_nul();
+        let p = ss.as_ptr();
+        let l = ss.len();
+
+        // Safety: `p` and `l` are valid
+        let u = unsafe { UefiStr::from_ptr_len(p.cast_mut(), l) };
+        stdout.output_string(&u)?;
+
         let vendor = table.firmware_vendor();
 
         let boot = table.boot();
@@ -308,9 +319,10 @@ mod tests {
     /// close an environment to reality as possible.
     #[test]
     fn miri() -> Result<()> {
-        let (mut st, _box) = { mock() };
+        // let (mut st, _box) = { mock() };
+        let mut sys = mock();
         {
-            let st = (&mut *st) as *mut RawSystemTable;
+            let st = (&mut sys.sys) as *mut _;
             // info!("{st:?}");
             let ret = efi_main(IMAGE, st);
             // info!("{ret:?}");
