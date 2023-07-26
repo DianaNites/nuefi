@@ -25,15 +25,6 @@ use crate::{
     SystemTable,
 };
 
-fn table() -> Result<SystemTable<Boot>> {
-    if let Some(table) = get_boot_table() {
-        Ok(table)
-    } else {
-        error!("Tried to use `SystemTable` while not in `Boot` mode");
-        Err(Status::UNSUPPORTED.into())
-    }
-}
-
 /// An owned UEFI string, encoded as UTF-16/UCS-2/lies*
 ///
 /// *UEFI firmware supposedly often lies/is not conformant with UCS-2.
