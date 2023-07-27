@@ -47,7 +47,10 @@ unsafe impl GlobalAlloc for UefiAlloc {
         let align = layout.align();
         let size = layout.size();
         let offset = if align > POOL_ALIGN {
+            #[allow(clippy::let_and_return)]
             let o = align - POOL_ALIGN;
+            // TODO: macro and check for compatible logger that promises not to allocate?
+            // also a cfg logging?
             // trace!(
             //"Allocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
             //     o
@@ -83,6 +86,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         let align = layout.align();
         let _size = layout.size();
         let offset = if align > POOL_ALIGN {
+            #[allow(clippy::let_and_return)]
             let o = align - POOL_ALIGN;
             // trace!(
             //"Deallocation alignment {align} greater than {POOL_ALIGN}, using {} as offset",
@@ -97,7 +101,7 @@ unsafe impl GlobalAlloc for UefiAlloc {
         if let Some(table) = get_boot_table() {
             let ptr = ptr.sub(offset);
             let ret = table.boot().free_pool(ptr.cast());
-            if let Err(e) = ret {
+            if let Err(_e) = ret {
                 // error!("Error {e} while deallocating memory {ptr:p} with
                 // layout {layout:?}");
             }

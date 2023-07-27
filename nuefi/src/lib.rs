@@ -92,14 +92,10 @@ extern crate self as nuefi;
 
 use core::{
     ffi::c_void,
-    fmt::Write,
-    panic::PanicInfo,
     ptr::addr_of,
     sync::atomic::{AtomicPtr, Ordering},
-    time::Duration,
 };
 
-use log::{error, info};
 pub use macros::{entry, Protocol, GUID};
 pub use nuefi_core::error;
 use table::raw::RawSystemTable;
@@ -257,8 +253,6 @@ pub mod handlers;
 #[cfg(test)]
 mod tests {
     #![allow(unreachable_code, unused_mut)]
-    use alloc::{boxed::Box, vec::Vec};
-    use core::mem::{forget, size_of};
 
     use mock::mock;
     use nuefi_core::table::{Header, CRC};
@@ -266,15 +260,15 @@ mod tests {
     use super::*;
     use crate::{
         entry,
-        error::{Result, Status},
-        proto::{console::SimpleTextOutput, graphics::GraphicsOutput, loaded_image::LoadedImage},
-        string::{UcsString, UefiStr, UefiString},
+        error::Result,
+        proto::console::SimpleTextOutput,
+        string::{UcsString, UefiStr},
     };
 
     mod mock;
 
     #[entry(crate("self"))]
-    pub fn mock_main(handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
+    pub fn mock_main(_handle: EfiHandle, table: SystemTable<Boot>) -> error::Result<()> {
         let stdout = table.stdout();
         stdout.reset()?;
 
@@ -287,7 +281,7 @@ mod tests {
         let u = unsafe { UefiStr::from_ptr_len(p.cast_mut(), l) };
         stdout.output_string(&u)?;
 
-        let vendor = table.firmware_vendor();
+        let _vendor = table.firmware_vendor();
 
         let boot = table.boot();
 

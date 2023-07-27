@@ -1,7 +1,5 @@
 //! Raw UEFI data types
 
-use core::{fmt, ptr::null_mut};
-
 use crate::nuefi_core::base::{Char16, Status};
 
 #[derive(Debug)]

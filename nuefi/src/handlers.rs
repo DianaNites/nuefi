@@ -1,16 +1,7 @@
 //! Alloc and panic handlers
-use core::{
-    alloc::Layout,
-    fmt::Write,
-    panic::PanicInfo,
-    ptr::NonNull,
-    sync::atomic::{AtomicPtr, Ordering},
-};
+use core::{alloc::Layout, fmt::Write, panic::PanicInfo, sync::atomic::Ordering};
 
 use crate::get_boot_table;
-
-type AllocFn = fn(Layout) -> !;
-type PanicFn = fn(&PanicInfo) -> !;
 
 // TODO: The handlers need to not accidentally panic themselves
 // Everything they use, recursively, needs to ensure this property.

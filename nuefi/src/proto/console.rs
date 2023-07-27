@@ -1,14 +1,10 @@
 //! UEFI Console related protocols
-use core::{
-    fmt::{self, Write},
-    mem::size_of,
-    slice::from_raw_parts_mut,
-};
+use core::fmt::{self, Write};
 
 use crate::{
     error::{Result, Status},
     nuefi_core::interface,
-    string::{UefiStr, UefiString},
+    string::UefiStr,
 };
 
 pub mod raw;

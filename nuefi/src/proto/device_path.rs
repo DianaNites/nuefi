@@ -6,21 +6,10 @@
 //!
 //! [s10]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html>
 
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
-use core::{
-    ffi::c_void,
-    mem::{size_of, transmute},
-    ptr::addr_of,
-    slice::from_raw_parts,
-};
+use alloc::string::{String, ToString};
+use core::{ffi::c_void, mem::transmute, ptr::addr_of};
 
-use nuefi_core::proto::device_path::{
-    nodes::{media::File, End},
-    DevicePathHdr,
-};
+use nuefi_core::proto::device_path::{nodes::End, DevicePathHdr};
 
 pub mod raw {
     // FIXME: Ugly hack to keep things compiling
@@ -32,7 +21,7 @@ pub mod raw {
 }
 use raw::{RawDevicePathToText, RawDevicePathUtil};
 
-use super::{Guid, Protocol, Scope};
+use super::{Protocol, Scope};
 use crate::{
     error::{Result, Status},
     get_boot_table,
@@ -44,7 +33,7 @@ use crate::{
 };
 
 /// Helper to get [`DevicePathUtil`]
-fn get_dev_util<'proto>(
+fn _get_dev_util<'proto>(
     _t: &'proto DevicePath<'_>,
 ) -> Result<Scope<'proto, DevicePathUtil<'proto>>> {
     if let Some(table) = get_boot_table() {

@@ -102,7 +102,6 @@ impl Log for UefiLogger {
         if let Some(table) = get_boot_table() {
             if self.enabled(record.metadata()) {
                 let mut stdout = table.stdout();
-                let level = record.level();
                 let _ = writeln!(
                     stdout,
                     "[{} - {}:{}] {} - {}",
