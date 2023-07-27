@@ -167,7 +167,8 @@ interface!(
 );
 
 impl<'table> LoadedImageDevicePath<'table> {
-    pub fn as_device_path(&self) -> DevicePath<'_> {
+    // FIXME: I dont think this is sound
+    pub fn as_device_path(&self) -> DevicePath<'table> {
         // Safety: This is a DevicePath
         unsafe { DevicePath::from_raw(self.interface) }
     }
