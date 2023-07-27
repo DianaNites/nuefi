@@ -118,6 +118,26 @@ mod imp {
         }
     }
 
+    pub trait TestExt2
+    where
+        Self: Sized,
+    {
+        type OUT;
+
+        fn missing(self) -> TestResult<Self::OUT>;
+    }
+
+    impl<'a, P> TestExt2 for Option<P>
+    where
+        P: Protocol<'a>,
+    {
+        type OUT = P;
+
+        fn missing(self) -> TestResult<Self::OUT> {
+            self.ok_or(TestError::MissingProtocol(P::NAME))
+        }
+    }
+
     #[derive(Debug, Clone, Copy)]
     pub struct Stdout;
 
