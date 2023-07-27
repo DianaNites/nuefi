@@ -45,6 +45,11 @@ const unsafe fn to_bytes<T>(this: &T) -> &[u8] {
 
 /// Create mock implementations of a SystemTable and a few protocols
 /// to aid testing of the basic interactions
+///
+/// This especially aids in miri and can help ensure that our wrappers are
+/// memory safe, assuming a suitably correct mock and compliant UEFI system.
+///
+/// Or not so compliant, there are some (debug) checks.
 pub fn mock() -> Box<System> {
     let mut sys = System::new();
     let vendor = &mut sys.vendor;
