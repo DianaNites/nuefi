@@ -260,7 +260,7 @@ mod tests {
     use alloc::{boxed::Box, vec::Vec};
     use core::mem::{forget, size_of};
 
-    use mock::{mock, MOCK_VENDOR};
+    use mock::mock;
     use nuefi_core::table::{Header, CRC};
 
     use super::*;
