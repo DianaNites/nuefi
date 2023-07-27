@@ -1,11 +1,28 @@
 //! [`DevicePathHdr`] types
+use core::fmt;
+
 #[allow(unused_imports)]
 use super::DevicePathHdr;
 
 /// [`DevicePathHdr`] types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct DevicePathType(pub(crate) u8);
+
+impl fmt::Debug for DevicePathType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // f.debug_tuple("DevicePathType").field(&self.0).finish();
+        match *self {
+            Self::HARDWARE => write!(f, "DevicePathType(Hardware)"),
+            Self::ACPI => write!(f, "DevicePathType(Acpi)"),
+            Self::MESSAGING => write!(f, "DevicePathType(Messaging)"),
+            Self::MEDIA => write!(f, "DevicePathType(Media)"),
+            Self::BIOS => write!(f, "DevicePathType(Bios)"),
+            Self::END => write!(f, "DevicePathType(End)"),
+            _ => f.debug_tuple("DevicePathType").field(&self.0).finish(),
+        }
+    }
+}
 
 impl DevicePathType {
     /// Represents a device connected to the system
