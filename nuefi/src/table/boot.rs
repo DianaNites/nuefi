@@ -246,6 +246,7 @@ impl<'table> BootServices<'table> {
         let mut out: *mut c_void = null_mut();
         let mut guid = Proto::GUID;
         let op = self.interface().open_protocol.ok_or(Status::UNSUPPORTED)?;
+        // FIXME: OpenProtocol agent
         let agent = get_image_handle().expect("UEFI Image Handle was null in open_protocol");
 
         // Safety: Construction ensures safety. Statically verified arguments.
