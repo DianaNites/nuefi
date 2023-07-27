@@ -17,7 +17,7 @@
 //!
 //! [s10]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html>
 
-use core::ffi::c_void;
+use core::{ffi::c_void, fmt};
 
 use nuefi_macros::GUID;
 
@@ -82,7 +82,7 @@ use types::*;
 ///
 /// [s10_2]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html#efi-device-path-protocol>
 #[GUID("09576E91-6D3F-11D2-8E39-00A0C969723B")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(C, packed)]
 pub struct DevicePathHdr {
     /// Type of device path
@@ -93,6 +93,17 @@ pub struct DevicePathHdr {
 
     /// Length, in ***bytes***, including this header
     pub len: [u8; 2],
+}
+
+impl fmt::Debug for DevicePathHdr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DevicePathHdr")
+            .field("ty", &self.ty)
+            .field("sub_ty", &self.sub_ty)
+            .field("len", &self.len)
+            .field("len(u16)", &u16::from_le_bytes(self.len))
+            .finish()
+    }
 }
 
 /// Device Path Utilities protocol
