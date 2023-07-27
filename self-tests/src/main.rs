@@ -250,17 +250,21 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         info!("Successfully initialized testing core");
     }
 
-    let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
+    let dev = {
+        let file_dev = us.device().ok_or(Status::INVALID_PARAMETER)?;
 
-    let file_path = boot
-        .open_protocol::<LoadedImageDevicePath>(handle)?
-        .ok_or(Status::UNSUPPORTED)?;
-    let file_path = Path::new(file_path.as_device_path());
+        let file_path = boot
+            .open_protocol::<LoadedImageDevicePath>(handle)?
+            .ok_or(Status::UNSUPPORTED)?;
+        // let file_path = Path::new(file_path.as_device_path());
+        let file_path = file_path.as_device_path();
 
-    trace!("Path = {}", file_path);
-    trace!("Device = {:p}", file_dev);
+        trace!("Path = {}", file_path.to_uefi_string()?);
+        trace!("Device = {:p}", file_dev);
 
-    let dev = file_path.as_device();
+        // Duplicate the path to avoid locking the `LoadedImageDevicePath` protocol
+        file_path.duplicate()?
+    };
 
     let max = TESTS.len();
     info!("Running {} tests", max);
@@ -269,7 +273,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         let opt = idx.to_le_bytes();
 
         // Safety: We trust ourselves.
-        let ret = unsafe { boot.run_image_fs(handle, dev, &opt) };
+        let ret = unsafe { boot.run_image_fs(handle, &dev, &opt) };
 
         if ret.is_ok() || (ret.is_err() && *fail) {
             info!("Test {}/{} completed successfully", idx + 1, max);
@@ -277,6 +281,13 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
             warn!("Test {}/{} completed unsuccessfully", idx + 1, max);
         }
     }
+
+    // Safety: we own dev and this is the last use, and it was moved into this
+    // block.
+    unsafe {
+        let mut dev = dev;
+        dev.free(&boot)?
+    };
 
     // TODO: Callback to keep watchdog alive
     // Detect slow tests
