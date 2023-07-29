@@ -7,7 +7,11 @@
 //! [s10]: <https://uefi.org/specs/UEFI/2.10/10_Protocols_Device_Path_Protocol.html>
 
 use alloc::string::{String, ToString};
-use core::{ffi::c_void, mem::transmute, ptr::addr_of};
+use core::{
+    ffi::c_void,
+    mem::{size_of, transmute},
+    ptr::addr_of,
+};
 
 use nuefi_core::proto::device_path::{nodes::End, DevicePathHdr};
 
@@ -115,7 +119,8 @@ impl<'table> DevicePath<'table> {
 
     /// Duplicate/clone the path
     ///
-    /// It is the callers responsibility to free the returned [`DevicePath`]
+    /// It is the callers responsibility to [`DevicePath::free`] the returned
+    /// [`DevicePath`]
     ///
     /// This does **not** use [`DevicePathUtil::duplicate`]
     pub fn duplicate(&self) -> Result<DevicePath<'table>> {
