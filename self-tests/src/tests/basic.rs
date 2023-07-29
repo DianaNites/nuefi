@@ -52,12 +52,12 @@ pub fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<(
 }
 
 #[cfg(target_arch = "x86_64")]
-fn abi_sanity(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
+fn abi_sanity(_handle: EfiHandle, _table: &SystemTable<Boot>) -> TestResult<()> {
     info!("Testing our sanity");
 
     {
         let cpuid = CpuId::new();
-        let info = cpuid.get_feature_info().ok_or(Status::UNSUPPORTED)?;
+        let _info = cpuid.get_feature_info().ok_or(Status::UNSUPPORTED)?;
 
         let mut word: u16 = 0;
         // Safety: loads a 16 bit value
