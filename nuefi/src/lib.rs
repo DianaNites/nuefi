@@ -250,7 +250,8 @@ extern "efiapi" fn efi_main(image: EfiHandle, system_table: *mut RawSystemTable)
 #[doc(hidden)]
 pub mod handlers;
 
-#[cfg(test)]
+// These tests require miri/std
+#[cfg(all(test, miri))]
 mod tests {
     #![allow(unreachable_code, unused_mut)]
 
@@ -287,9 +288,6 @@ mod tests {
 
         // Safety: Always valid
         let img = unsafe { boot.locate_protocol::<SimpleTextOutput>()? };
-
-        extern crate std;
-        std::dbg!(img);
 
         // panic!();
 
