@@ -1,10 +1,13 @@
 use alloc::string::ToString;
 use core::{arch::asm, fmt::Write, mem::size_of};
 
-use log::info;
+use log::{debug, info, trace};
 use nuefi::{
     error::Status,
-    proto::{loaded_image::LoadedImage, Protocol},
+    proto::{
+        loaded_image::{LoadedImage, LoadedImageDevicePath},
+        Protocol,
+    },
     table::raw::RawSystemTable,
     Boot,
     EfiHandle,
@@ -15,7 +18,7 @@ use x86_64::registers::control::{Cr0, Cr0Flags};
 
 use crate::{
     ensure,
-    imp::{TestError, TestExt},
+    imp::{TestError, TestExt, TestExt2},
     TestResult,
 };
 
@@ -69,11 +72,8 @@ pub fn basic_tests(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<(
     let uefi_revision = table.uefi_revision();
     let boot = table.boot();
 
-    // Safety: We know our test runner is okay with this
-    let us = unsafe {
-        boot.handle_protocol::<LoadedImage>(handle)?
-            .ok_or(TestError::MissingProtocol(LoadedImage::NAME))?
-    };
+    image_handle(handle, table)?;
+    device_path_duplicate(handle, table)?;
 
     Ok(())
 }
@@ -109,5 +109,77 @@ fn abi_sanity(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
 
     info!("Our sanity seems to have held, for now");
 
+    Ok(())
+}
+
+/// Test the LoadedImage protocol, which UEFI mandates be installed on our
+/// handle
+///
+/// Test that our image handle has the required [`LoadedImage`] and
+/// [`LoadedImageDevicePath`] protocols
+fn image_handle(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
+    trace!("image_handle");
+    let boot = table.boot();
+    // let mut stdout = table.stdout();
+
+    // Safety: We know our test runner is okay with this
+    let img = unsafe { boot.handle_protocol::<LoadedImage>(handle) };
+    info!("LoadedImage = {img:#?}");
+    let img = img?.missing();
+
+    let img_dev = boot.open_protocol::<LoadedImageDevicePath>(handle);
+    info!("LoadedImageDevicePath = {img_dev:#?}");
+    let img_dev = img_dev?.missing()?;
+
+    Ok(())
+}
+
+/// Test that [`DevicePath::duplicate`][0] and [`DevicePath::len`][0]
+/// work correctly
+///
+/// This was initially implemented using the [`DevicePathUtil::duplicate`][0]
+/// protocol, and then rewritten in Rust to directly duplicate using the UEFI
+/// allocator.
+///
+/// As part of this, it became necessary to calculate the byte length of the
+/// entire structure, which requires iterating through it, so a
+/// [`DevicePath::len`] method was added.
+///
+/// This initial implementation had a soundness bug where it did not actually
+/// update the running length, and always returned 0, resulting in duplicate
+/// returning an invalid DevicePath pointing to a zero-sized allocation, which
+/// apparently QEMU/OVMF can do, with none of the expected structure expected
+/// for its type.
+///
+/// It also had an off-by-one node issue while traversing the DevicePaths,
+/// incrementing the size for all the nodes and ending on the last one, but
+/// *not* adding its size.
+///
+/// Test to ensure this works correctly.
+///
+/// [0]: nuefi::proto::device_path::DevicePathUtil
+fn device_path_duplicate(handle: EfiHandle, table: &SystemTable<Boot>) -> TestResult<()> {
+    trace!("device_path_duplicate");
+    let boot = table.boot();
+
+    let path = boot
+        .open_protocol::<LoadedImageDevicePath>(handle)?
+        .missing()?;
+    let path = path.as_device_path();
+
+    debug!("Path = {}", path.to_uefi_string()?);
+
+    let dup = path.duplicate()?;
+    debug!("Duplicate ({} bytes): {dup:#?}", dup.len());
+    ensure!(path.len() == dup.len(), "Duplicated DevicePath was unequal");
+
+    let dup = dup.to_string()?;
+    let path = path.to_string()?;
+
+    debug!("Duplicate: {dup}");
+
+    ensure!(path == dup, "Duplicated DevicePath was unequal");
+
+    //
     Ok(())
 }
