@@ -99,19 +99,18 @@ impl<'table> DevicePath<'table> {
     pub fn len(&self) -> usize {
         let mut size = 0;
         let mut ptr = self.interface as *const DevicePathHdr;
-        let mut cur = *self.interface();
-        while End::entire() != cur {
-            // Safety:
-            // - Existence of `&self` means `DevicePath` is valid
-            // - `DevicePath`s must end with an `End` node.
-            unsafe {
-                let len = addr_of!((*ptr).len);
-                let len = u16::from_le_bytes(*len).into();
+        // Safety:
+        // - Existence of `self` implies this is a valid `DevicePath`
+        // - `DevicePath`s must end with an `End` node.
+        // - `DevicePathHdr` has no alignment requirements
+        unsafe {
+            while End::entire() != unsafe { *ptr } {
+                let len: usize = u16::from_le_bytes((*ptr).len).into();
                 ptr = (ptr as *const u8).add(len) as *const _;
-                cur = *ptr;
+                size += len;
             }
         }
-        size
+        size + size_of::<End>()
     }
 
     /// Duplicate/clone the path
