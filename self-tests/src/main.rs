@@ -1,48 +1,30 @@
 #![allow(unstable_name_collisions)]
-#![allow(
-    dead_code,
-    unused_imports,
-    unused_variables,
-    unreachable_code,
-    clippy::no_effect,
-    unused_mut
-)]
+// #![allow(
+//     dead_code,
+//     unused_imports,
+//     unused_variables,
+//     unreachable_code,
+//     clippy::no_effect,
+//     unused_mut
+// )]
 #![no_std]
 #![no_main]
 extern crate alloc;
 
-use alloc::{boxed::Box, string::ToString};
-use core::{
-    arch::asm,
-    fmt::{self, write, Write},
-    mem::size_of,
-    ops::Deref,
-};
+use core::arch::asm;
 
 use log::{debug, error, info, trace, warn};
 use nuefi::{
     entry,
-    error::{Result, Status, UefiError},
-    proto::{
-        console::SimpleTextOutput,
-        loaded_image::{raw::RawLoadedImage, LoadedImage, LoadedImageDevicePath},
-        media::LoadFile2,
-        Protocol,
-        Scope,
-    },
-    string::{Path, UefiString},
-    table::raw::RawSystemTable,
+    error::{Result, Status},
+    proto::loaded_image::{LoadedImage, LoadedImageDevicePath},
     Boot,
     EfiHandle,
     SystemTable,
 };
 use qemu_exit::{QEMUExit, X86};
-use raw_cpuid::CpuId;
 use runs_inside_qemu::runs_inside_qemu;
-use x86_64::{
-    instructions::hlt,
-    registers::control::{Cr0, Cr0Flags},
-};
+use x86_64::instructions::hlt;
 
 mod tests;
 
@@ -72,7 +54,7 @@ mod imp {
     }
 
     impl From<fmt::Error> for TestError {
-        fn from(value: fmt::Error) -> Self {
+        fn from(_value: fmt::Error) -> Self {
             TestError::Uefi(Status::DEVICE_ERROR.into())
         }
     }
@@ -263,12 +245,14 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
         trace!("Device = {:p}", file_dev);
 
         // Duplicate the path to avoid locking the `LoadedImageDevicePath` protocol
+        // Note: Freed below
+        // FIXME: Will leak if theres a panic
         file_path.duplicate()?
     };
 
     let max = TESTS.len();
     info!("Running {} tests", max);
-    for (idx, (test, fail)) in TESTS.iter().enumerate() {
+    for (idx, (_, fail)) in TESTS.iter().enumerate() {
         info!("Running test {}/{}", idx + 1, max);
         let opt = idx.to_le_bytes();
 
