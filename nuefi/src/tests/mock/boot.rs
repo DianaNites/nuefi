@@ -1,5 +1,3 @@
-extern crate std;
-
 use alloc::boxed::Box;
 use core::{
     ffi::c_void,
@@ -75,9 +73,6 @@ impl MockBoot {
                 .db
                 .iter()
                 .find_map(|h| h.protos.iter().find(|p| p.guid == guid));
-
-            std::dbg!(&sys);
-            std::dbg!(&found);
 
             if let Some(proto) = found {
                 *out = proto.ptr.cast_mut().cast();

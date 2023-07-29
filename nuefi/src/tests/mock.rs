@@ -1,4 +1,3 @@
-extern crate std;
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::{
     alloc::Layout,
