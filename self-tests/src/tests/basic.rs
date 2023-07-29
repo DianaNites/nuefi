@@ -151,9 +151,7 @@ fn device_path_duplicate(handle: EfiHandle, table: &SystemTable<Boot>) -> TestRe
 
     debug!("Duplicate: {dup}");
 
-    // ensure!(path == dup, "Duplicated DevicePath was unequal");
-    // assert_eq!(path, dup, "Duplicated DevicePath was unequal");
-    assert_ne!(path, dup, "Duplicated DevicePath was unequal");
+    ensure!(path == dup, "Duplicated DevicePath are equal");
 
     //
     Ok(())

@@ -270,7 +270,7 @@ fn main(handle: EfiHandle, table: SystemTable<Boot>) -> Result<()> {
     // block.
     unsafe {
         let mut dev = dev;
-        dev.free(&boot)?
+        dev.free(&boot)?;
     };
 
     // TODO: Callback to keep watchdog alive
